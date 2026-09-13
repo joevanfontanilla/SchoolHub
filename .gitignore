@@ -1,0 +1,26 @@
+# Local configuration and secrets — never commit
+config/config.local.php
+
+# Runtime storage: uploads, logs, backups
+storage/uploads/*
+storage/logs/*
+storage/backups/*
+!storage/uploads/.gitkeep
+!storage/logs/.gitkeep
+!storage/backups/.gitkeep
+
+# Tailwind standalone CLI binary (downloaded per-machine, ~100MB)
+tailwindcss.exe
+tailwindcss
+
+# Compiled CSS is committed so the app runs without a build step.
+# Remove the next line if you prefer to require a build on every clone.
+# public/assets/app.css
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
