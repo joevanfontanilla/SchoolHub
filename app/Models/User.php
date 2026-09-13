@@ -1,0 +1,143 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Core\Database;
+
+/**
+ * A system user. One role per user (docs/17).
+ */
+final class User
+{
+    public const ROLE_STUDENT     = 'Student';
+    public const ROLE_TEACHER     = 'Teacher';
+    public const ROLE_REGISTRAR   = 'Registrar';
+    public const ROLE_CASHIER     = 'Cashier';
+    public const ROLE_SUPER_ADMIN = 'Super Admin';
+
+    public const STATUS_PENDING  = 'Pending';
+    public const STATUS_ACTIVE   = 'Active';
+    public const STATUS_DISABLED = 'Disabled';
+    public const STATUS_LOCKED   = 'Locked';
+
+    public int $id;
+    public int $role_id;
+    public string $username;
+    public string $email;
+    public string $password_hash;
+    public string $first_name;
+    public ?string $middle_name;
+    public string $last_name;
+    public string $status;
+    public bool $must_change_password;
+    public int $failed_login_attempts;
+    public ?string $locked_until;
+    public ?string $last_login_at;
+    public ?string $role_name;
+
+    public static function fromRow(array $row): self
+    {
+        $user = new self();
+        $user->id                    = (int) $row['id'];
+        $user->role_id               = (int) $row['role_id'];
+        $user->username              = (string) $row['username'];
+        $user->email                 = (string) $row['email'];
+        $user->password_hash         = (string) $row['password_hash'];
+        $user->first_name            = (string) $row['first_name'];
+        $user->middle_name           = $row['middle_name'] !== null ? (string) $row['middle_name'] : null;
+        $user->last_name             = (string) $row['last_name'];
+        $user->status                = (string) $row['status'];
+        $user->must_change_password  = (bool) $row['must_change_password'];
+        $user->failed_login_attempts = (int) ($row['failed_login_attempts'] ?? 0);
+        $user->locked_until          = $row['locked_until'] ?? null;
+        $user->last_login_at         = $row['last_login_at'] ?? null;
+        $user->role_name             = isset($row['role_name']) ? (string) $row['role_name'] : null;
+
+        return $user;
+    }
+
+    private const SELECT = 'SELECT u.*, r.name AS role_name FROM users u JOIN roles r ON r.id = u.role_id';
+
+    public static function find(int $id): ?self
+    {
+        $row = Database::selectOne(self::SELECT . ' WHERE u.id = ?', [$id]);
+        return $row === null ? null : self::fromRow($row);
+    }
+
+    /** Look up by either email or username — docs/07 allows both. */
+    public static function findByLogin(string $login): ?self
+    {
+        $row = Database::selectOne(
+            self::SELECT . ' WHERE u.email = ? OR u.username = ? LIMIT 1',
+            [$login, $login]
+        );
+        return $row === null ? null : self::fromRow($row);
+    }
+
+    public static function findByEmail(string $email): ?self
+    {
+        $row = Database::selectOne(self::SELECT . ' WHERE u.email = ?', [$email]);
+        return $row === null ? null : self::fromRow($row);
+    }
+
+    public function fullName(): string
+    {
+        $middle = $this->middle_name !== null && $this->middle_name !== ''
+            ? ' ' . mb_substr($this->middle_name, 0, 1) . '.'
+            : '';
+        return $this->first_name . $middle . ' ' . $this->last_name;
+    }
+
+    public function initials(): string
+    {
+        return mb_strtoupper(mb_substr($this->first_name, 0, 1) . mb_substr($this->last_name, 0, 1));
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role_name === self::ROLE_SUPER_ADMIN;
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->role_name === self::ROLE_STUDENT;
+    }
+
+    public function isTeacher(): bool
+    {
+        return $this->role_name === self::ROLE_TEACHER;
+    }
+
+    public function isRegistrar(): bool
+    {
+        return $this->role_name === self::ROLE_REGISTRAR;
+    }
+
+    public function isCashier(): bool
+    {
+        return $this->role_name === self::ROLE_CASHIER;
+    }
+
+    public function isLocked(): bool
+    {
+        if ($this->status === self::STATUS_LOCKED) {
+            // A lockout with an elapsed expiry is no longer a lockout.
+            return $this->locked_until === null || strtotime($this->locked_until) > time();
+        }
+        return false;
+    }
+
+    /** Whether this account may hold a session right now (docs/07). */
+    public function canSignIn(): bool
+    {
+        if ($this->status === self::STATUS_DISABLED) {
+            return false;
+        }
+        if ($this->isLocked()) {
+            return false;
+        }
+        return in_array($this->status, [self::STATUS_ACTIVE, self::STATUS_PENDING], true);
+    }
+}

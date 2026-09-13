@@ -147,3 +147,38 @@ dashboard. Per-role Can/Cannot lists are in `docs/04_USER_ROLES_AND_PERMISSIONS.
 Per `docs/25`, end an implementation by reporting: feature implemented, files created,
 files modified, database changes, route/API changes, permission changes, tests
 performed, known limitations, and assumptions made.
+
+## Brand palette — Lyceum of the East Aurora
+
+Defined once in `tailwind.config.js` as `brand.*`. Use the tokens, never a raw hex
+and never a stock Tailwind color.
+
+| Token | Hex | Use |
+|---|---|---|
+| `brand-primary` / `brand-400` | `#2E9AD6` | Primary Blue — large headings, fills, accents |
+| `brand-600` | `#1E7BAE` | Buttons, links, small text |
+| `brand-navy` / `brand-900` | `#0F4C5C` | Headings and important text |
+| `brand-teal` | `#7ED08A` | Accents and success highlights |
+| `brand-mint` | `#E8F6ED` | Section and card backgrounds |
+| `brand-sky` / `brand-200` | `#B3DFF5` | Borders, hover states |
+| `brand-pale` / `brand-50` | `#EAF6FF` | Subtle backgrounds |
+| `brand-gray` | `#6B7280` | Secondary text, disabled states |
+| `brand-alert` | `#E63946` | Alerts |
+| `brand-warning` | `#FFC947` | Warnings |
+
+**Why buttons use `brand-600` and not the brand blue:** white text on `#2E9AD6`
+reaches only 3.1:1, below the 4.5:1 WCAG AA minimum for normal text. `brand-600`
+(`#1E7BAE`) is the same hue at 4.7:1. The brand blue is still used wherever 3:1 is
+enough — large headings, fills, and accents. Do not put white small text on
+`brand-primary`.
+
+Status colors are paired text/background/border sets (`success-*`, `warning-*`,
+`danger-*`) so a message is readable, and every one of them also carries a word and
+an icon — status is never color alone (docs/21).
+
+## Local development accounts
+
+`php database/create_demo_users.php` creates one account per role for testing
+(`student`, `teacher`, `registrar`, `cashier`). It refuses to run when
+`app.env` is `production`. The Super Admin is created separately and
+interactively by `php database/create_admin.php` — no password is ever committed.

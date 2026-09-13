@@ -1,0 +1,209 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Core\Auth;
+use App\Core\Csrf;
+use App\Core\Router;
+use App\Core\Session;
+use App\Core\View;
+
+/**
+ * Global helpers. Loaded by bootstrap.php before anything else runs.
+ */
+
+if (!function_exists('base_path_uri')) {
+    /**
+     * The URI prefix the application is served from, with no trailing slash.
+     *
+     * Auto-detected from the front controller's location so the app works
+     * unchanged at a domain root, at /SchoolHub/public, or anywhere else.
+     * Never hardcode a leading-slash path anywhere in the app — use url().
+     */
+    function base_path_uri(): string
+    {
+        static $base = null;
+        if ($base !== null) {
+            return $base;
+        }
+
+        $configured = App\Core\Config::get('app.base_url');
+        if (is_string($configured) && $configured !== '') {
+            return $base = rtrim($configured, '/');
+        }
+
+        $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+
+        // dirname() returns a BACKSLASH on Windows for '/index.php', so its
+        // result is normalized again before trimming. Without this the base
+        // becomes '\' and every asset URL turns into '//assets/...', which the
+        // browser reads as protocol-relative and sends to a host named
+        // "assets" instead of to this application.
+        $dir = str_replace('\\', '/', dirname($script));
+        $dir = rtrim($dir, '/');
+
+        return $base = ($dir === '' || $dir === '.') ? '' : $dir;
+    }
+}
+
+if (!function_exists('url')) {
+    /** Build an application URL. ALWAYS use this instead of a literal "/path". */
+    function url(string $path = '/'): string
+    {
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+        return base_path_uri() . '/' . ltrim($path, '/');
+    }
+}
+
+if (!function_exists('asset')) {
+    /** URL for a file under public/, cache-busted by its modification time. */
+    function asset(string $path): string
+    {
+        $relative = ltrim($path, '/');
+        $file = BASE_PATH . '/public/' . $relative;
+        $version = is_file($file) ? '?v=' . filemtime($file) : '';
+        return url($relative) . $version;
+    }
+}
+
+if (!function_exists('route')) {
+    /** URL for a named route. */
+    function route(string $name, array $params = []): string
+    {
+        return url(Router::route($name, $params));
+    }
+}
+
+if (!function_exists('e')) {
+    /** Escape for HTML output. Every dynamic value in a view goes through this. */
+    function e(mixed $value): string
+    {
+        return htmlspecialchars((string) ($value ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+if (!function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        return Csrf::token();
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    /** Hidden CSRF input. Every form in the application must include this. */
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="_token" value="' . e(Csrf::token()) . '">';
+    }
+}
+
+if (!function_exists('method_field')) {
+    function method_field(string $method): string
+    {
+        return '<input type="hidden" name="_method" value="' . e(strtoupper($method)) . '">';
+    }
+}
+
+if (!function_exists('old')) {
+    /** Previously submitted value, for redisplaying a form that failed validation. */
+    function old(string $key, mixed $default = ''): mixed
+    {
+        static $old = null;
+        if ($old === null) {
+            $old = Session::pullOldInput();
+        }
+        return $old[$key] ?? $default;
+    }
+}
+
+if (!function_exists('errors')) {
+    /** @return array<string,array<int,string>> */
+    function errors(): array
+    {
+        static $errors = null;
+        if ($errors === null) {
+            $errors = Session::pullErrors();
+        }
+        return $errors;
+    }
+}
+
+if (!function_exists('error_for')) {
+    function error_for(string $field): ?string
+    {
+        $all = errors();
+        return isset($all[$field][0]) ? (string) $all[$field][0] : null;
+    }
+}
+
+if (!function_exists('view')) {
+    function view(string $template, array $data = [], ?string $layout = null): string
+    {
+        return View::render($template, $data, $layout);
+    }
+}
+
+if (!function_exists('component')) {
+    /** Render a reusable component from app/Views/components. */
+    function component(string $name, array $data = []): string
+    {
+        return View::partial('components/' . $name, $data);
+    }
+}
+
+if (!function_exists('auth_user')) {
+    function auth_user(): ?App\Models\User
+    {
+        return Auth::user();
+    }
+}
+
+if (!function_exists('money')) {
+    /** Format pesos. Money is always DECIMAL in the database, never float. */
+    function money(mixed $amount): string
+    {
+        return '₱' . number_format((float) $amount, 2);
+    }
+}
+
+if (!function_exists('dt')) {
+    /** Format a datetime for display; returns an em dash for null. */
+    function dt(?string $value, string $format = 'M j, Y g:i A'): string
+    {
+        if ($value === null || $value === '' || $value === '0000-00-00 00:00:00') {
+            return '—';
+        }
+        $ts = strtotime($value);
+        return $ts === false ? '—' : date($format, $ts);
+    }
+}
+
+if (!function_exists('d')) {
+    /** Format a date for display. */
+    function d(?string $value): string
+    {
+        return dt($value, 'M j, Y');
+    }
+}
+
+if (!function_exists('str_limit')) {
+    function str_limit(string $value, int $limit = 100): string
+    {
+        return mb_strlen($value) <= $limit ? $value : mb_substr($value, 0, $limit) . '…';
+    }
+}
+
+if (!function_exists('partial')) {
+    /**
+     * Render a partial from app/Views/partials.
+     *
+     * Views are included in the global namespace, so they cannot reference
+     * App\Core\View by its short name — use this instead.
+     */
+    function partial(string $name, array $data = []): string
+    {
+        return View::partial('partials/' . $name, $data);
+    }
+}

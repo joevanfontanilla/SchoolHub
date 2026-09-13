@@ -1,0 +1,274 @@
+<?php
+/**
+ * Reference data seeder — roles, permissions, system settings, and the academic
+ * lookups the application cannot run without.
+ *
+ *   php database/seed.php
+ *
+ * Idempotent: every insert is an upsert, so re-running is safe. This seeder
+ * creates NO user accounts — use database/create_admin.php for that.
+ */
+
+declare(strict_types=1);
+
+if (PHP_SAPI !== 'cli') {
+    exit('This script may only be run from the command line.');
+}
+
+require dirname(__DIR__) . '/bootstrap.php';
+
+use App\Core\Database;
+use App\Models\User;
+
+/** key => [module, description] */
+const PERMISSIONS = [
+    // Student
+    'profile.manage'      => ['profile', 'Manage own profile'],
+    'enrollment.apply'    => ['enrollment', 'Create and submit an enrollment application'],
+    'enrollment.view'     => ['enrollment', 'View enrollment applications'],
+    'requirements.upload' => ['requirements', 'Upload requirement documents'],
+    'schedule.view'       => ['academic', 'View class schedule'],
+    'grades.view'         => ['academic', 'View grades'],
+    'attendance.view'     => ['academic', 'View attendance'],
+    'payments.view'       => ['finance', 'View payment history and receipts'],
+    'finance.view_account' => ['finance', 'View a student financial account'],
+    'announcements.view'  => ['communication', 'Read announcements'],
+    'notifications.view'  => ['communication', 'Receive notifications'],
+
+    // Teacher
+    'classes.view'        => ['academic', 'View assigned classes'],
+    'attendance.record'   => ['academic', 'Record attendance for assigned classes'],
+    'grades.record'       => ['academic', 'Record grades for assigned classes'],
+    'reports.teacher'     => ['reports', 'Generate class reports'],
+
+    // Registrar
+    'students.view'       => ['students', 'View student records'],
+    'students.manage'     => ['students', 'Create and update student records'],
+    'enrollment.review'   => ['enrollment', 'Review enrollment applications'],
+    'enrollment.approve'  => ['enrollment', 'Approve, reject, or request correction'],
+    'enrollment.confirm'  => ['enrollment', 'Confirm enrollment and assign sections'],
+    'requirements.verify' => ['requirements', 'Verify or reject submitted requirements'],
+    'academic.manage'     => ['academic', 'Manage programs, subjects, and sections'],
+    'academic.assign'     => ['academic', 'Assign classes, teachers, and rooms'],
+    'grade_periods.manage' => ['academic', 'Open and close grading periods'],
+    'announcements.manage' => ['communication', 'Create and edit announcements'],
+    'announcements.publish' => ['communication', 'Publish announcements'],
+    'reports.registrar'   => ['reports', 'Generate registrar reports'],
+
+    // Cashier
+    'fees.manage'         => ['finance', 'Assess and maintain fees'],
+    'payments.record'     => ['finance', 'Record payments'],
+    'receipts.issue'      => ['finance', 'Issue receipts'],
+    'reports.cashier'     => ['reports', 'Generate collection reports'],
+
+    // Super Admin (holds everything implicitly; listed for completeness)
+    'users.manage'        => ['administration', 'Manage user accounts'],
+    'roles.manage'        => ['administration', 'Manage roles and permissions'],
+    'settings.manage'     => ['administration', 'Manage system settings'],
+    'audit.view'          => ['administration', 'View audit logs'],
+    'backups.manage'      => ['administration', 'Create and restore backups'],
+    'system.health'       => ['administration', 'View system health'],
+    'reports.admin'       => ['reports', 'Generate administrative reports'],
+];
+
+const ROLE_PERMISSIONS = [
+    User::ROLE_STUDENT => [
+        'profile.manage', 'enrollment.apply', 'enrollment.view', 'requirements.upload',
+        'schedule.view', 'grades.view', 'attendance.view', 'finance.view_account',
+        'payments.view', 'announcements.view', 'notifications.view',
+    ],
+    User::ROLE_TEACHER => [
+        'classes.view', 'attendance.record', 'grades.record', 'schedule.view',
+        'reports.teacher', 'announcements.view', 'notifications.view',
+    ],
+    User::ROLE_REGISTRAR => [
+        'students.view', 'students.manage', 'enrollment.view', 'enrollment.review',
+        'enrollment.approve', 'enrollment.confirm', 'requirements.verify',
+        'academic.manage', 'academic.assign', 'grade_periods.manage',
+        'announcements.view', 'announcements.manage', 'announcements.publish',
+        'reports.registrar', 'notifications.view',
+    ],
+    User::ROLE_CASHIER => [
+        'finance.view_account', 'fees.manage', 'payments.record', 'payments.view',
+        'receipts.issue', 'reports.cashier', 'announcements.view', 'notifications.view',
+    ],
+    // Super Admin is intentionally empty — Auth::can() grants it everything.
+    User::ROLE_SUPER_ADMIN => [],
+];
+
+const ROLES = [
+    User::ROLE_STUDENT     => ['student', 'Enrolls, uploads requirements, and views their own records'],
+    User::ROLE_TEACHER     => ['teacher', 'Records attendance and grades for assigned classes'],
+    User::ROLE_REGISTRAR   => ['registrar', 'Processes enrollment and manages academic records'],
+    User::ROLE_CASHIER     => ['cashier', 'Assesses fees, records payments, and issues receipts'],
+    User::ROLE_SUPER_ADMIN => ['super-admin', 'Administers users, settings, backups, and audit logs'],
+];
+
+const SETTINGS = [
+    ['school_name', 'Lyceum of the East Aurora', 'string', 'school', 'Name shown across the site', 1],
+    ['school_tagline', 'Discipline · Integrity · Service', 'string', 'school', 'Tagline on the public home page', 1],
+    ['school_address', 'Baler, Aurora, Philippines', 'string', 'school', 'Official address', 1],
+    ['school_email', 'info@schoolhub.test', 'string', 'school', 'Public contact email', 1],
+    ['school_phone', '(042) 000-0000', 'string', 'school', 'Public contact number', 1],
+    ['office_hours', 'Monday to Friday, 8:00 AM - 5:00 PM', 'string', 'school', 'Office hours', 1],
+    ['enrollment_payment_policy', 'MINIMUM_DOWNPAYMENT', 'string', 'enrollment', 'FULL | MINIMUM_DOWNPAYMENT | NONE (docs/26)', 0],
+    ['minimum_downpayment_percent', '20', 'int', 'enrollment', 'Percent of assessment required to confirm enrollment', 0],
+    ['max_units_per_term', '27', 'int', 'academic', 'Maximum units a student may enlist in per term', 0],
+    ['enrollment_open_message', 'Enrollment for the coming semester is now open.', 'string', 'enrollment', 'Shown on the public enrollment page', 1],
+];
+
+const YEAR_LEVELS = [
+    ['First Year', 1], ['Second Year', 2], ['Third Year', 3], ['Fourth Year', 4],
+];
+
+const PROGRAMS = [
+    ['BSIT', 'Bachelor of Science in Information Technology', 'Software development, networking, and information systems.', 'Bachelor', 4],
+    ['BSED', 'Bachelor of Secondary Education', 'Preparation for secondary school teaching.', 'Bachelor', 4],
+    ['BSBA', 'Bachelor of Science in Business Administration', 'Management, marketing, and financial operations.', 'Bachelor', 4],
+    ['BSHM', 'Bachelor of Science in Hospitality Management', 'Hospitality, tourism, and service operations.', 'Bachelor', 4],
+];
+
+try {
+    Database::transaction(static function (): void {
+        seedRoles();
+        seedPermissions();
+        seedRolePermissions();
+        seedSettings();
+        seedYearLevels();
+        seedPrograms();
+        seedAcademicCalendar();
+    });
+
+    echo "\n  Seeding complete.\n";
+    echo "  Next: php database/create_admin.php\n\n";
+} catch (Throwable $e) {
+    fwrite(STDERR, "\n  ERROR: " . $e->getMessage() . "\n\n");
+    exit(1);
+}
+
+// ---------------------------------------------------------------------------
+
+function seedRoles(): void
+{
+    foreach (ROLES as $name => [$slug, $description]) {
+        Database::query(
+            'INSERT INTO roles (name, slug, description) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE slug = VALUES(slug), description = VALUES(description)',
+            [$name, $slug, $description]
+        );
+    }
+    echo '  roles ................ ' . count(ROLES) . "\n";
+}
+
+function seedPermissions(): void
+{
+    foreach (PERMISSIONS as $key => [$module, $description]) {
+        Database::query(
+            'INSERT INTO permissions (`key`, module, description) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE module = VALUES(module), description = VALUES(description)',
+            [$key, $module, $description]
+        );
+    }
+    echo '  permissions .......... ' . count(PERMISSIONS) . "\n";
+}
+
+function seedRolePermissions(): void
+{
+    $roleIds = array_column(Database::select('SELECT id, name FROM roles'), 'id', 'name');
+    $permIds = array_column(Database::select('SELECT id, `key` FROM permissions'), 'id', 'key');
+
+    $granted = 0;
+
+    foreach (ROLE_PERMISSIONS as $roleName => $keys) {
+        $roleId = $roleIds[$roleName] ?? null;
+        if ($roleId === null) {
+            continue;
+        }
+
+        // Rewrite this role's grants so removing a key from the list removes it
+        // from the database too.
+        Database::query('DELETE FROM role_permissions WHERE role_id = ?', [$roleId]);
+
+        foreach ($keys as $key) {
+            if (!isset($permIds[$key])) {
+                throw new RuntimeException("Unknown permission key in ROLE_PERMISSIONS: {$key}");
+            }
+            Database::query(
+                'INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
+                [$roleId, $permIds[$key]]
+            );
+            $granted++;
+        }
+    }
+
+    echo "  role permissions ..... {$granted}\n";
+}
+
+function seedSettings(): void
+{
+    foreach (SETTINGS as [$key, $value, $type, $group, $description, $isPublic]) {
+        // Only insert — never overwrite a value the school has already changed.
+        Database::query(
+            'INSERT INTO system_settings (`key`, `value`, `type`, `group`, description, is_public)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE description = VALUES(description), `group` = VALUES(`group`)',
+            [$key, $value, $type, $group, $description, $isPublic]
+        );
+    }
+    echo '  system settings ...... ' . count(SETTINGS) . "\n";
+}
+
+function seedYearLevels(): void
+{
+    foreach (YEAR_LEVELS as [$name, $sequence]) {
+        Database::query(
+            'INSERT INTO year_levels (name, sequence) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE name = VALUES(name)',
+            [$name, $sequence]
+        );
+    }
+    echo '  year levels .......... ' . count(YEAR_LEVELS) . "\n";
+}
+
+function seedPrograms(): void
+{
+    foreach (PROGRAMS as [$code, $name, $description, $level, $years]) {
+        Database::query(
+            'INSERT INTO programs (code, name, description, degree_level, years_duration, is_active)
+             VALUES (?, ?, ?, ?, ?, 1)
+             ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description)',
+            [$code, $name, $description, $level, $years]
+        );
+    }
+    echo '  programs ............. ' . count(PROGRAMS) . "\n";
+}
+
+function seedAcademicCalendar(): void
+{
+    $year = (int) date('Y');
+    $code = $year . '-' . ($year + 1);
+
+    Database::query(
+        'INSERT INTO academic_years (code, start_date, end_date, is_active) VALUES (?, ?, ?, 1)
+         ON DUPLICATE KEY UPDATE start_date = VALUES(start_date), end_date = VALUES(end_date)',
+        [$code, "{$year}-06-01", ($year + 1) . '-03-31']
+    );
+
+    $academicYearId = (int) Database::scalar('SELECT id FROM academic_years WHERE code = ?', [$code]);
+
+    $terms = [
+        ['1st Semester', 1, "{$year}-06-01", "{$year}-10-31"],
+        ['2nd Semester', 2, "{$year}-11-01", ($year + 1) . '-03-31'],
+    ];
+
+    foreach ($terms as [$name, $sequence, $start, $end]) {
+        Database::query(
+            'INSERT INTO terms (academic_year_id, name, sequence, start_date, end_date, is_active)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE name = VALUES(name), start_date = VALUES(start_date), end_date = VALUES(end_date)',
+            [$academicYearId, $name, $sequence, $start, $end, $sequence === 1 ? 1 : 0]
+        );
+    }
+
+    echo "  academic calendar .... {$code}\n";
+}
