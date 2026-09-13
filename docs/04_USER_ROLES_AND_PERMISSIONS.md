@@ -53,6 +53,13 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Generate registrar reports
 - Publish registrar announcements if permitted
 
+### Cannot
+- Record payments or issue receipts
+- Change grades submitted by teachers
+- Change user roles or permissions
+- Access system settings, backups, or audit log administration
+- Delete financial or academic records
+
 ## Cashier
 ### Can
 - View student financial accounts
@@ -78,6 +85,15 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Manage backups
 - View system health
 - Access administrative reports
+
+### Cannot
+- Edit or delete audit log entries. Audit logs are **append-only for every role,
+  including Super Admin** — an administrator who can rewrite the log defeats its
+  purpose.
+- Read a stored password. Passwords are hashed and may only be reset, never retrieved.
+- Bypass the enrollment status transition rules in `26_STATUS_TRANSITIONS.md`.
+- Record payments or enter grades in place of the Cashier or Teacher. Super Admin
+  administers the system; it is not a substitute operator role.
 
 ## Sensitive Operations
 Enrollment approval, grade changes, fee changes, payment recording, role changes, and backup restoration must be logged.

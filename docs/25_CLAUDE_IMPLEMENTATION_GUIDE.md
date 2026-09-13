@@ -52,3 +52,12 @@ After implementation, report:
 - Tests performed
 - Known limitations
 - Assumptions
+
+## Additional Required Reading
+Insert into the reading order above:
+
+- `CLAUDE.md` at the repository root — read **first**; it is loaded automatically and
+  carries the stack constraints and security rules.
+- `docs/26_STATUS_TRANSITIONS.md` — required before touching any enrollment status.
+- `docs/17_DATABASE_DESIGN.md` section 8 — the integrity rules the schema cannot
+  enforce. These are the ones most easily missed.

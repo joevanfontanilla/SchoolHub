@@ -83,3 +83,41 @@ A feature is not complete until:
 - Relevant logs/notifications are implemented.
 - Existing features remain functional.
 - The feature has been tested.
+
+## 8. Resolved Constraints
+
+These decisions resolve contradictions found in the original specification. They are
+authoritative.
+
+### School type: tertiary (college)
+The academic structure is Academic Year → Semester → Program → Year Level → Section →
+Subject → Class Schedule. Subjects carry **units** and prerequisites. The document list
+in `10_REQUIREMENTS_AND_DOCUMENTS.md` is configurable per enrollment period and is
+seeded with tertiary admission requirements.
+
+### Tailwind without Node.js
+Section 2 requires Tailwind CSS and also forbids Node.js. These are reconciled by using
+the **Tailwind standalone CLI binary** (`tailwindcss.exe`), which bundles its own
+runtime and needs no Node installation:
+
+```
+tailwindcss.exe -i src/input.css -o public/assets/app.css --minify
+```
+
+No `package.json`, no `node_modules/`. The restriction in section 2 stands as written.
+
+### Zero dependencies
+There is no Composer either. The router, view rendering, validation, CSRF, session
+handling, database access, migration runner, and test runner are hand-written in
+`app/Core/`. Consequently:
+
+- **Receipts and printable reports** are HTML with print CSS, not a PDF library.
+- **Spreadsheet export** uses native `fputcsv`.
+- **Tests** use a small hand-written runner (`tests/run.php`), not PHPUnit.
+
+Adding any dependency requires explicit authorization and an amendment to this section.
+
+### Enrollment status
+The twelve statuses listed in `09_ENROLLMENT_SYSTEM.md` are **three independent axes**,
+not one enum. See `26_STATUS_TRANSITIONS.md`, which is authoritative for every status
+change.

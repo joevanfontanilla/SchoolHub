@@ -33,3 +33,17 @@ Before implementing a feature:
 `00_MASTER_SPECIFICATION.md` is the primary technical and functional authority for the project.
 
 If a requirement changes, update the relevant Markdown specification before or together with implementation.
+
+## Key Documents
+| File | Purpose |
+|---|---|
+| `CLAUDE.md` | Working rules loaded automatically by Claude Code — stack constraints, architecture, security rules |
+| `docs/00_MASTER_SPECIFICATION.md` | Primary authority. Section 8 records resolved constraints |
+| `docs/17_DATABASE_DESIGN.md` | Column-level schema, integrity rules, identifier formats, data protection |
+| `docs/26_STATUS_TRANSITIONS.md` | Authoritative enrollment status transition matrix |
+| `docs/24_DEVELOPMENT_ROADMAP.md` | Phase plan |
+
+## Resolved Project Decisions
+- **School type:** tertiary (college) — programs, semesters, year levels, subjects with units and prerequisites.
+- **Zero dependencies:** no Composer, no npm. Tailwind is compiled by the standalone `tailwindcss.exe` binary, so the no-Node rule in `docs/00` holds literally.
+- **Receipts** are HTML with print CSS; **exports** use native `fputcsv`; **tests** use a hand-written runner.

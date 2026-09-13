@@ -1,68 +1,435 @@
 # Database Design Specification
 
-## Core Tables
+Engine: **MySQL / MariaDB**, InnoDB, `utf8mb4_unicode_ci`.
+Model: **tertiary (college)** — Program → Year Level → Semester, subjects carry units
+and prerequisites.
 
-### Authentication
-- users
-- roles
-- permissions
-- role_permissions
-- login_logs
-- password_reset_tokens
+Conventions used throughout:
 
-### Student
-- students
-- student_profiles
-- student_documents
-- guardians/emergency_contacts as required
+- Every table has `id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY` unless stated.
+- Every table has `created_at` and `updated_at` (`TIMESTAMP`) unless stated.
+- Foreign keys are named `<singular>_id` and are real `FOREIGN KEY` constraints.
+- Money is `DECIMAL(12,2)` — **never** `FLOAT` or `DOUBLE`.
+- Deletions that would destroy history use `ON DELETE RESTRICT`. Nothing financial or
+  academic is ever hard-deleted.
+- Fixed value sets are stored as `VARCHAR` validated in the application rather than as
+  MySQL `ENUM`, so adding a value never requires an `ALTER TABLE` on a large table.
 
-### Academic
-- academic_years
-- terms
-- programs
-- year_levels
-- subjects
-- sections
-- rooms
-- class_schedules
-- class_assignments
+---
 
-### Enrollment
-- enrollment_applications
-- enrollment_requirements
-- enrollment_requirement_files
-- enrollment_status_history
-- enrollments
+## 1. Authentication and Access
 
-### Academic Records
-- attendance
-- grade_periods
-- grades
+### `roles`
+`name` (unique — `Student`, `Teacher`, `Registrar`, `Cashier`, `Super Admin`),
+`slug` (unique), `description`.
+Exactly five seeded rows. **One role per user.**
 
-### Finance
-- fee_types
-- fee_assessments
-- fee_items
-- payments
-- payment_items
-- receipts
-- financial_adjustments
+### `permissions`
+`key` (unique, e.g. `enrollment.approve`), `module`, `description`.
 
-### Communication
-- announcements
-- notifications
+### `role_permissions`
+`role_id`, `permission_id` — composite primary key, both FK, `ON DELETE CASCADE`.
+Super Admin implicitly holds every permission and needs no rows here.
 
-### Administration
-- audit_logs
-- backups
-- system_settings
+### `users`
+| Column | Type | Notes |
+|---|---|---|
+| `role_id` | FK → roles | RESTRICT |
+| `username` | VARCHAR(50) | unique |
+| `email` | VARCHAR(150) | unique |
+| `password_hash` | VARCHAR(255) | `password_hash()` output — **never** plaintext |
+| `first_name`, `middle_name`, `last_name` | VARCHAR(100) | middle nullable |
+| `status` | VARCHAR(20) | `Pending`, `Active`, `Disabled`, `Locked` |
+| `must_change_password` | TINYINT(1) | default 0 |
+| `failed_login_attempts` | SMALLINT | default 0 |
+| `locked_until` | DATETIME | nullable |
+| `last_login_at` | DATETIME | nullable |
 
-## Database Rules
-- Use primary keys consistently.
-- Use foreign keys where appropriate.
-- Add indexes for frequent searches/filtering.
-- Use timestamps.
-- Avoid storing duplicate authoritative data.
-- Preserve historical records.
-- Use appropriate decimal precision for money.
-- Never store passwords directly.
+Index `(status)`. Users are **disabled, never deleted**.
+
+### `sessions`
+`id` VARCHAR(128) **primary key** (no auto-increment), `user_id` FK nullable,
+`ip_address` VARCHAR(45), `user_agent` VARCHAR(255), `payload` TEXT,
+`last_activity` INT. Indexes `(last_activity)`, `(user_id)`.
+
+### `login_logs`
+`user_id` FK nullable (a failed attempt may match no user),
+`username_attempted` VARCHAR(150), `ip_address` VARCHAR(45), `user_agent` VARCHAR(255),
+`result` VARCHAR(20) (`SUCCESS`, `FAILED`, `LOCKED_OUT`, `DISABLED`),
+`attempted_at` DATETIME.
+
+Indexes `(username_attempted, attempted_at)` and `(ip_address, attempted_at)` — these
+two drive login rate limiting and are required, not optional.
+
+### `password_reset_tokens`
+`user_id` FK, `token_hash` VARCHAR(255) (**a hash of the token, not the token**),
+`expires_at` DATETIME, `used_at` DATETIME nullable, `requested_ip` VARCHAR(45).
+Single-use. Index `(token_hash)`.
+
+---
+
+## 2. Students
+
+### `students`
+`user_id` FK unique (one student per user account),
+`student_number` VARCHAR(20) unique (format in section 9),
+`program_id` FK, `year_level_id` FK,
+`student_type` VARCHAR(20) (`New`, `Transferee`, `Continuing`, `Returning`),
+`status` VARCHAR(20) (`Applicant`, `Enrolled`, `Inactive`, `Graduated`),
+`admitted_at` DATE nullable.
+
+### `student_profiles`
+`student_id` FK unique, `birthdate` DATE, `sex` VARCHAR(10),
+`civil_status` VARCHAR(20), `mobile` VARCHAR(20), `telephone` VARCHAR(20),
+`street`, `barangay`, `city_municipality`, `province`, `postal_code`,
+`nationality`, `religion`,
+`photo_path` VARCHAR(255) — stored under `storage/`, **never** web-reachable.
+
+### `guardians`
+`student_id` FK, `full_name`, `relationship`, `mobile`, `email`, `address`,
+`is_emergency_contact` TINYINT(1). A student may have several.
+
+---
+
+## 3. Academic Structure
+
+### `academic_years`
+`code` VARCHAR(20) unique (`2026-2027`), `start_date`, `end_date`,
+`is_active` TINYINT(1). Only one active at a time, enforced in the service layer.
+
+### `terms`
+`academic_year_id` FK, `name` (`1st Semester`, `2nd Semester`, `Summer`),
+`sequence` TINYINT, `start_date`, `end_date`,
+`enrollment_opens_at` DATETIME, `enrollment_closes_at` DATETIME,
+`is_active` TINYINT(1). Unique `(academic_year_id, sequence)`.
+
+### `programs`
+`code` VARCHAR(20) unique (`BSIT`), `name`, `description`,
+`degree_level` VARCHAR(50), `years_duration` TINYINT, `is_active`.
+
+### `year_levels`
+`name` (`First Year` … `Fourth Year`), `sequence` TINYINT unique.
+
+### `subjects`
+`code` VARCHAR(20) unique (`IT-201`), `title`, `description`,
+`units` DECIMAL(3,1), `lecture_hours` TINYINT, `lab_hours` TINYINT,
+`program_id` FK **nullable** (null = general subject, open to all programs),
+`year_level_id` FK nullable,
+`term_sequence` TINYINT nullable (the term it is normally offered in),
+`is_active`.
+
+### `subject_prerequisites`
+`subject_id`, `prerequisite_subject_id` — composite primary key, both FK → `subjects`.
+Self-referencing. The service layer must reject cycles.
+
+### `rooms`
+`code` unique, `name`, `building`, `capacity` SMALLINT, `type`, `is_active`.
+
+### `sections`
+`code` VARCHAR(20) (`BSIT-2A`), `program_id` FK, `year_level_id` FK, `term_id` FK,
+`capacity` SMALLINT **NOT NULL**, `adviser_user_id` FK nullable, `is_active`.
+Unique `(code, term_id)`. Capacity is enforced on enlistment — see section 8.
+
+### `class_schedules`
+One meeting block of one subject for one section.
+`term_id` FK, `section_id` FK, `subject_id` FK,
+`teacher_user_id` FK nullable (unassigned until the registrar assigns one),
+`room_id` FK nullable, `day_of_week` TINYINT (1 = Monday … 7 = Sunday),
+`start_time` TIME, `end_time` TIME, `status` VARCHAR(20).
+
+Indexes `(term_id, teacher_user_id, day_of_week)` and `(term_id, room_id, day_of_week)`.
+**Time-overlap conflicts cannot be expressed as a UNIQUE index** — teacher and room
+double-booking checks run in the service layer against these indexes. See section 8.
+
+### `teacher_profiles`
+`user_id` FK unique, `employee_number` unique, `department`, `position`,
+`specialization`, `is_active`.
+Added for symmetry with students; the original specification had no teacher table.
+
+---
+
+## 4. Enrollment
+
+### `enrollment_applications`
+| Column | Type | Notes |
+|---|---|---|
+| `application_number` | VARCHAR(20) | unique, see section 9 |
+| `student_id` | FK | RESTRICT |
+| `academic_year_id`, `term_id` | FK | the period applied for |
+| `program_id`, `year_level_id` | FK | what the student applied **for** |
+| `student_type` | VARCHAR(20) | New, Transferee, Continuing, Returning |
+| `application_status` | VARCHAR(30) | axis 1 — see `docs/26` |
+| `payment_status` | VARCHAR(20) | axis 2 — **derived**, see `docs/26` section 3 |
+| `enrollment_state` | VARCHAR(20) | axis 3 — see `docs/26` section 4 |
+| `submitted_at`, `reviewed_at`, `decided_at` | DATETIME | nullable |
+| `reviewed_by` | FK → users | nullable |
+| `remarks` | TEXT | nullable |
+
+A student may hold only one **non-terminal** application per term. MySQL cannot express
+that as a partial unique index, so it is enforced in the service layer.
+Indexes `(application_status, term_id)`, `(term_id, program_id)`.
+
+### `requirement_types`
+The configurable document list from `docs/10`.
+`name`, `description`, `is_required` TINYINT(1),
+`applies_to` VARCHAR(20) (`All`, `New`, `Transferee`, `Continuing`, `Returning`),
+`max_file_size_kb` INT, `allowed_extensions` VARCHAR(100), `sort_order`, `is_active`.
+
+### `term_requirements`
+Per-period override, because `docs/10` gives each enrollment period its own list.
+`term_id` FK, `requirement_type_id` FK, `is_required` TINYINT(1).
+Unique `(term_id, requirement_type_id)`.
+
+### `enrollment_requirements`
+One row per required document per application.
+`application_id` FK, `requirement_type_id` FK,
+`status` VARCHAR(30) (`NOT_SUBMITTED`, `SUBMITTED`, `UNDER_REVIEW`, `VERIFIED`,
+`REJECTED`, `CORRECTION_REQUIRED`),
+`verified_by` FK nullable, `verified_at` DATETIME nullable, `remarks` TEXT.
+Unique `(application_id, requirement_type_id)`.
+
+### `enrollment_requirement_files`
+The uploaded file itself. This replaces the previously listed `student_documents`,
+which duplicated it.
+
+`enrollment_requirement_id` FK,
+`original_filename` VARCHAR(255) — **display only, never used as a path**,
+`stored_filename` VARCHAR(255) — **generated, never the uploaded name**,
+`storage_path` VARCHAR(255) — relative, under `storage/uploads/`,
+`mime_type` VARCHAR(100), `file_size` INT, `checksum` CHAR(64),
+`uploaded_by` FK, `uploaded_at` DATETIME,
+`is_current` TINYINT(1) — a re-upload supersedes rather than overwrites, so history
+survives.
+
+### `enrollment_status_history`
+Written on **every** status transition (`docs/26` section 5).
+`application_id` FK, `axis` VARCHAR(20) (`application`, `payment`, `enrollment`),
+`previous_value` VARCHAR(30) nullable, `new_value` VARCHAR(30),
+`actor_user_id` FK nullable, `actor_role` VARCHAR(30), `remarks` TEXT,
+`created_at` DATETIME. Index `(application_id, created_at)`.
+
+### `enrollments`
+Created only when `enrollment_state` becomes `ENROLLED`.
+`application_id` FK unique, `student_id` FK, `term_id` FK, `section_id` FK,
+`total_units` DECIMAL(4,1), `enrolled_at` DATETIME, `enrolled_by` FK,
+`status` VARCHAR(20). Unique `(student_id, term_id)`.
+
+### `class_enlistments`
+**The link the original specification was missing** — without it, neither a class list
+nor a student schedule can be produced.
+
+`enrollment_id` FK, `class_schedule_id` FK,
+`status` VARCHAR(20) (`ENLISTED`, `DROPPED`), `enlisted_at`, `enlisted_by` FK.
+Unique `(enrollment_id, class_schedule_id)`.
+Index `(class_schedule_id, status)` — drives the teacher's class list.
+
+---
+
+## 5. Academic Records
+
+### `grade_periods`
+`term_id` FK, `name` (`Prelim`, `Midterm`, `Finals`), `sequence` TINYINT,
+`opens_at` DATETIME, `closes_at` DATETIME, `is_open` TINYINT(1).
+Unique `(term_id, sequence)`.
+
+A teacher may submit grades **only while the period is open** (`docs/12`). The registrar
+or Super Admin opens and closes periods; a teacher never can.
+
+### `grades`
+`class_enlistment_id` FK, `grade_period_id` FK,
+`grade` DECIMAL(5,2) nullable, `remarks` VARCHAR(50) (`INC`, `DRP`, `NG`),
+`recorded_by` FK, `recorded_at` DATETIME,
+`updated_by` FK nullable, `updated_at` DATETIME nullable.
+Unique `(class_enlistment_id, grade_period_id)`.
+
+Grades are **updated in place, never deleted**; every change writes an `audit_logs` row
+carrying the old and new value (`docs/12`, `docs/19`).
+
+### `attendance`
+`class_enlistment_id` FK, `class_schedule_id` FK, `attendance_date` DATE,
+`status` VARCHAR(10) (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`), `remarks`,
+`recorded_by` FK, `recorded_at` DATETIME.
+Unique `(class_enlistment_id, attendance_date)` — one record per student per class day.
+Index `(class_schedule_id, attendance_date)`.
+
+---
+
+## 6. Finance
+
+### `fee_types`
+`code` unique, `name`, `description`,
+`is_per_unit` TINYINT(1) (tuition is typically charged per unit),
+`default_amount` DECIMAL(12,2), `is_active`.
+
+### `fee_assessments`
+`assessment_number` VARCHAR(20) unique, `application_id` FK, `student_id` FK,
+`term_id` FK,
+`total_amount` DECIMAL(12,2), `total_adjustments` DECIMAL(12,2) default 0,
+`total_paid` DECIMAL(12,2) default 0, `balance` DECIMAL(12,2),
+`status` VARCHAR(20), `assessed_by` FK, `assessed_at` DATETIME.
+
+`total_paid` and `balance` are **maintained by `FinanceService` inside the payment
+transaction** and are the source of the derived `payment_status` (`docs/26` section 3).
+
+### `fee_items`
+`fee_assessment_id` FK, `fee_type_id` FK, `description`,
+`quantity` DECIMAL(6,2) (units, when per-unit), `unit_amount` DECIMAL(12,2),
+`amount` DECIMAL(12,2).
+
+### `payments`
+`transaction_number` VARCHAR(20) unique, `fee_assessment_id` FK, `student_id` FK,
+`amount` DECIMAL(12,2), `payment_method` VARCHAR(30) (`Cash`, `Bank`, `Online`, `Other`),
+`reference_number` VARCHAR(100) nullable, `paid_at` DATETIME,
+`cashier_user_id` FK, `remarks` TEXT,
+`is_reversed` TINYINT(1) default 0, `reversed_by_payment_id` FK nullable.
+
+**Payments are never deleted or edited** (`docs/14`). A mistake is corrected by a
+reversing entry that points back via `reversed_by_payment_id`.
+
+### `payment_items`
+`payment_id` FK, `fee_item_id` FK, `amount` DECIMAL(12,2) — allocates a payment across
+the assessed items.
+
+### `receipts`
+`receipt_number` VARCHAR(20) unique, `payment_id` FK unique,
+`issued_by` FK, `issued_at` DATETIME, `print_count` INT default 0.
+
+### `financial_adjustments`
+`fee_assessment_id` FK,
+`type` VARCHAR(20) (`DISCOUNT`, `SCHOLARSHIP`, `WAIVER`, `CORRECTION`, `REVERSAL`),
+`amount` DECIMAL(12,2) **signed** (negative reduces the balance),
+`reason` TEXT **required**, `created_by` FK, `approved_by` FK nullable.
+
+### `document_sequences`
+Gapless, collision-free numbering for receipts, transactions, assessments, application
+numbers, and student numbers.
+
+`key` VARCHAR(50) unique (`receipt`, `payment`, `assessment`, `application`, `student`),
+`prefix` VARCHAR(10), `period` VARCHAR(10) (usually the year), `current_number` INT.
+
+Numbers are issued by `SELECT ... FOR UPDATE` on this row **inside the same transaction**
+as the document being created. Two cashiers clicking at the same instant must never
+receive the same receipt number.
+
+---
+
+## 7. Communication and Administration
+
+### `announcements`
+`title`, `slug` unique, `content` TEXT, `category` VARCHAR(50),
+`image_path` VARCHAR(255) nullable,
+`audience` VARCHAR(20) (`EVERYONE`, `TARGETED`),
+`is_public` TINYINT(1) — shows on the public website (`docs/06`),
+`status` VARCHAR(20) (`DRAFT`, `PUBLISHED`, `ARCHIVED`),
+`published_at` DATETIME nullable, `expires_at` DATETIME nullable,
+`author_user_id` FK.
+Index `(status, published_at, expires_at)`.
+
+### `announcement_targets`
+Targeting is multi-valued (`docs/16` allows role, program, and year level), so it is a
+pivot, not a column.
+`announcement_id` FK, `target_type` VARCHAR(20) (`ROLE`, `PROGRAM`, `YEAR_LEVEL`),
+`target_id` BIGINT. Unique `(announcement_id, target_type, target_id)`.
+
+### `notifications`
+`user_id` FK, `type` VARCHAR(50), `title`, `body` TEXT,
+`link_url` VARCHAR(255) nullable (stored as a **relative** path — see `CLAUDE.md`),
+`state` VARCHAR(10) (`UNREAD`, `READ`, `ARCHIVED`), `read_at` DATETIME nullable.
+Index `(user_id, state, created_at)`.
+
+### `downloads`
+Public documents published by administrators (`docs/06`).
+`title`, `description`, `original_filename`, `stored_filename`, `file_size`,
+`mime_type`, `download_count` INT, `is_public` TINYINT(1), `uploaded_by` FK.
+
+### `audit_logs`
+`user_id` FK nullable, `actor_role` VARCHAR(30), `action` VARCHAR(100),
+`module` VARCHAR(50), `target_type` VARCHAR(100) nullable, `target_id` BIGINT nullable,
+`old_values` JSON nullable, `new_values` JSON nullable,
+`ip_address` VARCHAR(45), `user_agent` VARCHAR(255),
+`result` VARCHAR(20) (`SUCCESS`, `FAILURE`), `remarks` TEXT, `created_at` DATETIME.
+
+**Append-only — including for Super Admin.** No `UPDATE` or `DELETE` path exists in the
+application. `old_values` / `new_values` must never contain a password, token, or
+document content.
+Indexes `(user_id, created_at)`, `(module, created_at)`, `(target_type, target_id)`.
+
+### `system_settings`
+`key` VARCHAR(100) unique, `value` TEXT, `type` VARCHAR(20)
+(`string`, `int`, `bool`, `json`), `group` VARCHAR(50), `description`,
+`is_public` TINYINT(1), `updated_by` FK nullable.
+
+### `backups`
+`filename`, `path`, `size_bytes` BIGINT, `type` VARCHAR(20) (`Manual`, `Scheduled`),
+`status` VARCHAR(20) (`Running`, `Completed`, `Failed`), `checksum` CHAR(64),
+`started_at`, `completed_at`, `created_by` FK nullable, `notes` TEXT.
+
+### `migrations`
+`filename` VARCHAR(255) unique, `batch` INT, `applied_at` DATETIME.
+Used by `database/migrate.php`. No `updated_at`.
+
+---
+
+## 8. Integrity rules the schema cannot express
+
+These are enforced in the service layer and must be covered by tests:
+
+1. **Section capacity** — enlisting when `COUNT(class_enlistments WHERE status='ENLISTED')`
+   has reached `sections.capacity` is rejected. Checked inside the enlistment
+   transaction with the section row locked, so two simultaneous enlistments cannot both
+   take the last seat.
+2. **Teacher double-booking** — no teacher may hold two `class_schedules` whose times
+   overlap on the same day within the same term.
+3. **Room double-booking** — the same, per room.
+4. **Student schedule conflict** — a student may not be enlisted in two overlapping
+   class schedules.
+5. **Prerequisites** — a student may not enlist in a subject whose prerequisites are not
+   passed, unless a registrar records an explicit override (written to `audit_logs`).
+6. **Maximum units per term** — `max_units_per_term` system setting; overrides are
+   registrar-only and audited.
+7. **One active academic year** and one active term at a time.
+8. **Class must belong to the enrollment context** (`docs/13`) — a `class_enlistment`'s
+   `class_schedule.term_id` must equal the `enrollment.term_id`.
+9. **One non-terminal application per student per term.**
+10. **`payment_status` is derived** and is written only by
+    `FinanceService::recalculatePaymentStatus()`.
+
+## 9. Identifier formats
+
+| Identifier | Format | Example |
+|---|---|---|
+| Student number | `YYYY-NNNNN` (admission year + sequence) | `2026-00184` |
+| Application number | `APP-YYYY-NNNNN` | `APP-2026-00291` |
+| Assessment number | `ASM-YYYY-NNNNN` | `ASM-2026-00188` |
+| Transaction number | `TXN-YYYY-NNNNNN` | `TXN-2026-001043` |
+| Receipt number | `OR-YYYY-NNNNNN` | `OR-2026-000517` |
+
+All are issued through `document_sequences` (section 6), never by `MAX(id) + 1`.
+
+## 10. Data protection
+
+The database holds birth certificates, guardian contacts, addresses, and birthdates, so
+RA 10173 (Data Privacy Act of 2012) applies.
+
+- Uploaded documents live under `storage/`, are never web-reachable, and are served only
+  through a controller route that authorizes the requester and streams the file.
+- A student's documents are visible to that student, the Registrar, and Super Admin.
+  **Teachers and Cashiers never have access.**
+- Every view or download of a student document writes an `audit_logs` row.
+- `audit_logs` and backups may contain personal data — backups are stored outside the
+  web root with restricted permissions (`docs/20`).
+- Retention: student academic records are permanent (registrar requirement). Uploaded
+  requirement files are retained for **five years** after the last enrolled term, then
+  purged by an administrative action that is itself audited.
+- Password hashes, tokens, and document contents are **never** written to
+  `audit_logs`, `login_logs`, or application logs.
+
+## 11. General rules
+
+- Primary keys on every table; foreign keys wherever a relationship exists.
+- Index every column used for frequent search or filtering, especially the login-log
+  and application-queue indexes called out above.
+- Store no duplicate authoritative data — derive it, or join.
+- Preserve historical records: supersede rows, never overwrite history.
+- Use `DECIMAL` for money, appropriate precision everywhere.
+- Never store a password in any form other than a hash.
