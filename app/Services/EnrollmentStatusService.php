@@ -48,7 +48,7 @@ final class EnrollmentStatusService
         'UNDER_REVIEW>CANCELLED'            => [11, [self::STUDENT, self::REGISTRAR], false, null],
         'REQUIREMENTS_INCOMPLETE>CANCELLED' => [11, [self::STUDENT, self::REGISTRAR], false, null],
         'CORRECTION_REQUIRED>CANCELLED'     => [11, [self::STUDENT, self::REGISTRAR], false, null],
-        'APPROVED>CANCELLED'                => [12, [self::REGISTRAR], true,  'noPaymentRecorded'],
+        'APPROVED>CANCELLED'                => [12, [self::REGISTRAR], true,  'approvedCancellable'],
     ];
 
     /**
@@ -135,6 +135,7 @@ final class EnrollmentStatusService
             Database::update('enrollment_applications', $update, ['id' => $applicationId]);
 
             self::writeHistory($applicationId, 'application', $from, $to, $actor, $remarks);
+            self::applySideEffects($application, $from, $to, $actor, $remarks);
 
             AuditService::log(
                 'enrollment.status_changed',
@@ -151,6 +152,117 @@ final class EnrollmentStatusService
 
             return Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$applicationId]);
         });
+    }
+
+    /**
+     * The enrollment axis (docs/26 section 4): NOT_ENROLLED -> ENROLLED.
+     *
+     * Registrar only; the application must be APPROVED and the payment policy
+     * satisfied. Call it from EnrollmentConfirmationService, which also creates
+     * the enrollment record and issues the student number in the same
+     * transaction — never on its own.
+     *
+     * @return array<string,mixed> the updated application row
+     */
+    public static function transitionEnrollment(int $applicationId, string $to, User $actor): array
+    {
+        return Database::transaction(static function () use ($applicationId, $to, $actor): array {
+            $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ? FOR UPDATE', [$applicationId]);
+            if ($application === null) {
+                throw HttpException::notFound('That application was not found.');
+            }
+
+            $from = (string) $application['enrollment_state'];
+
+            if ("{$from}>{$to}" !== 'NOT_ENROLLED>ENROLLED') {
+                throw ValidationException::withMessage(sprintf(
+                    'Enrollment cannot be changed from %s to %s.',
+                    strtolower(App::label($from)),
+                    strtolower(App::label($to))
+                ));
+            }
+            if (!$actor->isRegistrar()) {
+                throw HttpException::forbidden('Only the registrar can confirm enrollment.');
+            }
+            if ($application['application_status'] !== App::APPROVED) {
+                throw ValidationException::withMessage('Only an approved application can be confirmed for enrollment.');
+            }
+            $paymentProblem = PaymentPolicy::problem($application);
+            if ($paymentProblem !== null) {
+                throw ValidationException::withMessage($paymentProblem);
+            }
+
+            Database::update('enrollment_applications', ['enrollment_state' => $to], ['id' => $applicationId]);
+            self::writeHistory($applicationId, 'enrollment', $from, $to, $actor, null);
+
+            AuditService::log(
+                'enrollment.state_changed',
+                'enrollment',
+                'EnrollmentApplication',
+                $applicationId,
+                ['enrollment_state' => $from],
+                ['enrollment_state' => $to],
+                'SUCCESS',
+                null,
+                $actor->id,
+                $actor->role_name
+            );
+
+            return Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$applicationId]);
+        });
+    }
+
+    /**
+     * Side effects that belong to a transition (docs/26 section 2, last column).
+     * Runs inside the transition's transaction, so they commit or roll back with it.
+     *
+     * @param array<string,mixed> $application the row as locked, before the change
+     */
+    private static function applySideEffects(array $application, string $from, string $to, User $actor, ?string $remarks): void
+    {
+        $id = (int) $application['id'];
+        $number = (string) $application['application_number'];
+        $studentLink = "/student/enrollment/{$id}";
+        $note = ($remarks !== null && $remarks !== '') ? $remarks : null;
+
+        // Rule 3: documents waiting for review are now being reviewed.
+        if ($to === App::UNDER_REVIEW) {
+            Database::query(
+                "UPDATE enrollment_requirements SET status = 'UNDER_REVIEW' WHERE application_id = ? AND status = 'SUBMITTED'",
+                [$id]
+            );
+        }
+
+        // Rules 2, 6, 7: the registrar's queue has new work.
+        if ($to === App::SUBMITTED) {
+            NotificationService::notifyRole(
+                User::ROLE_REGISTRAR,
+                'enrollment.submitted',
+                $from === App::DRAFT ? "New application {$number}" : "Application {$number} was resubmitted",
+                null,
+                "/registrar/applications/{$id}"
+            );
+        }
+
+        // Registrar decisions reach the student.
+        if ($actor->isRegistrar()) {
+            $message = match ($to) {
+                App::REQUIREMENTS_INCOMPLETE => 'Some documents need to be replaced',
+                App::CORRECTION_REQUIRED     => 'Your application needs a correction',
+                App::APPROVED                => 'Your application was approved',
+                App::REJECTED                => 'Your application was not approved',
+                App::CANCELLED               => 'Your application was cancelled by the registrar',
+                default                      => null,
+            };
+            if ($message !== null) {
+                NotificationService::notify((int) $application['owner_user_id'], 'enrollment.' . strtolower($to), "{$message} ({$number})", $note, $studentLink);
+            }
+        }
+
+        // Rule 11 by the student after submission: tell the registrar's office.
+        if ($actor->isStudent() && $to === App::CANCELLED && $from !== App::DRAFT) {
+            NotificationService::notifyRole(User::ROLE_REGISTRAR, 'enrollment.cancelled', "Application {$number} was withdrawn by the student", $note, "/registrar/applications/{$id}");
+        }
     }
 
     /**
@@ -232,9 +344,14 @@ final class EnrollmentStatusService
     /** @param array<string,mixed> $application */
     private static function hasIncompleteRequirement(array $application): ?string
     {
+        // A REQUIRED document that is missing, or ANY document the registrar has
+        // turned back. An optional document nobody uploaded is not a reason to
+        // return an application — every application has some of those.
         $count = (int) Database::scalar(
             "SELECT COUNT(*) FROM enrollment_requirements
-              WHERE application_id = ? AND status IN ('NOT_SUBMITTED', 'REJECTED', 'CORRECTION_REQUIRED')",
+              WHERE application_id = ?
+                AND (status IN ('REJECTED', 'CORRECTION_REQUIRED')
+                     OR (is_required = 1 AND status = 'NOT_SUBMITTED'))",
             [$application['id']]
         );
 
@@ -255,9 +372,20 @@ final class EnrollmentStatusService
         return $count === 0 ? null : 'Every required document must be verified before the application can be approved.';
     }
 
-    /** @param array<string,mixed> $application */
-    private static function noPaymentRecorded(array $application): ?string
+    /**
+     * Rule 12. An enrolled application cannot be cancelled either: that would
+     * leave an enrollment record and student number behind a cancelled
+     * application. Withdrawing an enrolled student is a separate "drop" process,
+     * which is not part of v1.0 (docs/26 section 4).
+     *
+     * @param array<string,mixed> $application
+     */
+    private static function approvedCancellable(array $application): ?string
     {
+        if ($application['enrollment_state'] !== 'NOT_ENROLLED') {
+            return 'This student is already enrolled, so the application cannot be cancelled. Withdrawing an enrolled student is not supported yet.';
+        }
+
         return in_array($application['payment_status'], ['NOT_ASSESSED', 'PENDING'], true)
             ? null
             : 'A payment has already been recorded, so this approved application cannot be cancelled.';

@@ -135,7 +135,7 @@ Self-referencing. The service layer must reject cycles.
 `code` unique, `name`, `building`, `capacity` SMALLINT, `type`, `is_active`.
 
 ### `sections`
-`code` VARCHAR(20) (`BSIT-2A`), `program_id` FK, `year_level_id` FK, `term_id` FK,
+*(Built in migration 012.)* `code` VARCHAR(20) (`BSIT-2A`), `program_id` FK, `year_level_id` FK, `term_id` FK,
 `capacity` SMALLINT **NOT NULL**, `adviser_user_id` FK nullable, `is_active`.
 Unique `(code, term_id)`. Capacity is enforced on enlistment — see section 8.
 
@@ -224,7 +224,8 @@ Written on **every** status transition (`docs/26` section 5).
 `created_at` DATETIME. Index `(application_id, created_at)`.
 
 ### `enrollments`
-Created only when `enrollment_state` becomes `ENROLLED`.
+Created only when `enrollment_state` becomes `ENROLLED`, and only by `EnrollmentConfirmationService`
+(migration 013). `total_units` stays 0 until class enlistment.
 `application_id` FK unique, `student_id` FK, `term_id` FK, `section_id` FK,
 `total_units` DECIMAL(4,1), `enrolled_at` DATETIME, `enrolled_by` FK,
 `status` VARCHAR(20). Unique `(student_id, term_id)`.

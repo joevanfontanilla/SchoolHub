@@ -45,3 +45,16 @@ system setting. A registrar may override this; the override is audited.
 
 ## Active Period
 Exactly one academic year and one term may be active at a time.
+
+## Implemented Catalog Rules
+- Program and subject codes are unique and stored upper-case.
+- Subject units are greater than 0 and at most 10, with at most one decimal place.
+- **Prerequisites** may not include the subject itself, or any subject that already
+  requires it directly or through a chain; the save is refused and names the loop.
+- A **section** belongs to one program, year level, and term; its code is unique within
+  the term. Capacity is 1 to 500 and can never be set below the number already enrolled.
+  Once students are enrolled, its program, year level, and term cannot change.
+- An adviser, when set, must be an active teacher.
+- Programs, subjects, and sections are **deactivated, never deleted**.
+- Enlisting enrolled students into class schedules, with the conflict, prerequisite, and
+  load checks above, arrives with class assignment.

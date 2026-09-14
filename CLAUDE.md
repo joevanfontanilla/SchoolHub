@@ -140,6 +140,19 @@ an **audit log** entry.
 - **Uploads go through `DocumentUploadService`**, which checks extension, `finfo` MIME, and
   magic bytes, stores under a random name, and supersedes instead of deleting. Files are
   served only via `/documents/{id}` and `DocumentAccessPolicy`.
+- **Enrollment confirmation goes only through `EnrollmentConfirmationService::confirm()`.**
+  It is the one place a student number is issued, an `enrollments` row is created, and
+  `enrollment_state` becomes `ENROLLED` — all in one transaction, so a refused
+  confirmation (payment policy, full section, wrong section) leaves no trace and no gap
+  in the number sequence. Payment readiness is `PaymentPolicy::problem()`.
+- **Registrar routes** are `role:Registrar` **plus** a specific `can:` permission, and
+  `tests/registrar_access_test.php` walks the real route table to enforce it. Super Admin
+  is intentionally refused. Document reviews go through `RequirementReviewService`; catalog
+  changes through `CatalogService` (prerequisite cycles and capacity floors are enforced
+  there). The registrar may correct a student's locked legal name via
+  `StudentRecordService`, audited by field name only.
+- **Notifications** are written with `NotificationService` at the moment of the event; the
+  inbox UI comes later. Links are relative paths.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
   calling `session_destroy()`. The latter keeps the old id for the rest of the request while
   deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).

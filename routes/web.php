@@ -20,6 +20,10 @@ use App\Controllers\PublicController;
 use App\Controllers\Registrar\DashboardController as RegistrarDashboard;
 use App\Controllers\DocumentController;
 use App\Controllers\RegisterController;
+use App\Controllers\Registrar\ApplicationController as RegistrarApplications;
+use App\Controllers\Registrar\CatalogController;
+use App\Controllers\Registrar\ConfirmationController;
+use App\Controllers\Registrar\StudentController as RegistrarStudents;
 use App\Controllers\Student\DashboardController as StudentDashboard;
 use App\Controllers\Student\EnrollmentController;
 use App\Controllers\Student\ProfileController;
@@ -89,6 +93,48 @@ $router->post('/student/enrollment/{id}/requirements/{requirementId}/upload', [R
 
 $router->get('/student/requirements', [EnrollmentController::class, 'requirements'], $student, 'student.requirements');
 $router->get('/student/status',       [EnrollmentController::class, 'status'],       $student, 'student.status');
+
+// ---------------------------------------------------------------------------
+// Registrar (Phase 3)
+//
+// Every route: the Registrar role AND the specific permission for the action.
+// Super Admin is deliberately not admitted here (docs/04, docs/26 section 7).
+// ---------------------------------------------------------------------------
+$registrar = static fn (string $permission): array => ['auth', 'role:' . User::ROLE_REGISTRAR, 'can:' . $permission];
+
+$router->get('/registrar/applications',      [RegistrarApplications::class, 'index'], $registrar('enrollment.review'), 'registrar.applications');
+$router->get('/registrar/applications/{id}', [RegistrarApplications::class, 'show'],  $registrar('enrollment.review'), 'registrar.applications.show');
+$router->get('/registrar/applications/{id}/confirm',  [ConfirmationController::class, 'show'],  $registrar('enrollment.confirm'));
+$router->post('/registrar/applications/{id}/confirm', [ConfirmationController::class, 'store'], $registrar('enrollment.confirm'));
+$router->post('/registrar/applications/{id}/start-review',       [RegistrarApplications::class, 'startReview'],       $registrar('enrollment.review'));
+$router->post('/registrar/applications/{id}/return-incomplete',  [RegistrarApplications::class, 'returnIncomplete'],  $registrar('enrollment.approve'));
+$router->post('/registrar/applications/{id}/request-correction', [RegistrarApplications::class, 'requestCorrection'], $registrar('enrollment.approve'));
+$router->post('/registrar/applications/{id}/approve',            [RegistrarApplications::class, 'approve'],           $registrar('enrollment.approve'));
+$router->post('/registrar/applications/{id}/reject',             [RegistrarApplications::class, 'reject'],            $registrar('enrollment.approve'));
+$router->post('/registrar/applications/{id}/cancel',             [RegistrarApplications::class, 'cancel'],            $registrar('enrollment.approve'));
+$router->post('/registrar/requirements/{requirementId}/review',  [RegistrarApplications::class, 'reviewRequirement'], $registrar('requirements.verify'));
+
+$router->get('/registrar/students',       [RegistrarStudents::class, 'index'],  $registrar('students.view'), 'registrar.students');
+$router->get('/registrar/students/{id}',  [RegistrarStudents::class, 'show'],   $registrar('students.view'), 'registrar.students.show');
+$router->post('/registrar/students/{id}', [RegistrarStudents::class, 'update'], $registrar('students.manage'));
+
+$router->get('/registrar/programs',            [CatalogController::class, 'programs'],      $registrar('academic.manage'), 'registrar.programs');
+$router->get('/registrar/programs/create',     [CatalogController::class, 'createProgram'], $registrar('academic.manage'));
+$router->post('/registrar/programs/create',    [CatalogController::class, 'saveProgram'],   $registrar('academic.manage'));
+$router->get('/registrar/programs/{id}/edit',  [CatalogController::class, 'editProgram'],   $registrar('academic.manage'));
+$router->post('/registrar/programs/{id}/edit', [CatalogController::class, 'saveProgram'],   $registrar('academic.manage'));
+
+$router->get('/registrar/subjects',            [CatalogController::class, 'subjects'],      $registrar('academic.manage'), 'registrar.subjects');
+$router->get('/registrar/subjects/create',     [CatalogController::class, 'createSubject'], $registrar('academic.manage'));
+$router->post('/registrar/subjects/create',    [CatalogController::class, 'saveSubject'],   $registrar('academic.manage'));
+$router->get('/registrar/subjects/{id}/edit',  [CatalogController::class, 'editSubject'],   $registrar('academic.manage'));
+$router->post('/registrar/subjects/{id}/edit', [CatalogController::class, 'saveSubject'],   $registrar('academic.manage'));
+
+$router->get('/registrar/sections',            [CatalogController::class, 'sections'],      $registrar('academic.manage'), 'registrar.sections');
+$router->get('/registrar/sections/create',     [CatalogController::class, 'createSection'], $registrar('academic.manage'));
+$router->post('/registrar/sections/create',    [CatalogController::class, 'saveSection'],   $registrar('academic.manage'));
+$router->get('/registrar/sections/{id}/edit',  [CatalogController::class, 'editSection'],   $registrar('academic.manage'));
+$router->post('/registrar/sections/{id}/edit', [CatalogController::class, 'saveSection'],   $registrar('academic.manage'));
 
 // Uploaded requirement documents. Signed-in users only; who may open which
 // file is decided by DocumentAccessPolicy (docs/17 section 10).

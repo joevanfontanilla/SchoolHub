@@ -64,6 +64,10 @@ function testPrefixPattern(): string
 
 function deleteTestUsers(): void
 {
+    // Catalog fixtures first: they may reference fixture users (section advisers)
+    // and must go even when a test created no users.
+    deleteTestCatalog();
+
     $ids = array_column(
         Database::select('SELECT id FROM users WHERE username LIKE ?', [testPrefixPattern()]),
         'id'
@@ -74,6 +78,20 @@ function deleteTestUsers(): void
     }
 
     $in = implode(',', array_fill(0, count($ids), '?'));
+
+    // Notifications addressed to fixture users go with them (FK cascade), but
+    // "new application" notices also reach REAL registrars; remove those by the
+    // fixture application they point at.
+    $fixtureApplicationIds = array_column(Database::select(
+        "SELECT ea.id FROM enrollment_applications ea JOIN students s ON s.id = ea.student_id WHERE s.user_id IN ({$in})",
+        $ids
+    ), 'id');
+    foreach ($fixtureApplicationIds as $applicationId) {
+        Database::query(
+            'DELETE FROM notifications WHERE link_url IN (?, ?)',
+            ["/registrar/applications/{$applicationId}", "/student/enrollment/{$applicationId}"]
+        );
+    }
 
     // Student data, child tables first (the foreign keys are RESTRICT).
     $studentIds = array_column(Database::select("SELECT id FROM students WHERE user_id IN ({$in})", $ids), 'id');
@@ -105,6 +123,7 @@ function deleteTestUsers(): void
                   WHERE er.application_id IN ({$ain})",
                 $applicationIds
             );
+            Database::query("DELETE FROM enrollments WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_requirements WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_status_history WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_applications WHERE id IN ({$ain})", $applicationIds);
@@ -115,11 +134,59 @@ function deleteTestUsers(): void
         Database::query("DELETE FROM students WHERE id IN ({$sin})", $studentIds);
 
         resetApplicationSequence();
+        resetStudentSequence();
     }
+
+    // Again, now that fixture applications no longer hold fixture programs.
+    deleteTestCatalog();
 
     Database::query("DELETE FROM login_logs WHERE user_id IN ({$in})", $ids);
     Database::query("DELETE FROM audit_logs WHERE user_id IN ({$in})", $ids);
     Database::query("DELETE FROM users WHERE id IN ({$in})", $ids);
+}
+
+/** Fixture programs, subjects, and sections use codes starting with this. */
+const TEST_CODE = 'ZZT';
+
+/** Remove fixture catalog rows (codes starting ZZT), children first. */
+function deleteTestCatalog(): void
+{
+    $like = TEST_CODE . '%';
+
+    Database::query(
+        'DELETE e FROM enrollments e JOIN sections sec ON sec.id = e.section_id WHERE sec.code LIKE ?',
+        [$like]
+    );
+    Database::query('DELETE FROM sections WHERE code LIKE ?', [$like]);
+    Database::query(
+        'DELETE sp FROM subject_prerequisites sp JOIN subjects s ON s.id = sp.subject_id WHERE s.code LIKE ?',
+        [$like]
+    );
+    Database::query(
+        'DELETE sp FROM subject_prerequisites sp JOIN subjects s ON s.id = sp.prerequisite_subject_id WHERE s.code LIKE ?',
+        [$like]
+    );
+    Database::query('DELETE FROM subjects WHERE code LIKE ?', [$like]);
+    Database::query(
+        'DELETE FROM programs WHERE code LIKE ? AND id NOT IN (SELECT program_id FROM enrollment_applications)',
+        [$like]
+    );
+}
+
+/** Rewind the student-number counter to the highest number still assigned. */
+function resetStudentSequence(): void
+{
+    $period = date('Y');
+    $highest = (string) Database::scalar(
+        'SELECT MAX(student_number) FROM students WHERE student_number LIKE ?',
+        ["{$period}-%"]
+    );
+    $number = $highest === '' ? 0 : (int) substr($highest, strrpos($highest, '-') + 1);
+
+    Database::query(
+        "UPDATE document_sequences SET current_number = ? WHERE `key` = 'student' AND period = ?",
+        [$number, $period]
+    );
 }
 
 /**
@@ -295,4 +362,63 @@ function statusOf(callable $callback): ?int
         return $e->status();
     }
     return null;
+}
+
+// -- Phase 3 fixtures -----------------------------------------------------------
+
+/** Run a callback with a system setting temporarily changed, always restoring it. */
+function withSetting(string $key, string $value, callable $callback): mixed
+{
+    $original = (string) Database::scalar('SELECT `value` FROM system_settings WHERE `key` = ?', [$key]);
+    App\Models\SystemSetting::set($key, $value);
+    try {
+        return $callback();
+    } finally {
+        App\Models\SystemSetting::set($key, $original);
+    }
+}
+
+/** A fixture section matching an application's program, year level, and term. */
+function makeSectionFor(int $applicationId, int $capacity = 40): int
+{
+    $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$applicationId]);
+
+    return Database::insert('sections', [
+        'code'          => TEST_CODE . strtoupper(bin2hex(random_bytes(3))),
+        'program_id'    => (int) $application['program_id'],
+        'year_level_id' => (int) $application['year_level_id'],
+        'term_id'       => (int) $application['term_id'],
+        'capacity'      => $capacity,
+        'is_active'     => 1,
+    ]);
+}
+
+/** A submitted application whose required documents are all uploaded. @return array{0:User,1:int} */
+function submittedApplication(string $studentType = 'New'): array
+{
+    $student = makeStudent();
+    $id = App\Services\EnrollmentApplicationService::createDraft($student, applicationInput($studentType));
+    uploadAllRequired($student, $id);
+    App\Services\EnrollmentApplicationService::submit($student, $id);
+    return [$student, $id];
+}
+
+/**
+ * An application taken all the way to APPROVED by a registrar through the real
+ * services. @return array{0:User,1:User,2:int} student, registrar, application id
+ */
+function approvedApplication(): array
+{
+    [$student, $id] = submittedApplication();
+    $registrar = makeUser(User::ROLE_REGISTRAR);
+
+    App\Services\EnrollmentStatusService::transition($id, 'UNDER_REVIEW', $registrar);
+    foreach (App\Models\EnrollmentApplication::requirements($id) as $requirement) {
+        if ((int) $requirement['is_required'] === 1) {
+            App\Services\RequirementReviewService::review($registrar, (int) $requirement['id'], 'VERIFIED', null);
+        }
+    }
+    App\Services\EnrollmentStatusService::transition($id, 'APPROVED', $registrar);
+
+    return [$student, $registrar, $id];
 }

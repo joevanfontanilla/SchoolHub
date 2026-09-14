@@ -36,11 +36,11 @@ $nav = match ($user?->role_name) {
     ],
     User::ROLE_REGISTRAR => [
         ['/registrar/dashboard', 'Dashboard', true],
-        ['/registrar/applications', 'Applications', false],
-        ['/registrar/students', 'Students', false],
-        ['/registrar/programs', 'Programs', false],
-        ['/registrar/subjects', 'Subjects', false],
-        ['/registrar/sections', 'Sections', false],
+        ['/registrar/applications', 'Applications', true],
+        ['/registrar/students', 'Students', true],
+        ['/registrar/programs', 'Programs', true],
+        ['/registrar/subjects', 'Subjects', true],
+        ['/registrar/sections', 'Sections', true],
         ['/registrar/reports', 'Reports', false],
     ],
     User::ROLE_CASHIER => [

@@ -127,14 +127,28 @@ final class Router
             : HttpException::notFound();
     }
 
-    private function runMiddleware(array $aliases, Request $request): void
+    /**
+     * The registered routes: method, pattern, and middleware aliases.
+     * Read-only; used by the test suite to check every route's authorization.
+     *
+     * @return array<int,array{method:string,pattern:string,middleware:array<int,string>}>
+     */
+    public function routes(): array
     {
-        // CSRF is verified on every state-changing request, whether or not the
-        // route asked for it. Routes cannot opt out.
-        if ($request->isStateChanging()) {
-            (new VerifyCsrf())->handle($request);
-        }
+        return array_map(
+            static fn (array $r) => ['method' => $r['method'], 'pattern' => $r['pattern'], 'middleware' => $r['middleware']],
+            $this->routes
+        );
+    }
 
+    /**
+     * Run a route's access middleware (everything except CSRF) for a request.
+     * Throws HttpException when access is refused.
+     *
+     * @param array<int,string> $aliases
+     */
+    public function authorize(array $aliases, Request $request): void
+    {
         foreach ($aliases as $alias) {
             [$name, $argument] = array_pad(explode(':', $alias, 2), 2, null);
 
@@ -143,10 +157,21 @@ final class Router
                 throw new \RuntimeException("Unknown middleware alias: {$alias}");
             }
             if ($class === VerifyCsrf::class) {
-                continue; // already applied above
+                continue;
             }
 
             (new $class())->handle($request, $argument);
         }
+    }
+
+    private function runMiddleware(array $aliases, Request $request): void
+    {
+        // CSRF is verified on every state-changing request, whether or not the
+        // route asked for it. Routes cannot opt out.
+        if ($request->isStateChanging()) {
+            (new VerifyCsrf())->handle($request);
+        }
+
+        $this->authorize($aliases, $request);
     }
 }

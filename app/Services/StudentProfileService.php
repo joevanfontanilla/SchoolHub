@@ -43,7 +43,23 @@ final class StudentProfileService
     {
         $student = RegistrationService::ensureStudentRecord($user);
         $studentId = (int) $student['id'];
-        $nameLocked = self::nameLocked($studentId);
+
+        self::save($studentId, $user->id, $input, !self::nameLocked($studentId), $user);
+    }
+
+    /**
+     * Validate and save a profile. Shared by the student's own profile page and
+     * the registrar's record correction, so both follow the same rules.
+     *
+     * @param array<string,mixed> $input
+     * @param bool $allowNameEdit students lose this once an application is submitted;
+     *                            the registrar always has it (docs/04 "manage student records")
+     * @throws ValidationException
+     */
+    public static function save(int $studentId, int $ownerUserId, array $input, bool $allowNameEdit, User $actor): void
+    {
+        $nameLocked = !$allowNameEdit;
+        $user = $actor;
 
         $rules = [
             'birthdate'         => 'required|date|before_today',
@@ -81,7 +97,7 @@ final class StudentProfileService
             throw ValidationException::withErrors($errors);
         }
 
-        Database::transaction(static function () use ($user, $studentId, $input, $guardians, $nameLocked): void {
+        Database::transaction(static function () use ($user, $ownerUserId, $studentId, $input, $guardians, $nameLocked): void {
             $profile = [];
             foreach (self::PROFILE_FIELDS as $field) {
                 $value = trim((string) ($input[$field] ?? ''));
@@ -92,12 +108,18 @@ final class StudentProfileService
             $before = Student::profile($studentId);
             Database::update('student_profiles', $profile, ['student_id' => $studentId]);
 
+            $nameChanged = false;
             if (!$nameLocked) {
-                Database::update('users', [
+                // The STUDENT's account, never the actor's: when the registrar corrects
+                // a record, $user is the registrar.
+                $oldName = Database::selectOne('SELECT first_name, middle_name, last_name FROM users WHERE id = ?', [$ownerUserId]);
+                $newName = [
                     'first_name'  => trim((string) $input['first_name']),
                     'middle_name' => trim((string) ($input['middle_name'] ?? '')) ?: null,
                     'last_name'   => trim((string) $input['last_name']),
-                ], ['id' => $user->id]);
+                ];
+                $nameChanged = $oldName != $newName;
+                Database::update('users', $newName, ['id' => $ownerUserId]);
             }
 
             // Guardians are contact details the student maintains, so the set is
@@ -114,10 +136,21 @@ final class StudentProfileService
                 static fn ($value, $field) => (string) ($before[$field] ?? '') !== (string) ($value ?? ''),
                 ARRAY_FILTER_USE_BOTH
             ));
-            AuditService::log('student.profile_updated', 'students', 'Student', $studentId, null, [
-                'fields_changed'  => $changed,
-                'guardians_saved' => count($guardians),
-            ], 'SUCCESS', null, $user->id, $user->role_name);
+            if ($nameChanged) {
+                $changed[] = 'name';
+            }
+            AuditService::log(
+                $user->id === $ownerUserId ? 'student.profile_updated' : 'student.record_corrected',
+                'students',
+                'Student',
+                $studentId,
+                null,
+                ['fields_changed' => $changed, 'guardians_saved' => count($guardians)],
+                'SUCCESS',
+                null,
+                $user->id,
+                $user->role_name
+            );
         });
     }
 

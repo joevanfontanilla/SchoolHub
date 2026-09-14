@@ -72,6 +72,30 @@
         });
     });
 
+    // A confirmation on one specific submit button, for forms whose buttons do
+    // different things (return, reject, cancel share one reason box).
+    document.querySelectorAll('button[data-confirm-click]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            if (!window.confirm(button.getAttribute('data-confirm-click'))) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    // Filter forms apply as soon as a dropdown changes. The search box still
+    // waits for Enter or its button, so typing does not reload the page.
+    document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {
+        form.querySelectorAll('select').forEach(function (select) {
+            select.addEventListener('change', function () {
+                var page = form.querySelector('input[name="page"]');
+                if (page) {
+                    page.value = '1';
+                }
+                form.submit();
+            });
+        });
+    });
+
     // Warn about an oversized file before it is uploaded, so the student is not
     // left waiting for a multi-megabyte upload the server will refuse anyway.
     // The server still enforces the limit; this is only an early warning.

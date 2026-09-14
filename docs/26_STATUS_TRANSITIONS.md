@@ -42,7 +42,7 @@ with a validation error — not silently ignored.
 | 1 | *(none)* | `DRAFT` | Student (own) | No existing non-terminal application for the same academic year + term | Application row created |
 | 2 | `DRAFT` | `SUBMITTED` | Student (own) | Profile complete; program, year level, term selected; every **required** requirement has a file `SUBMITTED` | Notify registrar queue; lock student edits |
 | 3 | `SUBMITTED` | `UNDER_REVIEW` | Registrar | — | Reviewer recorded on the application |
-| 4 | `UNDER_REVIEW` | `REQUIREMENTS_INCOMPLETE` | Registrar | At least one requirement is `NOT_SUBMITTED`, `REJECTED`, or `CORRECTION_REQUIRED` | Remarks required; unlock student uploads; notify student |
+| 4 | `UNDER_REVIEW` | `REQUIREMENTS_INCOMPLETE` | Registrar | At least one **required** requirement is `NOT_SUBMITTED`, or any requirement is `REJECTED` or `CORRECTION_REQUIRED` (an optional document nobody uploaded does not count) | Remarks required; unlock student uploads; notify student |
 | 5 | `UNDER_REVIEW` | `CORRECTION_REQUIRED` | Registrar | — | Remarks required; unlock student form edits; notify student |
 | 6 | `REQUIREMENTS_INCOMPLETE` | `SUBMITTED` | Student (own) | All required requirements `SUBMITTED` or `VERIFIED` | Re-queue; lock student edits |
 | 7 | `CORRECTION_REQUIRED` | `SUBMITTED` | Student (own) | Form passes validation | Re-queue; lock student edits |
@@ -50,7 +50,7 @@ with a validation error — not silently ignored.
 | 9 | `UNDER_REVIEW` | `REJECTED` | Registrar | Reason required | Notify student. Terminal. |
 | 10 | `DRAFT` | `CANCELLED` | Student (own) | — | Terminal |
 | 11 | `SUBMITTED`, `UNDER_REVIEW`, `REQUIREMENTS_INCOMPLETE`, `CORRECTION_REQUIRED` | `CANCELLED` | Student (own) or Registrar | — | Notify the other party. Terminal. |
-| 12 | `APPROVED` | `CANCELLED` | Registrar | **No payment recorded** (`payment_status` is `PENDING`) | Void the assessment; notify student. Terminal. |
+| 12 | `APPROVED` | `CANCELLED` | Registrar | **No payment recorded** (`payment_status` is `NOT_ASSESSED` or `PENDING`) **and not yet enrolled** (`enrollment_state` is `NOT_ENROLLED`) | Void the assessment; notify student. Terminal. |
 
 **Terminal states:** `REJECTED` and `CANCELLED`. Nothing leaves them. A student who
 needs to try again files a **new** application; the old one stays for history.
@@ -128,3 +128,20 @@ registrar (`docs/04`), so it cannot review, approve, reject, or cancel applicati
   arrives with the finance module. Until then approval sets only `decided_at`.
 - The `enrollment_state` transition (`NOT_ENROLLED` to `ENROLLED`) arrives with enrollment
   confirmation, which also issues the student number.
+
+## 9. Implemented enrollment confirmation (supersedes the "not yet wired" note in section 8 for the enrollment axis)
+`NOT_ENROLLED` to `ENROLLED` is performed only by `EnrollmentConfirmationService`, together
+with section assignment, student-number issuance, and the enrollment record, in one
+transaction. The payment check (`PaymentPolicy`) reads the `enrollment_payment_policy`
+setting:
+
+| Policy | Confirmation allowed when |
+|---|---|
+| `NONE` | always |
+| `FULL` | `payment_status` is `PAID` |
+| `MINIMUM_DOWNPAYMENT` (default) | `payment_status` is `PARTIAL` or `PAID` |
+
+Until the finance module records payments, `payment_status` stays `NOT_ASSESSED`, so under
+`FULL` or `MINIMUM_DOWNPAYMENT` confirmation correctly waits for payment. The finance module
+adds the minimum-percentage check against the assessment total. Registrar side effects that
+write student notifications are live for rules 4, 5, 8, 9, 11, and 12, and for confirmation.

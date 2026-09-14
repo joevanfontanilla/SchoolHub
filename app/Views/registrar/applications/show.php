@@ -1,0 +1,271 @@
+<?php
+/**
+ * Registrar review of one application (docs/11 "Application Review").
+ *
+ * Shows everything docs/11 lists: student information, academic selection,
+ * uploaded requirements, previous applications, the review timeline, remarks,
+ * and the current status. Buttons mirror EnrollmentStatusService's rules; the
+ * server re-checks every one.
+ *
+ * @var array  $application
+ * @var array  $student
+ * @var array  $profile
+ * @var array  $guardians
+ * @var array  $requirements
+ * @var array  $history
+ * @var array  $otherApps
+ * @var array  $targets
+ * @var ?string $paymentProblem
+ * @var ?array $enrollment
+ */
+use App\Models\EnrollmentApplication as Application;
+use App\Models\Download;
+
+$id = (int) $application['id'];
+$status = $application['application_status'];
+$reviewing = $status === Application::UNDER_REVIEW;
+// Once enrolled, the application can no longer be cancelled (rule 12's
+// precondition); don't offer a button the server will refuse.
+if ($application['enrollment_state'] !== 'NOT_ENROLLED') {
+    $targets = array_values(array_diff($targets, [Application::CANCELLED]));
+}
+$can = static fn (string $target) => in_array($target, $targets, true);
+
+$required = array_filter($requirements, static fn ($r) => (int) $r['is_required'] === 1);
+$verified = array_filter($required, static fn ($r) => $r['status'] === 'VERIFIED');
+$turnedBack = array_filter($requirements, static fn ($r) => in_array($r['status'], ['REJECTED', 'CORRECTION_REQUIRED'], true));
+$allVerified = count($required) > 0 && count($verified) === count($required);
+
+$fullName = trim($student['first_name'] . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . $student['last_name']);
+$emergency = array_values(array_filter($guardians, static fn ($g) => (int) $g['is_emergency_contact'] === 1))[0] ?? ($guardians[0] ?? null);
+$address = implode(', ', array_filter([$profile['street'] ?? null, $profile['barangay'] ?? null, $profile['city_municipality'] ?? null, $profile['province'] ?? null]));
+$oldRemarksFor = (int) old('remarks_for', 0);
+?>
+<div class="space-y-6">
+    <a href="<?= e(url('/registrar/applications')) ?>" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">&larr; Application queue</a>
+
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <p class="eyebrow">Application <?= e($application['application_number']) ?></p>
+            <h2 class="mt-1 text-2xl"><?= e($fullName) ?></h2>
+            <p class="mt-1 text-sm text-slate-600">
+                <?= e($application['program_code']) ?> · <?= e($application['year_level_name']) ?> · <?= e($application['student_type']) ?>
+                · <?= e($application['term_name']) ?>, A.Y. <?= e($application['academic_year_code']) ?>
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <?= component('status-badge', ['status' => $status, 'size' => 'md']) ?>
+            <?= component('status-badge', ['status' => $application['enrollment_state'], 'size' => 'md']) ?>
+        </div>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+        <!-- Left: the applicant and their documents -->
+        <div class="space-y-6 lg:col-span-2">
+            <section class="card" aria-labelledby="applicant-heading">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
+                    <h2 id="applicant-heading" class="text-base">Applicant</h2>
+                    <a href="<?= e(url('/registrar/students/' . $student['id'])) ?>" class="text-sm font-semibold text-brand-600 hover:underline">Open student record</a>
+                </div>
+                <dl class="grid gap-x-6 gap-y-4 px-5 py-5 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                    <?php foreach ([
+                        'Student number' => $student['student_number'] ?? 'Issued on confirmation',
+                        'Email'          => $student['email'],
+                        'Mobile'         => $profile['mobile'] ?? '—',
+                        'Date of birth'  => d($profile['birthdate'] ?? null),
+                        'Sex'            => $profile['sex'] ?? '—',
+                        'Civil status'   => $profile['civil_status'] ?? '—',
+                        'Nationality'    => $profile['nationality'] ?? '—',
+                        'Address'        => $address !== '' ? $address : '—',
+                    ] as $label => $value): ?>
+                        <div class="<?= $label === 'Address' ? 'sm:col-span-2' : '' ?>">
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-brand-gray"><?= e($label) ?></dt>
+                            <dd class="mt-1 break-words text-slate-800"><?= e($value) ?></dd>
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <dt class="text-xs font-semibold uppercase tracking-wider text-brand-gray">Emergency contact</dt>
+                        <dd class="mt-1 text-slate-800">
+                            <?= $emergency !== null ? e($emergency['full_name'] . ' (' . $emergency['relationship'] . ') · ' . $emergency['mobile']) : '—' ?>
+                        </dd>
+                    </div>
+                    <?php if (!empty($application['previous_school'])): ?>
+                        <div class="sm:col-span-2 lg:col-span-3">
+                            <dt class="text-xs font-semibold uppercase tracking-wider text-brand-gray">Previous school</dt>
+                            <dd class="mt-1 text-slate-800">
+                                <?= e($application['previous_school']) ?><?= !empty($application['last_school_year']) ? ' (' . e($application['last_school_year']) . ')' : '' ?>
+                            </dd>
+                        </div>
+                    <?php endif; ?>
+                </dl>
+            </section>
+
+            <section class="card" aria-labelledby="documents-heading">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <h2 id="documents-heading" class="text-base">Documents</h2>
+                        <p class="mt-0.5 text-sm text-brand-gray"><?= e(count($verified)) ?> of <?= e(count($required)) ?> required documents verified</p>
+                    </div>
+                    <?php if (!$reviewing && $status === Application::SUBMITTED): ?>
+                        <p class="text-sm text-slate-600">Start the review to verify documents.</p>
+                    <?php endif; ?>
+                </div>
+
+                <ul class="divide-y divide-slate-100">
+                    <?php foreach ($requirements as $requirement): ?>
+                        <?php $rid = (int) $requirement['id']; ?>
+                        <li id="requirement-<?= e($rid) ?>" class="scroll-mt-24 px-5 py-5">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h3 class="text-sm">
+                                        <?= e($requirement['name']) ?>
+                                        <span class="ml-1 font-sans text-xs font-medium <?= (int) $requirement['is_required'] === 1 ? 'text-danger-text' : 'text-brand-gray' ?>">
+                                            <?= (int) $requirement['is_required'] === 1 ? 'Required' : 'Optional' ?>
+                                        </span>
+                                    </h3>
+                                    <?php if (!empty($requirement['file_id'])): ?>
+                                        <p class="mt-1.5 text-sm">
+                                            <a href="<?= e(url('/documents/' . $requirement['file_id'])) ?>" class="font-medium text-brand-600 hover:underline">
+                                                Open <?= e($requirement['original_filename']) ?>
+                                            </a>
+                                            <span class="text-brand-gray">· <?= e(Download::humanSize((int) $requirement['file_size'])) ?> · <?= e(dt($requirement['uploaded_at'])) ?></span>
+                                        </p>
+                                    <?php else: ?>
+                                        <p class="mt-1.5 text-sm text-brand-gray">Nothing uploaded.</p>
+                                    <?php endif; ?>
+                                    <?php if (!empty($requirement['remarks'])): ?>
+                                        <p class="mt-2 rounded-lg border border-warning-line bg-warning-bg px-3 py-2 text-sm text-warning-text">
+                                            <span class="font-semibold">Note to student:</span> <?= e($requirement['remarks']) ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                                <?= component('status-badge', ['status' => $requirement['status']]) ?>
+                            </div>
+
+                            <?php if ($reviewing && !empty($requirement['file_id'])): ?>
+                                <form method="POST" action="<?= e(url("/registrar/requirements/{$rid}/review")) ?>" class="mt-3 space-y-3" data-allow-resubmit>
+                                    <?= csrf_field() ?>
+                                    <label for="remarks-<?= e($rid) ?>" class="sr-only">Note to the student about <?= e($requirement['name']) ?></label>
+                                    <textarea id="remarks-<?= e($rid) ?>" name="remarks" rows="2" maxlength="1000" class="field-input"
+                                              placeholder="Note to the student (required to reject or ask for a correction)"><?= $oldRemarksFor === $rid ? e(old('remarks')) : '' ?></textarea>
+                                    <div class="flex flex-wrap gap-2">
+                                        <?php if ($requirement['status'] !== 'VERIFIED'): ?>
+                                            <button type="submit" name="decision" value="VERIFIED" class="btn border border-success-line bg-success-bg text-success-text hover:brightness-95">Verify</button>
+                                        <?php endif; ?>
+                                        <button type="submit" name="decision" value="CORRECTION_REQUIRED" class="btn border border-warning-line bg-white text-warning-text hover:bg-warning-bg">Needs correction</button>
+                                        <button type="submit" name="decision" value="REJECTED" class="btn border border-danger-line bg-white text-danger-text hover:bg-danger-bg">Reject</button>
+                                    </div>
+                                </form>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+        </div>
+
+        <!-- Right: decisions and history -->
+        <div class="space-y-6">
+            <section class="card p-5" aria-labelledby="decision-heading">
+                <h2 id="decision-heading" class="text-base">Decision</h2>
+
+                <?php if ($enrollment !== null): ?>
+                    <div class="mt-3 rounded-lg border border-success-line bg-success-bg px-4 py-3 text-sm text-success-text">
+                        <p class="font-semibold">Enrolled in section <?= e($enrollment['section_code']) ?></p>
+                        <p class="mt-0.5">Student number <?= e($student['student_number']) ?> · <?= e(dt($enrollment['enrolled_at'])) ?></p>
+                    </div>
+                <?php elseif ($status === Application::APPROVED): ?>
+                    <?php if ($paymentProblem !== null): ?>
+                        <p class="mt-3 rounded-lg border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text"><?= e($paymentProblem) ?></p>
+                    <?php endif; ?>
+                    <a href="<?= e(url("/registrar/applications/{$id}/confirm")) ?>" class="btn-primary mt-3 w-full">Confirm enrollment</a>
+                <?php endif; ?>
+
+                <?php if ($can(Application::UNDER_REVIEW)): ?>
+                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/start-review")) ?>" class="mt-3">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn-primary w-full">Start review</button>
+                        <p class="mt-2 text-xs text-brand-gray">Marks the documents as under review so you can verify them.</p>
+                    </form>
+                <?php endif; ?>
+
+                <?php if ($can(Application::APPROVED)): ?>
+                    <div class="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm">
+                        <p class="<?= $allVerified ? 'text-success-text' : 'text-slate-700' ?>">
+                            <span aria-hidden="true"><?= $allVerified ? '✓' : '•' ?></span>
+                            <?= e(count($verified)) ?> of <?= e(count($required)) ?> required documents verified
+                        </p>
+                        <?php if ($turnedBack !== []): ?>
+                            <p class="mt-1 text-warning-text"><span aria-hidden="true">!</span> <?= e(count($turnedBack)) ?> document<?= count($turnedBack) === 1 ? '' : 's' ?> turned back</p>
+                        <?php endif; ?>
+                    </div>
+                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/approve")) ?>" class="mt-3"
+                          data-confirm="Approve this application? The student will be notified.">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn w-full bg-success-text text-white hover:brightness-110" <?= $allVerified ? '' : 'aria-describedby="approve-hint"' ?>>Approve</button>
+                        <?php if (!$allVerified): ?>
+                            <p id="approve-hint" class="mt-2 text-xs text-brand-gray">Every required document must be verified first.</p>
+                        <?php endif; ?>
+                    </form>
+                <?php endif; ?>
+
+                <?php $returnTargets = array_values(array_filter([Application::REQUIREMENTS_INCOMPLETE, Application::CORRECTION_REQUIRED, Application::REJECTED, Application::CANCELLED], $can)); ?>
+                <?php if ($returnTargets !== []): ?>
+                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/reject")) ?>" class="mt-5 space-y-3 border-t border-slate-200 pt-4" data-allow-resubmit>
+                        <?= csrf_field() ?>
+                        <?php $remarksError = error_for('remarks'); ?>
+                        <label for="decision-remarks" class="field-label">Reason <span class="font-normal text-brand-gray">(shown to the student)</span></label>
+                        <textarea id="decision-remarks" name="remarks" rows="3" maxlength="1000"
+                                  class="field-input <?= $remarksError && $oldRemarksFor === 0 ? 'field-input-error' : '' ?>"><?= $oldRemarksFor === 0 ? e(old('remarks')) : '' ?></textarea>
+                        <?php if ($remarksError && $oldRemarksFor === 0): ?>
+                            <p class="field-error"><span><?= e($remarksError) ?></span></p>
+                        <?php endif; ?>
+                        <div class="grid gap-2">
+                            <?php foreach ([
+                                Application::REQUIREMENTS_INCOMPLETE => ['return-incomplete', 'Return: replace documents', 'border-warning-line text-warning-text hover:bg-warning-bg', 'Return the application so the student can replace the turned-back documents?'],
+                                Application::CORRECTION_REQUIRED     => ['request-correction', 'Return: correct details', 'border-warning-line text-warning-text hover:bg-warning-bg', 'Return the application so the student can correct their details?'],
+                                Application::REJECTED                => ['reject', 'Reject application', 'border-danger-line text-danger-text hover:bg-danger-bg', 'Reject this application? This cannot be undone.'],
+                                Application::CANCELLED               => ['cancel', 'Cancel application', 'border-slate-300 text-slate-700 hover:bg-slate-50', 'Cancel this application? This cannot be undone.'],
+                            ] as $target => [$action, $label, $classes, $confirm]): ?>
+                                <?php if ($can($target)): ?>
+                                    <button type="submit" formaction="<?= e(url("/registrar/applications/{$id}/{$action}")) ?>"
+                                            data-confirm-click="<?= e($confirm) ?>"
+                                            class="btn w-full border bg-white <?= $classes ?>"><?= e($label) ?></button>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    </form>
+                <?php endif; ?>
+
+                <?php if ($targets === [] && $enrollment === null && $status !== Application::APPROVED): ?>
+                    <p class="mt-3 text-sm text-slate-600">
+                        <?= match ($status) {
+                            Application::REQUIREMENTS_INCOMPLETE, Application::CORRECTION_REQUIRED => 'Waiting for the student to resubmit.',
+                            Application::REJECTED  => 'This application was rejected.',
+                            Application::CANCELLED => 'This application was cancelled.',
+                            default                => 'No action is available.',
+                        } ?>
+                    </p>
+                <?php endif; ?>
+            </section>
+
+            <?= partial('enrollment/timeline', ['history' => $history]) ?>
+
+            <?php if ($otherApps !== []): ?>
+                <section class="card" aria-labelledby="other-heading">
+                    <h2 id="other-heading" class="border-b border-slate-200 px-5 py-4 text-base">Previous applications</h2>
+                    <ul class="divide-y divide-slate-100">
+                        <?php foreach ($otherApps as $other): ?>
+                            <li class="flex items-center justify-between gap-3 px-5 py-3 text-sm">
+                                <div>
+                                    <a href="<?= e(url('/registrar/applications/' . $other['id'])) ?>" class="font-semibold text-brand-600 hover:underline"><?= e($other['application_number']) ?></a>
+                                    <p class="text-xs text-brand-gray"><?= e($other['term_name']) ?>, <?= e($other['academic_year_code']) ?></p>
+                                </div>
+                                <?= component('status-badge', ['status' => $other['application_status']]) ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </section>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>

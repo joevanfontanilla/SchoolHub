@@ -8,26 +8,30 @@ use App\Controllers\Controller;
 use App\Core\Auth;
 use App\Core\Request;
 use App\Models\Announcement;
-use App\Models\Program;
+use App\Models\RegistrarQueue;
 
 /**
- * Registrar dashboard (docs/11). The application queue arrives in Phase 3.
+ * Registrar dashboard (docs/11): what needs attention, and the queue itself.
  */
 final class DashboardController extends Controller
 {
     public function index(Request $request): void
     {
-        $user = Auth::user();
+        $counts = RegistrarQueue::counts();
+        $needsAction = $counts['submitted'] + $counts['under_review'];
 
         $this->appView('dashboards/registrar', [
             'title'         => 'Dashboard',
-            'announcements' => Announcement::forUser($user, 5),
+            'announcements' => Announcement::forUser(Auth::user(), 5),
+            'queue'         => RegistrarQueue::applications(['status' => 'action'], 1)['rows'],
             'cards'         => [
-                ['label' => 'New applications',     'value' => '0', 'hint' => 'Awaiting review',            'tone' => 'neutral'],
-                ['label' => 'Pending review',       'value' => '0', 'hint' => 'In progress',                'tone' => 'neutral'],
-                ['label' => 'Incomplete requirements', 'value' => '0', 'hint' => 'Returned to students',    'tone' => 'neutral'],
-                ['label' => 'Active programs',      'value' => (string) Program::count(), 'hint' => 'Offered this year', 'tone' => 'neutral'],
+                ['label' => 'New applications', 'value' => (string) $counts['submitted'], 'hint' => 'Not yet opened', 'tone' => $counts['submitted'] > 0 ? 'warning' : 'neutral'],
+                ['label' => 'Under review', 'value' => (string) $counts['under_review'], 'hint' => 'Review in progress', 'tone' => 'neutral'],
+                ['label' => 'Returned to students', 'value' => (string) $counts['returned'], 'hint' => 'Waiting for resubmission', 'tone' => 'neutral'],
+                ['label' => 'Awaiting confirmation', 'value' => (string) $counts['awaiting_confirmation'], 'hint' => 'Approved, not yet enrolled', 'tone' => $counts['awaiting_confirmation'] > 0 ? 'warning' : 'neutral'],
             ],
+            'needsAction'   => $needsAction,
+            'enrolled'      => $counts['enrolled'],
         ]);
     }
 }
