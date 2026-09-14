@@ -19,7 +19,9 @@ Server-rendered. No SPA framework.
 # PHP is not on PATH — XAMPP's binary is at C:\xampp\php\php.exe
 php database/migrate.php            # apply pending migrations (idempotent)
 php database/migrate.php --status   # show applied / pending
-php database/seed.php               # roles, permissions, system settings (idempotent)
+php database/seed.php               # roles, permissions, settings, programs, terms (idempotent)
+php database/import_curricula.php   # the six curricula from database/seeds/curricula (skips existing)
+php database/import_curricula.php --check   # validate the curriculum files; writes nothing
 php database/create_admin.php       # interactively create the first Super Admin
 php database/backup.php             # manual database backup
 
@@ -151,6 +153,23 @@ an **audit log** entry.
   changes through `CatalogService` (prerequisite cycles and capacity floors are enforced
   there). The registrar may correct a student's locked legal name via
   `StudentRecordService`, audited by field name only.
+- **Curricula (docs/28).** Subjects belong to a curriculum; **a subject code is unique within its
+  curriculum, not school-wide** (`CORE 1` means different subjects in BSA and BPA), so never
+  look a subject up by code alone. A subject's curriculum never changes, and prerequisites
+  come from the same curriculum or the general subjects. The six school curricula are data
+  files imported by `CurriculumImporter`, which never overwrites; the open questions for the
+  registrar are listed in docs/28.
+- **Classes (docs/13).** A class is `class_schedules` (section + subject + teacher) plus its weekly
+  `class_meetings`; one class meeting on two days is still one class. Build and close classes only
+  through `ClassScheduleService`, which refuses teacher, room, section, and student overlaps.
+  **Only `EnlistmentService` writes `class_enlistments`**: block enlistment at confirmation, and
+  registrar add/drop. Prerequisite, progress, and load problems are overridable with a reason;
+  a time conflict never is. Drops keep the row. The unit limit is `EnlistmentService::unitLimit()`.
+- **Grades (docs/27).** All grade arithmetic is in `GradeCalculator`, and the final grade is computed,
+  never stored. Teachers record grades through `GradingService` and attendance through
+  `AttendanceService`; both find the class with `GradingService::ownedClass()`, so another
+  teacher's class is a **404**. Only the registrar opens and closes grading periods, and the
+  registrar never enters grades.
 - **Notifications** are written with `NotificationService` at the moment of the event; the
   inbox UI comes later. Links are relative paths.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
@@ -225,6 +244,13 @@ an icon — status is never color alone (docs/21).
 uploaded bytes; the application-number counter is rewound so real numbering has no gaps.
 When matching the prefix with `LIKE`, use `testPrefixPattern()` — an unescaped `_` is a
 wildcard and would match (and delete) real accounts.
+
+Catalog fixtures (sections, rooms, programs, curricula) use codes starting `ZZT`, and fixture
+subjects have a `ZZT` code or belong to a `ZZT` curriculum; `deleteTestCatalog()` removes them with
+their classes, enlistments, grades, and attendance. Phase 4 fixtures: `enrolledStudent()`,
+`makeClass()`, `meeting()`, `makeSubject()`, `makeRoom()`. Tests that open or re-weight a real term's
+grading periods must run inside `withGradePeriods()`, which restores them. Attendance tests use
+`currentTermId()` and `lastWeekday()`, because a date in the future or outside the term is refused.
 
 Upload tests use `UploadedFile::forTesting()`, which is refused outside the CLI. Real HTTP
 uploads (`move_uploaded_file`) are verified end-to-end through Apache with `curl -F`.

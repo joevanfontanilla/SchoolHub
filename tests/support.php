@@ -123,6 +123,11 @@ function deleteTestUsers(): void
                   WHERE er.application_id IN ({$ain})",
                 $applicationIds
             );
+            // Anything recorded against a fixture enrollment, even in a real class.
+            $enlistments = "SELECT ce.id FROM class_enlistments ce JOIN enrollments en ON en.id = ce.enrollment_id WHERE en.application_id IN ({$ain})";
+            Database::query("DELETE FROM attendance WHERE class_enlistment_id IN ({$enlistments})", $applicationIds);
+            Database::query("DELETE FROM grades WHERE class_enlistment_id IN ({$enlistments})", $applicationIds);
+            Database::query("DELETE ce FROM class_enlistments ce JOIN enrollments en ON en.id = ce.enrollment_id WHERE en.application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollments WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_requirements WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_status_history WHERE application_id IN ({$ain})", $applicationIds);
@@ -148,25 +153,49 @@ function deleteTestUsers(): void
 /** Fixture programs, subjects, and sections use codes starting with this. */
 const TEST_CODE = 'ZZT';
 
-/** Remove fixture catalog rows (codes starting ZZT), children first. */
+/**
+ * Remove fixture catalog rows, children first. Fixture sections, rooms, programs,
+ * and curricula have codes starting ZZT; fixture subjects either have a ZZT code
+ * or belong to a ZZT curriculum (so a test can use real-looking codes like CORE 1).
+ */
 function deleteTestCatalog(): void
 {
     $like = TEST_CODE . '%';
+
+    // Classes of fixture sections, or of fixture subjects, with everything recorded on them.
+    $fixtureClasses = 'SELECT cs.id FROM class_schedules cs
+                         JOIN sections sec ON sec.id = cs.section_id
+                         JOIN subjects sub ON sub.id = cs.subject_id
+                    LEFT JOIN curricula cur ON cur.id = sub.curriculum_id
+                        WHERE sec.code LIKE ? OR sub.code LIKE ? OR cur.code LIKE ?';
+    $classIds = array_column(Database::select($fixtureClasses, [$like, $like, $like]), 'id');
+    if ($classIds !== []) {
+        $in = implode(',', array_fill(0, count($classIds), '?'));
+        Database::query("DELETE a FROM attendance a JOIN class_enlistments ce ON ce.id = a.class_enlistment_id WHERE ce.class_schedule_id IN ({$in})", $classIds);
+        Database::query("DELETE g FROM grades g JOIN class_enlistments ce ON ce.id = g.class_enlistment_id WHERE ce.class_schedule_id IN ({$in})", $classIds);
+        Database::query("DELETE FROM class_enlistments WHERE class_schedule_id IN ({$in})", $classIds);
+        Database::query("DELETE FROM class_meetings WHERE class_schedule_id IN ({$in})", $classIds);
+        Database::query("DELETE FROM class_schedules WHERE id IN ({$in})", $classIds);
+    }
+    Database::query('DELETE FROM class_meetings WHERE room_id IN (SELECT id FROM rooms WHERE code LIKE ?)', [$like]);
+    Database::query('DELETE FROM rooms WHERE code LIKE ?', [$like]);
 
     Database::query(
         'DELETE e FROM enrollments e JOIN sections sec ON sec.id = e.section_id WHERE sec.code LIKE ?',
         [$like]
     );
     Database::query('DELETE FROM sections WHERE code LIKE ?', [$like]);
-    Database::query(
-        'DELETE sp FROM subject_prerequisites sp JOIN subjects s ON s.id = sp.subject_id WHERE s.code LIKE ?',
-        [$like]
-    );
-    Database::query(
-        'DELETE sp FROM subject_prerequisites sp JOIN subjects s ON s.id = sp.prerequisite_subject_id WHERE s.code LIKE ?',
-        [$like]
-    );
-    Database::query('DELETE FROM subjects WHERE code LIKE ?', [$like]);
+
+    $fixtureSubjects = 'SELECT s.id FROM subjects s LEFT JOIN curricula c ON c.id = s.curriculum_id WHERE s.code LIKE ? OR c.code LIKE ?';
+    $subjectIds = array_column(Database::select($fixtureSubjects, [$like, $like]), 'id');
+    if ($subjectIds !== []) {
+        $in = implode(',', array_fill(0, count($subjectIds), '?'));
+        Database::query("DELETE FROM subject_prerequisites WHERE subject_id IN ({$in}) OR prerequisite_subject_id IN ({$in})", array_merge($subjectIds, $subjectIds));
+        Database::query("DELETE FROM subjects WHERE id IN ({$in})", $subjectIds);
+    }
+
+    Database::query('UPDATE students SET curriculum_id = NULL WHERE curriculum_id IN (SELECT id FROM curricula WHERE code LIKE ?)', [$like]);
+    Database::query('DELETE FROM curricula WHERE code LIKE ?', [$like]);
     Database::query(
         'DELETE FROM programs WHERE code LIKE ? AND id NOT IN (SELECT program_id FROM enrollment_applications)',
         [$like]
@@ -421,4 +450,155 @@ function approvedApplication(): array
     App\Services\EnrollmentStatusService::transition($id, 'APPROVED', $registrar);
 
     return [$student, $registrar, $id];
+}
+
+// -- Catalog fixtures -----------------------------------------------------------
+
+/** A unique fixture code: ZZT + suffix + random hex. */
+function testCode(string $suffix): string
+{
+    return TEST_CODE . strtoupper($suffix) . strtoupper(bin2hex(random_bytes(2)));
+}
+
+/** @return array<string,array<int,string>> the field errors a callback produced */
+function fieldErrors(callable $callback): array
+{
+    try {
+        $callback();
+    } catch (App\Core\ValidationException $e) {
+        return $e->errors();
+    }
+    return [];
+}
+
+// -- Phase 4 fixtures -----------------------------------------------------------
+
+/** The term that contains today. Attendance can only be taken in a term that has started. */
+function currentTermId(): int
+{
+    $id = Database::scalar('SELECT id FROM terms WHERE CURDATE() BETWEEN start_date AND end_date ORDER BY start_date LIMIT 1');
+    if ($id === null) {
+        throw new RuntimeException('No term contains today. Run: php database/seed.php');
+    }
+    return (int) $id;
+}
+
+/**
+ * A student confirmed into a section, through the real services. With no section
+ * given, a fresh fixture section is made; a given section's program, year level,
+ * and term are copied onto the application first (fixture setup).
+ *
+ * @return array{student:User,registrar:User,application_id:int,section_id:int,enrollment_id:int,student_id:int}
+ */
+function enrolledStudent(?int $termId = null, ?int $sectionId = null): array
+{
+    [$student, $registrar, $applicationId] = approvedApplication();
+
+    if ($sectionId !== null) {
+        $section = Database::selectOne('SELECT * FROM sections WHERE id = ?', [$sectionId]);
+        Database::update('enrollment_applications', [
+            'program_id' => $section['program_id'], 'year_level_id' => $section['year_level_id'], 'term_id' => $section['term_id'],
+        ], ['id' => $applicationId]);
+    } else {
+        if ($termId !== null) {
+            Database::update('enrollment_applications', ['term_id' => $termId], ['id' => $applicationId]);
+        }
+        $sectionId = makeSectionFor($applicationId);
+    }
+
+    withSetting('enrollment_payment_policy', 'NONE', static fn () => App\Services\EnrollmentConfirmationService::confirm($registrar, $applicationId, $sectionId));
+
+    $enrollment = Database::selectOne('SELECT * FROM enrollments WHERE application_id = ?', [$applicationId]);
+
+    return [
+        'student'        => $student,
+        'registrar'      => $registrar,
+        'application_id' => $applicationId,
+        'section_id'     => $sectionId,
+        'enrollment_id'  => (int) $enrollment['id'],
+        'student_id'     => (int) $enrollment['student_id'],
+    ];
+}
+
+/** Another fixture section in the same program, year level, and term as $sectionId. */
+function siblingSection(int $sectionId): int
+{
+    $section = Database::selectOne('SELECT * FROM sections WHERE id = ?', [$sectionId]);
+    return Database::insert('sections', [
+        'code' => testCode('X'), 'program_id' => $section['program_id'], 'year_level_id' => $section['year_level_id'],
+        'term_id' => $section['term_id'], 'capacity' => 40, 'is_active' => 1,
+    ]);
+}
+
+/** A general fixture subject. @param array<int,int> $prerequisites */
+function makeSubject(float $units = 3, array $prerequisites = [], array $extra = []): int
+{
+    $id = Database::insert('subjects', array_merge([
+        'code' => testCode('S'), 'title' => 'Fixture Subject', 'units' => number_format($units, 1, '.', ''), 'is_active' => 1,
+    ], $extra));
+    foreach ($prerequisites as $prerequisite) {
+        Database::insert('subject_prerequisites', ['subject_id' => $id, 'prerequisite_subject_id' => $prerequisite]);
+    }
+    return $id;
+}
+
+function makeRoom(): int
+{
+    return Database::insert('rooms', ['code' => testCode('R'), 'name' => 'Fixture Room', 'capacity' => 40, 'type' => 'Lecture', 'is_active' => 1]);
+}
+
+/** One weekly meeting, in the form ClassScheduleService takes. */
+function meeting(int $day, string $start, string $end, ?int $roomId = null): array
+{
+    return ['day_of_week' => $day, 'start_time' => $start, 'end_time' => $end, 'room_id' => $roomId];
+}
+
+/** A class built through ClassScheduleService. @param array<int,array> $meetings */
+function makeClass(User $registrar, int $sectionId, int $subjectId, ?int $teacherId, array $meetings): int
+{
+    return App\Services\ClassScheduleService::saveClass($registrar, $sectionId, null, [
+        'subject_id' => $subjectId, 'teacher_user_id' => $teacherId, 'meetings' => $meetings,
+    ])['class_id'];
+}
+
+function enlistmentIdFor(int $enrollmentId, int $classId): ?int
+{
+    $id = Database::scalar('SELECT id FROM class_enlistments WHERE enrollment_id = ? AND class_schedule_id = ?', [$enrollmentId, $classId]);
+    return $id === null ? null : (int) $id;
+}
+
+/** The most recent date, today or earlier, falling on an ISO weekday (1 = Monday). */
+function lastWeekday(int $day): string
+{
+    $date = new DateTimeImmutable('today');
+    while ((int) $date->format('N') !== $day) {
+        $date = $date->modify('-1 day');
+    }
+    return $date->format('Y-m-d');
+}
+
+/**
+ * Run a callback that opens, closes, or re-weights a real term's grading
+ * periods, and put them back exactly as they were afterwards.
+ */
+function withGradePeriods(int $termId, callable $callback): mixed
+{
+    $snapshot = Database::select('SELECT * FROM grade_periods WHERE term_id = ?', [$termId]);
+    try {
+        return $callback(array_column($snapshot, 'id', 'name'));
+    } finally {
+        foreach ($snapshot as $period) {
+            Database::update('grade_periods', [
+                'weight' => $period['weight'], 'is_open' => $period['is_open'],
+                'opened_at' => $period['opened_at'], 'opened_by' => $period['opened_by'],
+                'closed_at' => $period['closed_at'], 'closed_by' => $period['closed_by'],
+            ], ['id' => $period['id']]);
+        }
+    }
+}
+
+/** Open a period directly, as fixture setup (the service is tested separately). */
+function openPeriodForTest(int $periodId): void
+{
+    Database::update('grade_periods', ['is_open' => 1, 'opened_by' => null, 'closed_by' => null], ['id' => $periodId]);
 }

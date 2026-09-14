@@ -118,6 +118,15 @@ function parseMigration(string $filename): array
 /** @return array<int,string> */
 function splitStatements(string $sql): array
 {
+    // Remove comment lines BEFORE splitting: a semicolon inside a comment
+    // ("... as a constraint; a time overlap ...") would otherwise cut a
+    // statement in half and leave a half-applied migration behind.
+    $lines = array_filter(
+        explode("\n", str_replace("\r\n", "\n", $sql)),
+        static fn (string $line) => !str_starts_with(ltrim($line), '--')
+    );
+    $sql = implode("\n", $lines);
+
     // Sufficient for DDL. If a migration ever needs a trigger or stored
     // procedure body, give it its own runner rather than complicating this.
     $parts = array_map('trim', explode(';', $sql));

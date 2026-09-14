@@ -177,11 +177,13 @@ final class RegistrarQueue
     {
         return Database::selectOne(
             'SELECT s.*, u.first_name, u.middle_name, u.last_name, u.email, u.username, u.status AS account_status,
-                    u.created_at AS registered_at, p.code AS program_code, p.name AS program_name, yl.name AS year_level_name
+                    u.created_at AS registered_at, p.code AS program_code, p.name AS program_name, yl.name AS year_level_name,
+                    c.code AS curriculum_code, c.name AS curriculum_name, c.effective_school_year AS curriculum_school_year
                FROM students s
                JOIN users u        ON u.id  = s.user_id
           LEFT JOIN programs p     ON p.id  = s.program_id
           LEFT JOIN year_levels yl ON yl.id = s.year_level_id
+          LEFT JOIN curricula c    ON c.id  = s.curriculum_id
               WHERE s.id = ?',
             [$id]
         );

@@ -122,11 +122,14 @@ const YEAR_LEVELS = [
     ['First Year', 1], ['Second Year', 2], ['Third Year', 3], ['Fourth Year', 4],
 ];
 
+/** The programs Lyceum of the East Aurora offers; their curricula are loaded by import_curricula.php. */
 const PROGRAMS = [
-    ['BSIT', 'Bachelor of Science in Information Technology', 'Software development, networking, and information systems.', 'Bachelor', 4],
-    ['BSED', 'Bachelor of Secondary Education', 'Preparation for secondary school teaching.', 'Bachelor', 4],
-    ['BSBA', 'Bachelor of Science in Business Administration', 'Management, marketing, and financial operations.', 'Bachelor', 4],
-    ['BSHM', 'Bachelor of Science in Hospitality Management', 'Hospitality, tourism, and service operations.', 'Bachelor', 4],
+    ['BSA', 'Bachelor of Science in Accountancy', 'Financial accounting and reporting, auditing, taxation, and business law.', 'Bachelor', 4],
+    ['BSAIS', 'Bachelor of Science in Accounting Information System', 'Accounting joined with information systems: analysis and design, security, data management, and ERP.', 'Bachelor', 4],
+    ['BSCRIM', 'Bachelor of Science in Criminology', 'Criminal justice, law enforcement, criminal investigation, forensic science, and corrections.', 'Bachelor', 4],
+    ['BSENTREP', 'Bachelor of Science in Entrepreneurship', 'Starting and running an enterprise, from opportunity seeking to a business plan put into practice.', 'Bachelor', 4],
+    ['BPA', 'Bachelor of Public Administration', 'Public policy, local governance, fiscal administration, and ethics in public service.', 'Bachelor', 4],
+    ['BSTM', 'Bachelor of Science in Tourism Management', 'Tour and travel management, sustainable tourism, events (MICE), and hospitality service.', 'Bachelor', 4],
 ];
 
 /** code => [name, description, is_required, applies_to, sort_order] (docs/10) */
@@ -152,6 +155,7 @@ try {
         seedAcademicCalendar();
         seedRequirementTypes();
         seedEnrollmentWindows();
+        seedGradePeriods();
     });
 
     echo "\n  Seeding complete.\n";
@@ -266,14 +270,16 @@ function seedAcademicCalendar(): void
     Database::query(
         'INSERT INTO academic_years (code, start_date, end_date, is_active) VALUES (?, ?, ?, 1)
          ON DUPLICATE KEY UPDATE start_date = VALUES(start_date), end_date = VALUES(end_date)',
-        [$code, "{$year}-06-01", ($year + 1) . '-03-31']
+        [$code, "{$year}-06-01", ($year + 1) . '-05-31']
     );
 
     $academicYearId = (int) Database::scalar('SELECT id FROM academic_years WHERE code = ?', [$code]);
 
+    // Every curriculum has a summer term after the second year (docs/28).
     $terms = [
         ['1st Semester', 1, "{$year}-06-01", "{$year}-10-31"],
         ['2nd Semester', 2, "{$year}-11-01", ($year + 1) . '-03-31'],
+        ['Summer', 3, ($year + 1) . '-04-01', ($year + 1) . '-05-31'],
     ];
 
     foreach ($terms as [$name, $sequence, $start, $end]) {
@@ -325,4 +331,34 @@ function seedEnrollmentWindows(): void
     $openLabel = $open === [] ? 'none open today' : implode(', ', array_map(static fn ($t) => "{$t['name']} {$t['code']} open", $open));
 
     echo "  enrollment windows ... {$updated} set ({$openLabel})\n";
+}
+
+/**
+ * Prelim, Midterm, Finals (30/30/40) for every term that has none (docs/27).
+ * Inserted closed; the registrar opens each one when grading starts. Terms that
+ * already have periods are left exactly as the registrar set them.
+ */
+function seedGradePeriods(): void
+{
+    $periods = [['Prelim', 1, 30], ['Midterm', 2, 30], ['Finals', 3, 40]];
+    $added = 0;
+
+    foreach (Database::select('SELECT id FROM terms') as $term) {
+        $has = (int) Database::scalar('SELECT COUNT(*) FROM grade_periods WHERE term_id = ?', [$term['id']]);
+        if ($has > 0) {
+            continue;
+        }
+        foreach ($periods as [$name, $sequence, $weight]) {
+            Database::insert('grade_periods', [
+                'term_id'  => (int) $term['id'],
+                'name'     => $name,
+                'sequence' => $sequence,
+                'weight'   => $weight,
+                'is_open'  => 0,
+            ]);
+            $added++;
+        }
+    }
+
+    echo "  grade periods ........ {$added} added\n";
 }

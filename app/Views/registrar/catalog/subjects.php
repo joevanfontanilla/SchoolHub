@@ -2,7 +2,9 @@
 /**
  * @var array    $subjects
  * @var array    $programs
+ * @var array    $curricula
  * @var int|null $programId
+ * @var int|null $curriculumId
  */
 ?>
 <div class="space-y-6">
@@ -10,7 +12,7 @@
         <div>
             <p class="eyebrow">Academic catalog</p>
             <h2 class="mt-1 text-2xl">Subjects</h2>
-            <p class="mt-1 text-sm text-slate-600">Units and prerequisites. General subjects are open to every program.</p>
+            <p class="mt-1 text-sm text-slate-600">Every curriculum's subjects, with units and prerequisites. General subjects belong to no curriculum.</p>
         </div>
         <a href="<?= e(url('/registrar/subjects/create')) ?>" class="btn-primary">New subject</a>
     </div>
@@ -22,6 +24,15 @@
                 <option value="">All programs</option>
                 <?php foreach ($programs as $program): ?>
                     <option value="<?= e($program['id']) ?>" <?= (int) $programId === (int) $program['id'] ? 'selected' : '' ?>><?= e($program['code']) ?> (and general subjects)</option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="min-w-[12rem]">
+            <label for="subject-curriculum" class="field-label">Curriculum</label>
+            <select id="subject-curriculum" name="curriculum_id" class="field-input">
+                <option value="">Any curriculum</option>
+                <?php foreach ($curricula as $option): ?>
+                    <option value="<?= e($option['id']) ?>" <?= (int) $curriculumId === (int) $option['id'] ? 'selected' : '' ?>><?= e($option['code']) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -39,7 +50,7 @@
                             <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Code</th>
                             <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Title</th>
                             <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Units</th>
-                            <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Program / year</th>
+                            <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Curriculum / year</th>
                             <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Prerequisites</th>
                             <th scope="col" class="px-4 py-3 font-display font-semibold text-brand-navy">Status</th>
                             <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
@@ -52,7 +63,7 @@
                                 <td class="px-4 py-3 text-slate-700"><?= e($subject['title']) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-700"><?= e(rtrim(rtrim((string) $subject['units'], '0'), '.')) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-700">
-                                    <?= $subject['program_code'] ? e($subject['program_code']) : 'General' ?>
+                                    <?= $subject['curriculum_code'] ? e($subject['curriculum_code']) : 'General' ?>
                                     <?= $subject['year_level_name'] ? ' · ' . e($subject['year_level_name']) : '' ?>
                                     <?= $subject['term_sequence'] ? ' · ' . e(['1' => '1st sem', '2' => '2nd sem', '3' => 'Summer'][(string) $subject['term_sequence']] ?? '') : '' ?>
                                 </td>

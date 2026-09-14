@@ -85,7 +85,7 @@
     // Filter forms apply as soon as a dropdown changes. The search box still
     // waits for Enter or its button, so typing does not reload the page.
     document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {
-        form.querySelectorAll('select').forEach(function (select) {
+        form.querySelectorAll('select, input[type="date"]').forEach(function (select) {
             select.addEventListener('change', function () {
                 var page = form.querySelector('input[name="page"]');
                 if (page) {
@@ -178,6 +178,18 @@
         };
         type.addEventListener('change', sync);
         sync();
+    });
+
+    // Attendance sheet: "Mark all present" checks that status for every student.
+    // Only a convenience; the teacher still reviews and saves the sheet.
+    document.querySelectorAll('button[data-mark-all]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var form = button.closest('form');
+            var status = button.getAttribute('data-mark-all');
+            form.querySelectorAll('input[type="radio"][value="' + status + '"]').forEach(function (radio) {
+                radio.checked = true;
+            });
+        });
     });
 
     // Prevent a double submit from creating two records. Checked after the

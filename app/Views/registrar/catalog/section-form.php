@@ -54,7 +54,7 @@ foreach ($teachers as $teacher) {
     <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate>
         <?= csrf_field() ?>
         <div class="grid gap-5 sm:grid-cols-2">
-            <?= component('field', ['name' => 'code', 'label' => 'Section code', 'required' => true, 'value' => $val('code'), 'help' => 'Example: BSIT-2A. Unique within a term.']) ?>
+            <?= component('field', ['name' => 'code', 'label' => 'Section code', 'required' => true, 'value' => $val('code'), 'help' => 'Example: BSA-1A. Unique within a term.']) ?>
             <?= component('field', ['name' => 'capacity', 'label' => 'Capacity', 'type' => 'number', 'required' => true, 'value' => $val('capacity', '40')]) ?>
         </div>
         <?= $select('term_id', 'Term', $termOptions, $val('term_id'), 'Select a term…') ?>

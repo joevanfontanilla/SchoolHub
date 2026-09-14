@@ -9,6 +9,12 @@
  * @var array $missing
  * @var array $sexes
  * @var array $civilStatus
+ * @var ?array $enrollment   current enrollment
+ * @var array  $classes      its classes (AcademicRecordService)
+ * @var array  $notEnlisted  section classes not taken, with why
+ * @var array  $addable      other classes of the term
+ * @var ?float $unitLimit
+ * @var array  $history
  */
 $id = (int) $student['id'];
 $value = static fn (string $field) => old($field, $profile[$field] ?? '');
@@ -30,7 +36,7 @@ $select = static function (string $name, string $label, array $options) use ($va
     }
     return $html . '</select>' . ($error ? '<p class="field-error"><span>' . e($error) . '</span></p>' : '') . '</div>';
 };
-$hasErrors = errors() !== [];
+$hasErrors = errors() !== [] && error_for('override_reason') === null && error_for('drop_reason') === null;
 ?>
 <div class="mx-auto max-w-5xl space-y-6">
     <a href="<?= e(url('/registrar/students')) ?>" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">&larr; Students</a>
@@ -73,6 +79,150 @@ $hasErrors = errors() !== [];
             </ul>
         <?php endif; ?>
     </section>
+
+    <?php if ($student['curriculum_code']): ?>
+        <p class="text-sm text-slate-600">
+            Curriculum:
+            <a href="<?= e(url('/registrar/curricula/' . $student['curriculum_id'])) ?>" class="font-semibold text-brand-600 hover:underline"><?= e($student['curriculum_code']) ?></a>
+            · <?= e($student['curriculum_name']) ?>, effective SY <?= e($student['curriculum_school_year']) ?>
+        </p>
+    <?php endif; ?>
+
+    <?php if ($enrollment !== null): ?>
+        <?php
+        $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 1, '.', ''), '0'), '.');
+        $overrideFailed = error_for('override_reason') !== null;
+        ?>
+        <section id="classes" class="card" aria-labelledby="classes-heading">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                <div>
+                    <h2 id="classes-heading" class="text-base">Classes · <?= e($enrollment['term_name']) ?>, <?= e($enrollment['academic_year_code']) ?></h2>
+                    <p class="text-xs text-brand-gray">Section <?= e($enrollment['section_code']) ?></p>
+                </div>
+                <p class="text-sm text-slate-700">
+                    <span class="font-display font-bold text-brand-navy"><?= e($number($enrollment['total_units'])) ?></span> of <?= e($number($unitLimit)) ?> units
+                    <?php if ((float) $enrollment['total_units'] > (float) $unitLimit): ?><span class="badge ml-1 bg-warning-bg text-warning-text">Overload</span><?php endif; ?>
+                </p>
+            </div>
+
+            <?php if ($classes === []): ?>
+                <?= component('empty-state', ['title' => 'Not enlisted in any class', 'message' => 'Classes are added from the section\'s class list, or below.']) ?>
+            <?php else: ?>
+                <ul class="divide-y divide-slate-100">
+                    <?php foreach ($classes as $class): ?>
+                        <?php $dropped = $class['enlistment_status'] === 'DROPPED'; ?>
+                        <li class="flex flex-wrap items-start justify-between gap-3 px-5 py-3 text-sm">
+                            <div class="min-w-0">
+                                <p class="<?= $dropped ? 'text-brand-gray' : '' ?>">
+                                    <span class="font-display font-bold <?= $dropped ? '' : 'text-brand-navy' ?>"><?= e($class['code']) ?></span>
+                                    <?= e($class['title']) ?> · <?= e($number($class['units'])) ?> units
+                                </p>
+                                <p class="text-xs text-brand-gray">
+                                    <?= e(implode(', ', array_map(static fn ($m) => substr(App\Services\ClassScheduleService::DAYS[(int) $m['day_of_week']], 0, 3) . ' ' . App\Services\ClassScheduleService::timeRange($m['start_time'], $m['end_time']), $class['meetings']))) ?>
+                                    · Section <?= e($class['section_code']) ?> · <?= e($class['teacher_name'] ?? 'No teacher yet') ?>
+                                </p>
+                                <?php if ($class['override_reason'] && !$dropped): ?>
+                                    <p class="mt-1 text-xs text-warning-text">Override: <?= e($class['override_reason']) ?></p>
+                                <?php endif; ?>
+                                <?php if ($dropped): ?>
+                                    <p class="mt-1 text-xs text-brand-gray">Dropped <?= e(dt($class['dropped_at'])) ?> · <?= e($class['drop_reason']) ?></p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <?= component('status-badge', ['status' => $class['enlistment_status']]) ?>
+                                <?php if (!$dropped): ?>
+                                    <details class="relative">
+                                        <summary class="cursor-pointer text-sm font-semibold text-danger-text hover:underline">Drop<span class="sr-only"> <?= e($class['code']) ?></span></summary>
+                                        <form method="POST" action="<?= e(url('/registrar/enlistments/' . $class['enlistment_id'] . '/drop')) ?>" class="absolute right-0 z-10 mt-2 w-72 space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                                            <?= csrf_field() ?>
+                                            <label for="drop-<?= e($class['enlistment_id']) ?>" class="field-label">Reason for dropping <?= e($class['code']) ?></label>
+                                            <input id="drop-<?= e($class['enlistment_id']) ?>" name="drop_reason" required maxlength="500" class="field-input">
+                                            <button type="submit" class="btn-danger w-full">Drop class</button>
+                                        </form>
+                                    </details>
+                                <?php endif; ?>
+                            </div>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+
+            <?php if ($notEnlisted !== []): ?>
+                <div class="border-t border-slate-200 bg-warning-bg/40 px-5 py-4">
+                    <h3 class="flex items-center gap-2 text-sm text-warning-text">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+                        Section classes this student is not enlisted in
+                    </h3>
+                    <ul class="mt-3 space-y-3">
+                        <?php foreach ($notEnlisted as $flag): ?>
+                            <?php $clash = in_array('conflict', array_column($flag['problems'], 'type'), true); ?>
+                            <li class="rounded-lg border border-warning-line bg-white p-3 text-sm">
+                                <p><span class="font-display font-bold text-brand-navy"><?= e($flag['code']) ?></span> <?= e($flag['title']) ?><?= $flag['dropped'] ? ' <span class="text-xs text-brand-gray">(dropped)</span>' : '' ?></p>
+                                <?php foreach ($flag['problems'] as $problem): ?>
+                                    <p class="mt-1 text-xs text-warning-text"><?= e($problem['message']) ?></p>
+                                <?php endforeach; ?>
+                                <?php if ($clash): ?>
+                                    <p class="mt-2 text-xs text-slate-600">A time conflict cannot be overridden. Change a class's schedule first.</p>
+                                <?php else: ?>
+                                    <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="mt-2 flex flex-wrap items-end gap-2">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="class_id" value="<?= e($flag['class_id']) ?>">
+                                        <?php if ($flag['problems'] !== []): ?>
+                                            <div class="min-w-[16rem] flex-1">
+                                                <label for="override-<?= e($flag['class_id']) ?>" class="field-label">Override reason</label>
+                                                <?php $flagError = (string) old('class_id') === (string) $flag['class_id'] ? error_for('override_reason') : null; ?>
+                                                <input id="override-<?= e($flag['class_id']) ?>" name="override_reason" maxlength="500" placeholder="e.g. Credited from previous school"
+                                                       class="field-input <?= $flagError ? 'field-input-error' : '' ?>" <?= $flagError ? 'aria-invalid="true" aria-describedby="override-error-' . e($flag['class_id']) . '"' : '' ?>>
+                                                <?php if ($flagError): ?><p id="override-error-<?= e($flag['class_id']) ?>" class="field-error"><span><?= e($flagError) ?></span></p><?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <button type="submit" class="btn-secondary"><?= $flag['problems'] === [] ? 'Enlist' : 'Enlist with override' ?></button>
+                                    </form>
+                                <?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($addable !== []): ?>
+                <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="space-y-3 border-t border-slate-200 px-5 py-4" novalidate>
+                    <?= csrf_field() ?>
+                    <h3 class="text-sm">Add a class from another section</h3>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label for="add-class" class="field-label">Class</label>
+                            <select id="add-class" name="class_id" class="field-input">
+                                <?php foreach ($addable as $option): ?>
+                                    <option value="<?= e($option['id']) ?>" <?= (string) old('class_id') === (string) $option['id'] ? 'selected' : '' ?>>
+                                        <?= e($option['code'] . ' · ' . $option['section_code'] . ' · ' . implode(', ', array_map(static fn ($m) => substr(App\Services\ClassScheduleService::DAYS[(int) $m['day_of_week']], 0, 3) . ' ' . substr($m['start_time'], 0, 5), $option['meetings']))) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?= component('field', ['name' => 'override_reason', 'label' => 'Override reason (only if needed)', 'value' => $overrideFailed ? old('override_reason') : '', 'help' => 'Required for a missing prerequisite, progress, or overload. Recorded in the audit log.']) ?>
+                    </div>
+                    <button type="submit" class="btn-secondary">Add class</button>
+                </form>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($history !== []): ?>
+        <section class="card" aria-labelledby="history-heading">
+            <h2 id="history-heading" class="border-b border-slate-200 px-5 py-4 text-base">Academic history</h2>
+            <?php foreach ($history as $term): ?>
+                <div class="border-b border-slate-100 last:border-b-0">
+                    <p class="px-5 pt-4 text-sm font-semibold text-brand-navy"><?= e($term['term_name']) ?>, <?= e($term['academic_year_code']) ?> · <?= e($term['section_code']) ?> · <?= e($term['program_code']) ?></p>
+                    <?php if ($term['classes'] === []): ?>
+                        <p class="px-5 py-3 text-sm text-brand-gray">No classes.</p>
+                    <?php else: ?>
+                        <?= partial('grade-table', ['periods' => $term['periods'], 'classes' => $term['classes'], 'caption' => $term['term_name'] . ' grades']) ?>
+                    <?php endif; ?>
+                </div>
+            <?php endforeach; ?>
+        </section>
+    <?php endif; ?>
 
     <details id="edit" class="card group" <?= $hasErrors ? 'open' : '' ?>>
         <summary class="flex cursor-pointer items-center justify-between px-5 py-4 font-display text-base font-bold text-brand-navy">

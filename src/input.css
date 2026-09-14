@@ -121,9 +121,10 @@
     }
 
     /* Wide tables scroll inside their own container so the page body never
-       scrolls sideways. */
+       scrolls sideways. relative: without it an absolutely positioned child (an
+       sr-only label in a header cell) escapes the overflow and widens the page. */
     .table-scroll {
-        @apply -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0;
+        @apply relative -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0;
     }
 
     .skip-link {

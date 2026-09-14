@@ -24,26 +24,88 @@ final class Catalog
     }
 
     /** @return array<int,array<string,mixed>> */
-    public static function subjects(?int $programId = null): array
+    public static function subjects(?int $programId = null, ?int $curriculumId = null): array
     {
-        $where = '';
+        $where = ['1 = 1'];
         $bindings = [];
-        if ($programId !== null) {
-            $where = 'WHERE s.program_id = ? OR s.program_id IS NULL';
+        if ($curriculumId !== null) {
+            $where[] = 's.curriculum_id = ?';
+            $bindings[] = $curriculumId;
+        } elseif ($programId !== null) {
+            $where[] = '(s.program_id = ? OR s.program_id IS NULL)';
             $bindings[] = $programId;
         }
 
         return Database::select(
-            "SELECT s.*, p.code AS program_code, yl.name AS year_level_name,
+            "SELECT s.*, p.code AS program_code, c.code AS curriculum_code, yl.name AS year_level_name,
                     (SELECT GROUP_CONCAT(pre.code ORDER BY pre.code SEPARATOR ', ')
                        FROM subject_prerequisites sp JOIN subjects pre ON pre.id = sp.prerequisite_subject_id
                       WHERE sp.subject_id = s.id) AS prerequisite_codes
                FROM subjects s
           LEFT JOIN programs p     ON p.id  = s.program_id
+          LEFT JOIN curricula c    ON c.id  = s.curriculum_id
           LEFT JOIN year_levels yl ON yl.id = s.year_level_id
-               {$where}
-              ORDER BY s.is_active DESC, p.code IS NULL, p.code, yl.sequence, s.term_sequence, s.code",
+              WHERE " . implode(' AND ', $where) . "
+              ORDER BY s.is_active DESC, p.code IS NULL, p.code, c.code, yl.sequence, s.term_sequence, s.id",
             $bindings
+        );
+    }
+
+    /** @return array<string,mixed>|null one section with its program, year level, and term */
+    public static function section(int $id): ?array
+    {
+        return Database::selectOne(
+            'SELECT sec.*, p.code AS program_code, yl.name AS year_level_name,
+                    t.name AS term_name, t.sequence AS term_sequence, ay.code AS academic_year_code
+               FROM sections sec
+               JOIN programs p        ON p.id  = sec.program_id
+               JOIN year_levels yl    ON yl.id = sec.year_level_id
+               JOIN terms t           ON t.id  = sec.term_id
+               JOIN academic_years ay ON ay.id = t.academic_year_id
+              WHERE sec.id = ?',
+            [$id]
+        );
+    }
+
+    /**
+     * Subjects that can still become classes of a section: active, from its
+     * program's curricula or general, and not already one of its classes. Subjects
+     * the curriculum places in the section's own year and term come first.
+     *
+     * @param array<string,mixed> $section a row from section()
+     * @param array<int,mixed>    $taken   subject ids the section already has
+     * @return array<int,array<string,mixed>>
+     */
+    public static function subjectsForSection(array $section, array $taken): array
+    {
+        $rows = Database::select(
+            'SELECT s.id, s.code, s.title, s.units, c.code AS curriculum_code,
+                    (s.year_level_id <=> ? AND s.term_sequence <=> ?) AS matches_term
+               FROM subjects s
+          LEFT JOIN curricula c ON c.id = s.curriculum_id
+              WHERE s.is_active = 1 AND (s.program_id = ? OR s.program_id IS NULL)
+              ORDER BY matches_term DESC, c.code IS NULL, c.code, s.year_level_id, s.term_sequence, s.id',
+            [$section['year_level_id'], $section['term_sequence'], $section['program_id']]
+        );
+        $taken = array_map('intval', $taken);
+        return array_values(array_filter($rows, static fn ($row) => !in_array((int) $row['id'], $taken, true)));
+    }
+
+    /**
+     * Subjects a subject in this curriculum may require: its own curriculum's
+     * subjects and the general ones.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function prerequisiteOptions(?int $curriculumId, ?int $exceptId): array
+    {
+        return Database::select(
+            'SELECT s.id, s.code, s.title, s.curriculum_id
+               FROM subjects s
+          LEFT JOIN year_levels yl ON yl.id = s.year_level_id
+              WHERE (s.curriculum_id <=> ? OR s.curriculum_id IS NULL) AND s.id <> ?
+              ORDER BY s.curriculum_id IS NULL, yl.sequence, s.term_sequence, s.id',
+            [$curriculumId, $exceptId ?? 0]
         );
     }
 

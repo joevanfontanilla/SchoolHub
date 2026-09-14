@@ -12,7 +12,7 @@ $active = errors() !== [] ? (bool) old('is_active', false) : (int) ($program['is
     <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate>
         <?= csrf_field() ?>
         <div class="grid gap-5 sm:grid-cols-3">
-            <?= component('field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'value' => $val('code'), 'help' => 'Example: BSIT']) ?>
+            <?= component('field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'value' => $val('code'), 'help' => 'Example: BSA']) ?>
             <div class="sm:col-span-2">
                 <?= component('field', ['name' => 'name', 'label' => 'Name', 'required' => true, 'value' => $val('name')]) ?>
             </div>

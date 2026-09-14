@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
     <h1 class="text-2xl font-bold text-brand-navy sm:text-3xl">Programs</h1>
     <p class="mt-2 max-w-2xl text-slate-600">
-        Undergraduate programs currently offered. Each runs on a two-semester academic year.
+        Undergraduate programs currently offered. The academic year has two semesters, and each program includes a summer term.
     </p>
 
     <?php if ($programs === []): ?>
@@ -23,7 +23,7 @@
                         <span class="badge bg-slate-100 text-slate-700"><?= e($program['degree_level']) ?></span>
                     </div>
                     <p class="mt-3 text-sm text-slate-600"><?= e($program['description']) ?></p>
-                    <p class="mt-4 text-sm text-brand-gray"><?= e($program['years_duration']) ?> years · 2 semesters per year</p>
+                    <p class="mt-4 text-sm text-brand-gray"><?= e($program['years_duration']) ?> years</p>
                 </article>
             <?php endforeach; ?>
         </div>

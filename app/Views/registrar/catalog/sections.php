@@ -80,6 +80,7 @@ use App\Models\Term;
                                     </span>
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">
+                                    <a href="<?= e(url('/registrar/sections/' . $section['id'] . '/classes')) ?>" class="mr-3 font-semibold text-brand-600 hover:underline">Classes<span class="sr-only"> of <?= e($section['code']) ?></span></a>
                                     <a href="<?= e(url('/registrar/sections/' . $section['id'] . '/edit')) ?>" class="font-semibold text-brand-600 hover:underline">Edit<span class="sr-only"> <?= e($section['code']) ?></span></a>
                                 </td>
                             </tr>

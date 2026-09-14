@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\ValidationException;
+use App\Models\Curriculum;
 use App\Models\EnrollmentApplication as Application;
 use App\Models\Student;
 use App\Models\User;
@@ -22,7 +23,7 @@ use App\Models\User;
 final class EnrollmentConfirmationService
 {
     /**
-     * @return array{enrollment_id:int,student_number:string,number_issued:bool}
+     * @return array{enrollment_id:int,student_number:string,number_issued:bool,enlistment:array}
      * @throws ValidationException|HttpException
      */
     public static function confirm(User $user, int $applicationId, int $sectionId): array
@@ -77,8 +78,17 @@ final class EnrollmentConfirmationService
             $numberIssued = $student['student_number'] === null;
             $studentNumber = $numberIssued ? SequenceService::next('student') : (string) $student['student_number'];
 
+            // A student keeps the curriculum they entered under. One is assigned
+            // only on first enrollment, or when they move to another program.
+            $curriculumId = $student['curriculum_id'] === null ? null : (int) $student['curriculum_id'];
+            if ($curriculumId === null || (int) $student['program_id'] !== (int) $application['program_id']) {
+                $current = Curriculum::currentForProgram((int) $application['program_id']);
+                $curriculumId = $current === null ? null : (int) $current['id'];
+            }
+
             Database::update('students', [
                 'student_number' => $studentNumber,
+                'curriculum_id'  => $curriculumId,
                 'program_id'     => (int) $application['program_id'],
                 'year_level_id'  => (int) $application['year_level_id'],
                 'student_type'   => (string) $application['student_type'],
@@ -98,11 +108,16 @@ final class EnrollmentConfirmationService
 
             EnrollmentStatusService::transitionEnrollment($applicationId, 'ENROLLED', $user);
 
+            // Block section: enlist in the section's classes now. Anything that
+            // can't be taken yet is skipped and reported, not forced.
+            $enlistment = EnlistmentService::enlistBlock($enrollmentId, $user);
+
             AuditService::log('enrollment.confirmed', 'enrollment', 'Enrollment', $enrollmentId, null, [
                 'application_id' => $applicationId,
                 'section_id'     => $sectionId,
                 'student_number' => $studentNumber,
                 'number_issued'  => $numberIssued,
+                'curriculum_id'  => $curriculumId,
             ], 'SUCCESS', null, $user->id, $user->role_name);
 
             NotificationService::notify(
@@ -113,7 +128,12 @@ final class EnrollmentConfirmationService
                 "/student/enrollment/{$applicationId}"
             );
 
-            return ['enrollment_id' => $enrollmentId, 'student_number' => $studentNumber, 'number_issued' => $numberIssued];
+            return [
+                'enrollment_id'  => $enrollmentId,
+                'student_number' => $studentNumber,
+                'number_issued'  => $numberIssued,
+                'enlistment'     => $enlistment,
+            ];
         });
     }
 

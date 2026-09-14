@@ -22,12 +22,17 @@ use App\Controllers\DocumentController;
 use App\Controllers\RegisterController;
 use App\Controllers\Registrar\ApplicationController as RegistrarApplications;
 use App\Controllers\Registrar\CatalogController;
+use App\Controllers\Registrar\ClassController as RegistrarClasses;
 use App\Controllers\Registrar\ConfirmationController;
+use App\Controllers\Registrar\GradingController;
+use App\Controllers\Registrar\RoomController;
 use App\Controllers\Registrar\StudentController as RegistrarStudents;
+use App\Controllers\Student\AcademicController as StudentAcademic;
 use App\Controllers\Student\DashboardController as StudentDashboard;
 use App\Controllers\Student\EnrollmentController;
 use App\Controllers\Student\ProfileController;
 use App\Controllers\Student\RequirementController;
+use App\Controllers\Teacher\ClassController as TeacherClasses;
 use App\Controllers\Teacher\DashboardController as TeacherDashboard;
 use App\Models\User;
 
@@ -94,6 +99,30 @@ $router->post('/student/enrollment/{id}/requirements/{requirementId}/upload', [R
 $router->get('/student/requirements', [EnrollmentController::class, 'requirements'], $student, 'student.requirements');
 $router->get('/student/status',       [EnrollmentController::class, 'status'],       $student, 'student.status');
 
+// Classes, grades, attendance, history (Phase 4). Always the signed-in student's own.
+$router->get('/student/schedule',   [StudentAcademic::class, 'schedule'],   [...$student, 'can:schedule.view'],   'student.schedule');
+$router->get('/student/grades',     [StudentAcademic::class, 'grades'],     [...$student, 'can:grades.view'],     'student.grades');
+$router->get('/student/attendance', [StudentAcademic::class, 'attendance'], [...$student, 'can:attendance.view'], 'student.attendance');
+$router->get('/student/history',    [StudentAcademic::class, 'history'],    [...$student, 'can:grades.view'],     'student.history');
+
+// ---------------------------------------------------------------------------
+// Teacher (Phase 4)
+//
+// The Teacher role AND the permission for the action. Class ownership is then
+// checked in GradingService::ownedClass(): another teacher's class is a 404.
+// ---------------------------------------------------------------------------
+$teacher = static fn (string $permission): array => ['auth', 'role:' . User::ROLE_TEACHER, 'can:' . $permission];
+
+$router->get('/teacher/classes',                   [TeacherClasses::class, 'index'],           $teacher('classes.view'),      'teacher.classes');
+$router->get('/teacher/attendance',                [TeacherClasses::class, 'attendanceIndex'], $teacher('attendance.record'), 'teacher.attendance');
+$router->get('/teacher/grades',                    [TeacherClasses::class, 'gradesIndex'],     $teacher('grades.record'),     'teacher.grades');
+$router->get('/teacher/schedule',                  [TeacherClasses::class, 'schedule'],        $teacher('schedule.view'),     'teacher.schedule');
+$router->get('/teacher/classes/{id}',              [TeacherClasses::class, 'show'],            $teacher('classes.view'));
+$router->get('/teacher/classes/{id}/attendance',   [TeacherClasses::class, 'attendance'],      $teacher('attendance.record'));
+$router->post('/teacher/classes/{id}/attendance',  [TeacherClasses::class, 'saveAttendance'],  $teacher('attendance.record'));
+$router->get('/teacher/classes/{id}/grades',       [TeacherClasses::class, 'grades'],          $teacher('grades.record'));
+$router->post('/teacher/classes/{id}/grades',      [TeacherClasses::class, 'saveGrades'],      $teacher('grades.record'));
+
 // ---------------------------------------------------------------------------
 // Registrar (Phase 3)
 //
@@ -117,12 +146,21 @@ $router->post('/registrar/requirements/{requirementId}/review',  [RegistrarAppli
 $router->get('/registrar/students',       [RegistrarStudents::class, 'index'],  $registrar('students.view'), 'registrar.students');
 $router->get('/registrar/students/{id}',  [RegistrarStudents::class, 'show'],   $registrar('students.view'), 'registrar.students.show');
 $router->post('/registrar/students/{id}', [RegistrarStudents::class, 'update'], $registrar('students.manage'));
+$router->post('/registrar/students/{id}/enlistments', [RegistrarStudents::class, 'addClass'],  $registrar('academic.assign'));
+$router->post('/registrar/enlistments/{id}/drop',     [RegistrarStudents::class, 'dropClass'], $registrar('academic.assign'));
 
 $router->get('/registrar/programs',            [CatalogController::class, 'programs'],      $registrar('academic.manage'), 'registrar.programs');
 $router->get('/registrar/programs/create',     [CatalogController::class, 'createProgram'], $registrar('academic.manage'));
 $router->post('/registrar/programs/create',    [CatalogController::class, 'saveProgram'],   $registrar('academic.manage'));
 $router->get('/registrar/programs/{id}/edit',  [CatalogController::class, 'editProgram'],   $registrar('academic.manage'));
 $router->post('/registrar/programs/{id}/edit', [CatalogController::class, 'saveProgram'],   $registrar('academic.manage'));
+
+$router->get('/registrar/curricula',            [CatalogController::class, 'curricula'],        $registrar('academic.manage'), 'registrar.curricula');
+$router->get('/registrar/curricula/create',     [CatalogController::class, 'createCurriculum'], $registrar('academic.manage'));
+$router->post('/registrar/curricula/create',    [CatalogController::class, 'saveCurriculum'],   $registrar('academic.manage'));
+$router->get('/registrar/curricula/{id}',       [CatalogController::class, 'showCurriculum'],   $registrar('academic.manage'));
+$router->get('/registrar/curricula/{id}/edit',  [CatalogController::class, 'editCurriculum'],   $registrar('academic.manage'));
+$router->post('/registrar/curricula/{id}/edit', [CatalogController::class, 'saveCurriculum'],   $registrar('academic.manage'));
 
 $router->get('/registrar/subjects',            [CatalogController::class, 'subjects'],      $registrar('academic.manage'), 'registrar.subjects');
 $router->get('/registrar/subjects/create',     [CatalogController::class, 'createSubject'], $registrar('academic.manage'));
@@ -135,6 +173,23 @@ $router->get('/registrar/sections/create',     [CatalogController::class, 'creat
 $router->post('/registrar/sections/create',    [CatalogController::class, 'saveSection'],   $registrar('academic.manage'));
 $router->get('/registrar/sections/{id}/edit',  [CatalogController::class, 'editSection'],   $registrar('academic.manage'));
 $router->post('/registrar/sections/{id}/edit', [CatalogController::class, 'saveSection'],   $registrar('academic.manage'));
+
+$router->get('/registrar/sections/{id}/classes',  [RegistrarClasses::class, 'section'], $registrar('academic.assign'));
+$router->post('/registrar/sections/{id}/classes', [RegistrarClasses::class, 'store'],   $registrar('academic.assign'));
+$router->get('/registrar/classes/{id}/edit',      [RegistrarClasses::class, 'edit'],    $registrar('academic.assign'));
+$router->post('/registrar/classes/{id}/edit',     [RegistrarClasses::class, 'update'],  $registrar('academic.assign'));
+$router->post('/registrar/classes/{id}/close',    [RegistrarClasses::class, 'close'],   $registrar('academic.assign'));
+
+$router->get('/registrar/rooms',            [RoomController::class, 'index'],  $registrar('academic.manage'), 'registrar.rooms');
+$router->get('/registrar/rooms/create',     [RoomController::class, 'create'], $registrar('academic.manage'));
+$router->post('/registrar/rooms/create',    [RoomController::class, 'save'],   $registrar('academic.manage'));
+$router->get('/registrar/rooms/{id}/edit',  [RoomController::class, 'edit'],   $registrar('academic.manage'));
+$router->post('/registrar/rooms/{id}/edit', [RoomController::class, 'save'],   $registrar('academic.manage'));
+
+$router->get('/registrar/grading',                     [GradingController::class, 'index'],   $registrar('grade_periods.manage'), 'registrar.grading');
+$router->post('/registrar/grading/periods/{id}/open',  [GradingController::class, 'open'],    $registrar('grade_periods.manage'));
+$router->post('/registrar/grading/periods/{id}/close', [GradingController::class, 'close'],   $registrar('grade_periods.manage'));
+$router->post('/registrar/grading/terms/{id}/weights', [GradingController::class, 'weights'], $registrar('grade_periods.manage'));
 
 // Uploaded requirement documents. Signed-in users only; who may open which
 // file is decided by DocumentAccessPolicy (docs/17 section 10).

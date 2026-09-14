@@ -77,14 +77,16 @@ Single-use. Index `(token_hash)`.
 ### `students`
 `user_id` FK unique (one student per user account),
 `student_number` VARCHAR(20) **NULL** unique (format in section 9),
-`program_id` FK **NULL**, `year_level_id` FK **NULL**,
+`program_id` FK **NULL**, `curriculum_id` FK **NULL** (docs/28), `year_level_id` FK **NULL**,
 `student_type` VARCHAR(20) (`New`, `Transferee`, `Continuing`, `Returning`),
 `status` VARCHAR(20) (`Applicant`, `Enrolled`, `Inactive`, `Graduated`),
 `admitted_at` DATE nullable.
 
 A student row exists from registration, as an `Applicant`. `student_number`, `program_id`,
 and `year_level_id` stay NULL until enrollment is **confirmed** (Phase 3), when the student
-number is issued through `document_sequences`. Applicants are identified by their
+number is issued through `document_sequences`. `curriculum_id` is set at the same moment:
+the program's latest active curriculum on first enrollment or a change of program; kept
+otherwise. Applicants are identified by their
 application number, so a rejected or abandoned applicant never consumes a student number.
 
 ### `student_profiles`
@@ -113,19 +115,31 @@ application number, so a rejected or abandoned applicant never consumes a studen
 `is_active` TINYINT(1). Unique `(academic_year_id, sequence)`.
 
 ### `programs`
-`code` VARCHAR(20) unique (`BSIT`), `name`, `description`,
+`code` VARCHAR(20) unique (`BSA`), `name`, `description`,
 `degree_level` VARCHAR(50), `years_duration` TINYINT, `is_active`.
 
 ### `year_levels`
 `name` (`First Year` … `Fourth Year`), `sequence` TINYINT unique.
 
+### `curricula`
+*(Migration 017; docs/28.)* `program_id` FK, `code` VARCHAR(30) unique (`BSA-2024`), `name`,
+`effective_school_year` CHAR(9) (`2024-2025`), `notes` nullable, `is_active`.
+A program can have several; a student keeps the one they entered under.
+
 ### `subjects`
-`code` VARCHAR(20) unique (`IT-201`), `title`, `description`,
-`units` DECIMAL(3,1), `lecture_hours` TINYINT, `lab_hours` TINYINT,
-`program_id` FK **nullable** (null = general subject, open to all programs),
+`code` VARCHAR(20) (`CORE 4`), `title`, `description`,
+`units` DECIMAL(3,1), `lab_units` DECIMAL(3,1) (the share of `units` that is laboratory),
+`lecture_hours` TINYINT, `lab_hours` TINYINT,
+`curriculum_id` FK **nullable** (null = general subject),
+`program_id` FK nullable, kept equal to the curriculum's program,
 `year_level_id` FK nullable,
-`term_sequence` TINYINT nullable (the term it is normally offered in),
+`term_sequence` TINYINT nullable (1, 2, or 3 = summer),
+`min_progress_percent` TINYINT nullable (a progress prerequisite, e.g. 80),
 `is_active`.
+
+**Unique `(curriculum_id, code)`, not `code` alone** (migration 017): the school reuses codes
+across programs with different meanings. Codes may contain spaces and are stored
+upper-case with single spaces.
 
 ### `subject_prerequisites`
 `subject_id`, `prerequisite_subject_id` — composite primary key, both FK → `subjects`.
@@ -140,15 +154,24 @@ Self-referencing. The service layer must reject cycles.
 Unique `(code, term_id)`. Capacity is enforced on enlistment — see section 8.
 
 ### `class_schedules`
-One meeting block of one subject for one section.
+**Amended in Phase 4 (migration 015).** The original design made this table one *meeting
+block*, so a subject meeting Monday and Wednesday would have been two classes with two
+rosters, two grade records, and two attendance sheets. It is instead **one class**: one
+subject taught to one section in one term, whose weekly times live in `class_meetings`.
+
 `term_id` FK, `section_id` FK, `subject_id` FK,
 `teacher_user_id` FK nullable (unassigned until the registrar assigns one),
-`room_id` FK nullable, `day_of_week` TINYINT (1 = Monday … 7 = Sunday),
-`start_time` TIME, `end_time` TIME, `status` VARCHAR(20).
+`status` VARCHAR(20) (`ACTIVE`, `CLOSED`).
+Unique `(section_id, subject_id)`. Index `(term_id, teacher_user_id)`.
 
-Indexes `(term_id, teacher_user_id, day_of_week)` and `(term_id, room_id, day_of_week)`.
-**Time-overlap conflicts cannot be expressed as a UNIQUE index** — teacher and room
-double-booking checks run in the service layer against these indexes. See section 8.
+### `class_meetings`
+`class_schedule_id` FK (cascade), `day_of_week` TINYINT (1 = Monday … 7 = Sunday),
+`start_time` TIME, `end_time` TIME, `room_id` FK nullable.
+Indexes `(room_id, day_of_week)` and `(day_of_week, start_time)`.
+Meetings are a class's configuration and are replaced as a set when the class is saved.
+
+**Time-overlap conflicts cannot be expressed as a UNIQUE index** — teacher, room, section,
+and student double-booking checks run in `ClassScheduleService`. See section 8.
 
 ### `teacher_profiles`
 `user_id` FK unique, `employee_number` unique, `department`, `position`,
@@ -235,8 +258,11 @@ Created only when `enrollment_state` becomes `ENROLLED`, and only by `Enrollment
 nor a student schedule can be produced.
 
 `enrollment_id` FK, `class_schedule_id` FK,
-`status` VARCHAR(20) (`ENLISTED`, `DROPPED`), `enlisted_at`, `enlisted_by` FK.
-Unique `(enrollment_id, class_schedule_id)`.
+`status` VARCHAR(20) (`ENLISTED`, `DROPPED`), `override_reason` VARCHAR(500) nullable,
+`enlisted_at`, `enlisted_by` FK, `dropped_at` nullable, `dropped_by` FK nullable,
+`drop_reason` VARCHAR(500) nullable.
+Unique `(enrollment_id, class_schedule_id)`. A drop keeps the row; re-adding revives it.
+Written only by `EnlistmentService` (migration 015).
 Index `(class_schedule_id, status)` — drives the teacher's class list.
 
 ---
@@ -244,29 +270,33 @@ Index `(class_schedule_id, status)` — drives the teacher's class list.
 ## 5. Academic Records
 
 ### `grade_periods`
-`term_id` FK, `name` (`Prelim`, `Midterm`, `Finals`), `sequence` TINYINT,
-`opens_at` DATETIME, `closes_at` DATETIME, `is_open` TINYINT(1).
-Unique `(term_id, sequence)`.
+*(Migration 016.)* `term_id` FK, `name` (`Prelim`, `Midterm`, `Finals`), `sequence` TINYINT,
+`weight` DECIMAL(5,2), `is_open` TINYINT(1), `opened_at`, `opened_by` FK, `closed_at`,
+`closed_by` FK. Unique `(term_id, sequence)`.
 
-A teacher may submit grades **only while the period is open** (`docs/12`). The registrar
-or Super Admin opens and closes periods; a teacher never can.
+Periods are opened and closed by hand rather than by `opens_at`/`closes_at` dates: the
+registrar reopens a period to allow a correction, which a fixed window cannot express.
+A teacher may submit grades **only while the period is open** (docs/12, docs/27). Only the
+registrar opens and closes periods.
 
 ### `grades`
 `class_enlistment_id` FK, `grade_period_id` FK,
-`grade` DECIMAL(5,2) nullable, `remarks` VARCHAR(50) (`INC`, `DRP`, `NG`),
-`recorded_by` FK, `recorded_at` DATETIME,
-`updated_by` FK nullable, `updated_at` DATETIME nullable.
+`grade` DECIMAL(3,2) nullable, `remark` VARCHAR(10) nullable (`INC`, `DRP`) — exactly one of
+the two is set, `recorded_by` FK, `recorded_at` DATETIME,
+`changed_by` FK nullable, `changed_at` DATETIME nullable.
+The final grade is **not stored**; it is computed from the period grades (docs/27).
 Unique `(class_enlistment_id, grade_period_id)`.
 
 Grades are **updated in place, never deleted**; every change writes an `audit_logs` row
 carrying the old and new value (`docs/12`, `docs/19`).
 
 ### `attendance`
-`class_enlistment_id` FK, `class_schedule_id` FK, `attendance_date` DATE,
-`status` VARCHAR(10) (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`), `remarks`,
+`class_enlistment_id` FK, `attendance_date` DATE,
+`status` VARCHAR(10) (`PRESENT`, `ABSENT`, `LATE`, `EXCUSED`), `remarks` VARCHAR(255),
 `recorded_by` FK, `recorded_at` DATETIME.
 Unique `(class_enlistment_id, attendance_date)` — one record per student per class day.
-Index `(class_schedule_id, attendance_date)`.
+No `class_schedule_id` column: the enlistment already names the class, and a second copy
+could disagree with it.
 
 ---
 
@@ -390,19 +420,21 @@ Used by `database/migrate.php`. No `updated_at`.
 
 These are enforced in the service layer and must be covered by tests:
 
-1. **Section capacity** — enlisting when `COUNT(class_enlistments WHERE status='ENLISTED')`
-   has reached `sections.capacity` is rejected. Checked inside the enlistment
-   transaction with the section row locked, so two simultaneous enlistments cannot both
-   take the last seat.
-2. **Teacher double-booking** — no teacher may hold two `class_schedules` whose times
+1. **Section capacity** — confirming an enrollment when `COUNT(enrollments WHERE
+   status='ENROLLED')` has reached `sections.capacity` is rejected. Checked inside the
+   confirmation transaction with the section row locked, so two simultaneous
+   confirmations cannot both take the last seat.
+2. **Teacher double-booking** — no teacher may hold two classes with meetings that
    overlap on the same day within the same term.
 3. **Room double-booking** — the same, per room.
-4. **Student schedule conflict** — a student may not be enlisted in two overlapping
-   class schedules.
+4. **Student schedule conflict** — a student may not be enlisted in two classes with
+   overlapping meetings, and one section's classes may not overlap each other. Never
+   overridable.
 5. **Prerequisites** — a student may not enlist in a subject whose prerequisites are not
    passed, unless a registrar records an explicit override (written to `audit_logs`).
-6. **Maximum units per term** — `max_units_per_term` system setting; overrides are
-   registrar-only and audited.
+6. **Maximum units per term** — the larger of the `max_units_per_term` setting and the
+   curriculum's regular load for that year and term (docs/28); overrides are
+   registrar-only, need a reason, and are audited.
 7. **One active academic year** and one active term at a time.
 8. **Class must belong to the enrollment context** (`docs/13`) — a `class_enlistment`'s
    `class_schedule.term_id` must equal the `enrollment.term_id`.

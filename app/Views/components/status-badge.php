@@ -7,6 +7,7 @@
  *
  * @var string $status
  * @var string $size   'sm' (default) or 'md'
+ * @var string $label  optional wording, when the status code alone is not the words to show
  */
 use App\Models\EnrollmentApplication;
 
@@ -37,6 +38,13 @@ $icons = [
     'APPROVED', 'VERIFIED', 'PAID', 'ENROLLED'               => ['success', 'check'],
     'REJECTED'                                               => ['danger', 'x'],
     'CANCELLED'                                              => ['neutral', 'x'],
+    // Classes, grades, and attendance (docs/12, docs/27)
+    'PASSED', 'PRESENT', 'ENLISTED', 'OPEN'                  => ['success', 'check'],
+    'FAILED', 'ABSENT'                                       => ['danger', 'x'],
+    'INC', 'LATE'                                           => ['warning', 'alert'],
+    'IN_PROGRESS'                                            => ['info', 'clock'],
+    'EXCUSED'                                                => ['info', 'minus'],
+    'DRP', 'DROPPED', 'CLOSED'                              => ['neutral', 'x'],
     default                                                  => ['neutral', 'minus'],
 };
 
@@ -46,5 +54,5 @@ $md = ($size ?? 'sm') === 'md';
     <svg class="<?= $md ? 'h-4 w-4' : 'h-3.5 w-3.5' ?> shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" d="<?= $icons[$icon] ?>"/>
     </svg>
-    <?= e(EnrollmentApplication::label($status)) ?>
+    <?= e($label ?? EnrollmentApplication::label($status)) ?>
 </span>

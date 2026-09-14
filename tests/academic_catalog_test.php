@@ -13,22 +13,6 @@ use App\Core\ValidationException;
 use App\Models\User;
 use App\Services\CatalogService as Catalog;
 
-function testCode(string $suffix): string
-{
-    return TEST_CODE . strtoupper($suffix) . strtoupper(bin2hex(random_bytes(2)));
-}
-
-/** @return array<string,array<int,string>> the field errors a callback produced */
-function fieldErrors(callable $callback): array
-{
-    try {
-        $callback();
-    } catch (ValidationException $e) {
-        return $e->errors();
-    }
-    return [];
-}
-
 function subjectInput(array $overrides = []): array
 {
     return array_merge(['code' => testCode('S'), 'title' => 'Test Subject', 'units' => '3', 'is_active' => '1'], $overrides);

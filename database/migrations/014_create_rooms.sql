@@ -1,0 +1,17 @@
+-- @up
+CREATE TABLE rooms (
+    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    code       VARCHAR(20)  NOT NULL,
+    name       VARCHAR(100) NOT NULL,
+    building   VARCHAR(100) NULL,
+    capacity   SMALLINT UNSIGNED NOT NULL DEFAULT 40,
+    type       VARCHAR(30)  NOT NULL DEFAULT 'Lecture',
+    is_active  TINYINT(1)   NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_rooms_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- @down
+DROP TABLE IF EXISTS rooms;

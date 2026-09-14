@@ -50,6 +50,15 @@ final class ConfirmationController extends Controller
         $message = $result['number_issued']
             ? "Enrollment confirmed. Student number {$result['student_number']} was issued."
             : "Enrollment confirmed for student number {$result['student_number']}.";
+
+        $enlisted = count($result['enlistment']['enlisted']);
+        if ($enlisted > 0) {
+            $message .= " Enlisted in {$enlisted} class" . ($enlisted === 1 ? '' : 'es') . '.';
+        }
+        if ($result['enlistment']['skipped'] !== []) {
+            $codes = implode(', ', array_column($result['enlistment']['skipped'], 'code'));
+            \App\Core\Session::flash('warning', "Not enlisted in {$codes}. Review these on the student's record.");
+        }
         $this->success($message, "/registrar/applications/{$id}");
     }
 
