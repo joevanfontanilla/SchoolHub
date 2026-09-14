@@ -58,6 +58,15 @@ final class Request
         return array_merge($_GET, $_POST);
     }
 
+    /** The uploaded file for a form field, or null when the field was not sent. */
+    public function file(string $key): ?UploadedFile
+    {
+        if (!isset($_FILES[$key]) || !is_array($_FILES[$key])) {
+            return null;
+        }
+        return UploadedFile::fromRequest($_FILES[$key]);
+    }
+
     public function has(string $key): bool
     {
         return isset($_POST[$key]) || isset($_GET[$key]);

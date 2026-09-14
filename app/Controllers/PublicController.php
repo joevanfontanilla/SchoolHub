@@ -9,6 +9,8 @@ use App\Core\Request;
 use App\Models\Announcement;
 use App\Models\Download;
 use App\Models\Program;
+use App\Models\RequirementType;
+use App\Models\Term;
 use App\Services\FileStreamer;
 
 /**
@@ -40,12 +42,18 @@ final class PublicController extends Controller
 
     public function enrollment(Request $request): void
     {
-        $this->publicView('public/enrollment', ['title' => 'Enrollment']);
+        $this->publicView('public/enrollment', [
+            'title'     => 'Enrollment',
+            'openTerms' => Term::openForEnrollment(),
+        ]);
     }
 
     public function requirements(Request $request): void
     {
-        $this->publicView('public/requirements', ['title' => 'Requirements']);
+        $this->publicView('public/requirements', [
+            'title'        => 'Requirements',
+            'requirements' => RequirementType::active(),
+        ]);
     }
 
     public function announcements(Request $request): void

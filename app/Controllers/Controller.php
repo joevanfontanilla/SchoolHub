@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\Response;
 use App\Core\Session;
+use App\Core\ValidationException;
 use App\Core\Validator;
 use App\Core\View;
 use App\Models\SystemSetting;
@@ -63,6 +64,20 @@ abstract class Controller
     protected function backWithError(string $message, array $input, string $path): void
     {
         Session::flash('error', $message);
+        Session::flashInput($input);
+        Response::redirect($path);
+    }
+
+    /**
+     * Redirect back after a service refused the action: field errors for the
+     * form, the summary as a flash notice, and the submitted values restored.
+     */
+    protected function failWith(ValidationException $e, array $input, string $path): void
+    {
+        if ($e->errors() !== []) {
+            Session::flashErrors($e->errors());
+        }
+        Session::flash('error', $e->getMessage());
         Session::flashInput($input);
         Response::redirect($path);
     }

@@ -135,6 +135,41 @@ final class Validator
                 }
                 break;
 
+            case 'unique':
+                // unique:table,column — identifiers are whitelisted by pattern
+                // because they cannot be bound as parameters; the value is bound.
+                [$table, $column] = array_pad(explode(',', (string) $argument, 2), 2, null);
+                if (
+                    !$this->isEmpty($value)
+                    && preg_match('/^[a-z_]+$/', (string) $table)
+                    && preg_match('/^[a-z_]+$/', (string) $column)
+                    && (int) Database::scalar("SELECT COUNT(*) FROM `{$table}` WHERE `{$column}` = ?", [(string) $value]) > 0
+                ) {
+                    $this->addError($field, "That {$label} is already registered.");
+                }
+                break;
+
+            case 'before_today':
+                if (!$this->isEmpty($value)) {
+                    $ts = strtotime((string) $value);
+                    if ($ts === false || $ts >= strtotime('today')) {
+                        $this->addError($field, "{$label} must be a date before today.");
+                    }
+                }
+                break;
+
+            case 'ph_mobile':
+                if (!$this->isEmpty($value) && !preg_match('/^09\d{9}$/', preg_replace('/[\s-]/', '', (string) $value))) {
+                    $this->addError($field, "{$label} must be a Philippine mobile number like 09171234567.");
+                }
+                break;
+
+            case 'accepted':
+                if (!in_array($value, ['1', 1, true, 'on', 'yes'], true)) {
+                    $this->addError($field, "You must accept the {$label} to continue.");
+                }
+                break;
+
             case 'alpha_dash':
                 if (!$this->isEmpty($value) && !preg_match('/^[A-Za-z0-9_.-]+$/', (string) $value)) {
                     $this->addError($field, "{$label} may contain only letters, numbers, dots, dashes and underscores.");

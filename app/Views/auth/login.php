@@ -8,7 +8,7 @@
 ?>
 <div class="card p-6 sm:p-8">
     <h1 class="text-xl font-semibold text-brand-navy">Sign in</h1>
-    <p class="mt-1.5 text-sm text-slate-600">Use the account issued by your school.</p>
+    <p class="mt-1.5 text-sm text-slate-600">Students may sign in with their email address.</p>
 
     <form method="POST" action="<?= e(url('/login')) ?>" class="mt-6 space-y-5" novalidate>
         <?= csrf_field() ?>
@@ -33,7 +33,11 @@
         <button type="submit" class="btn-primary w-full">Sign in</button>
     </form>
 
-    <p class="mt-6 border-t border-slate-200 pt-5 text-sm text-slate-600">
-        Forgot your password? Contact the registrar's office to have it reset.
-    </p>
+    <div class="mt-6 space-y-2 border-t border-slate-200 pt-5 text-sm text-slate-600">
+        <p>
+            New student?
+            <a href="<?= e(url('/register')) ?>" class="font-semibold text-brand-600 hover:underline">Create an account</a>
+        </p>
+        <p>Forgot your password? Contact the registrar's office to have it reset.</p>
+    </div>
 </div>

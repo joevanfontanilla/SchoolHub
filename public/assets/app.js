@@ -72,16 +72,106 @@
         });
     });
 
-    // Prevent a double submit from creating two records.
-    document.querySelectorAll('form[method="POST"]').forEach(function (form) {
-        form.addEventListener('submit', function () {
-            var button = form.querySelector('button[type="submit"]');
-            if (button && !form.hasAttribute('data-allow-resubmit')) {
-                window.setTimeout(function () {
-                    button.disabled = true;
-                    button.textContent = 'Working...';
-                }, 0);
+    // Warn about an oversized file before it is uploaded, so the student is not
+    // left waiting for a multi-megabyte upload the server will refuse anyway.
+    // The server still enforces the limit; this is only an early warning.
+    function formatMegabytes(bytes) {
+        return (Math.round(bytes / 104857.6) / 10) + ' MB';
+    }
+    function fileTooBig(input) {
+        var max = parseInt(input.getAttribute('data-max-bytes'), 10);
+        var file = input.files && input.files[0];
+        return file && max && file.size > max ? file : null;
+    }
+    document.querySelectorAll('input[type="file"][data-max-bytes]').forEach(function (input) {
+        var help = document.getElementById(input.id + '-help');
+        var original = help ? help.textContent : '';
+
+        input.addEventListener('change', function () {
+            var big = fileTooBig(input);
+            input.setCustomValidity(big ? 'This file is ' + formatMegabytes(big.size) + '. Please choose a smaller one.' : '');
+            if (help) {
+                help.textContent = big ? input.validationMessage : original;
+                help.classList.toggle('text-danger-text', !!big);
             }
+        });
+
+        if (input.form) {
+            input.form.addEventListener('submit', function (event) {
+                if (fileTooBig(input)) {
+                    event.preventDefault();
+                    input.reportValidity();
+                }
+            });
+        }
+    });
+
+    // Guardian rows on the profile form: add and remove.
+    document.querySelectorAll('[data-repeater]').forEach(function (repeater) {
+        var list = repeater.querySelector('[data-repeater-list]');
+        var template = repeater.querySelector('template[data-repeater-template]');
+        var add = repeater.querySelector('[data-repeater-add]');
+        if (!list || !template || !add) {
+            return;
+        }
+
+        var next = list.querySelectorAll('[data-repeater-item]').length;
+
+        add.addEventListener('click', function () {
+            var html = template.innerHTML.replace(/__INDEX__/g, String(next++));
+            list.insertAdjacentHTML('beforeend', html);
+            var added = list.lastElementChild;
+            var firstInput = added && added.querySelector('input');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        });
+
+        list.addEventListener('click', function (event) {
+            var remove = event.target.closest('[data-repeater-remove]');
+            if (!remove) {
+                return;
+            }
+            var item = remove.closest('[data-repeater-item]');
+            // Keep at least one row, so there is always somewhere to type.
+            if (item && list.querySelectorAll('[data-repeater-item]').length > 1) {
+                item.remove();
+                add.focus();
+            }
+        });
+    });
+
+    // Show the transferee fields only when "Transferee" is chosen. Without
+    // JavaScript they simply stay visible, and the server still validates them.
+    document.querySelectorAll('[data-student-type-form]').forEach(function (form) {
+        var type = form.querySelector('[name="student_type"]');
+        var fields = form.querySelector('[data-transferee-fields]');
+        if (!type || !fields) {
+            return;
+        }
+        var sync = function () {
+            fields.hidden = type.value !== 'Transferee';
+        };
+        type.addEventListener('change', sync);
+        sync();
+    });
+
+    // Prevent a double submit from creating two records. Checked after the
+    // other submit handlers have run, so a cancelled confirmation or a refused
+    // file does not leave the button disabled.
+    document.querySelectorAll('form[method="POST"]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            var button = form.querySelector('button[type="submit"]');
+            if (!button || form.hasAttribute('data-allow-resubmit')) {
+                return;
+            }
+            window.setTimeout(function () {
+                if (event.defaultPrevented) {
+                    return;
+                }
+                button.disabled = true;
+                button.textContent = 'Working...';
+            }, 0);
         });
     });
 })();

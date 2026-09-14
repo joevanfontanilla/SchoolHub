@@ -107,3 +107,24 @@ enrollment record.
    stale form or a replayed request must not slip past a check that passed earlier.
 6. An invalid transition returns a validation error and changes nothing.
 7. Remarks are **mandatory** for transitions 4, 5, 9, and 12.
+
+## 6. What each state unlocks for the student
+Restated from rules 1, 4, and 5, and enforced by `EnrollmentApplication::UPLOADS_UNLOCKED`
+and `EDITS_UNLOCKED`:
+
+| State | Upload documents | Edit program / year level / previous school |
+|---|---|---|
+| `DRAFT` | Yes | Yes |
+| `REQUIREMENTS_INCOMPLETE` | Yes | No |
+| `CORRECTION_REQUIRED` | No | Yes |
+| every other state | No | No |
+
+## 7. Actors
+Super Admin appears in **no** rule. It administers the system but is not a substitute
+registrar (`docs/04`), so it cannot review, approve, reject, or cancel applications.
+
+## 8. Not yet wired
+- The side effect of rule 8 (generate the fee assessment, `payment_status` to `PENDING`)
+  arrives with the finance module. Until then approval sets only `decided_at`.
+- The `enrollment_state` transition (`NOT_ENROLLED` to `ENROLLED`) arrives with enrollment
+  confirmation, which also issues the student number.

@@ -1,9 +1,28 @@
 <?php
-/** Public enrollment page: dates, steps, requirements, eligibility, FAQ (docs/06). */
+/**
+ * Public enrollment page: dates, steps, requirements, eligibility, FAQ (docs/06).
+ *
+ * @var array $openTerms
+ */
+use App\Models\Term;
 ?>
 <div class="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
     <h1 class="text-2xl font-bold text-brand-navy sm:text-3xl">Enrollment</h1>
-    <p class="mt-2 text-slate-600"><?= e($school['enrollment_open_message'] ?? '') ?></p>
+
+    <?php if ($openTerms !== []): ?>
+        <div class="mt-4 rounded-xl border border-brand-200 bg-brand-50 p-5">
+            <p class="eyebrow">Now accepting applications</p>
+            <?php foreach ($openTerms as $term): ?>
+                <p class="mt-2 text-slate-700">
+                    <span class="font-display font-bold text-brand-navy"><?= e(Term::label($term)) ?></span>:
+                    applications open until <span class="font-semibold"><?= e(dt($term['enrollment_closes_at'], 'F j, Y')) ?></span>.
+                    Classes start <?= e(d($term['start_date'])) ?>.
+                </p>
+            <?php endforeach; ?>
+        </div>
+    <?php else: ?>
+        <p class="mt-2 text-slate-600">Enrollment is not open right now. Check the announcements for the next schedule.</p>
+    <?php endif; ?>
 
     <section class="mt-10" aria-labelledby="steps-heading">
         <h2 id="steps-heading" class="text-xl font-semibold text-brand-navy">Steps</h2>
@@ -64,8 +83,11 @@
     <div class="mt-10 rounded-xl border border-brand-200 bg-brand-50 p-6">
         <h2 class="text-base font-semibold text-brand-navy">Ready to apply?</h2>
         <p class="mt-1.5 text-sm text-brand-700">
-            Sign in to your student account to begin. Online applications open in Phase 2 of the system rollout.
+            Create a student account to start your application online, or sign in if you already have one.
         </p>
-        <a href="<?= e(url('/login')) ?>" class="btn-primary mt-4">Sign in</a>
+        <div class="mt-4 flex flex-wrap gap-3">
+            <a href="<?= e(url('/register')) ?>" class="btn-primary">Create an account</a>
+            <a href="<?= e(url('/login')) ?>" class="btn-secondary">Sign in</a>
+        </div>
     </div>
 </div>

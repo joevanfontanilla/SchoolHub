@@ -114,6 +114,7 @@ const SETTINGS = [
     ['enrollment_payment_policy', 'MINIMUM_DOWNPAYMENT', 'string', 'enrollment', 'FULL | MINIMUM_DOWNPAYMENT | NONE (docs/26)', 0],
     ['minimum_downpayment_percent', '20', 'int', 'enrollment', 'Percent of assessment required to confirm enrollment', 0],
     ['max_units_per_term', '27', 'int', 'academic', 'Maximum units a student may enlist in per term', 0],
+    ['registration_limit_per_hour', '5', 'int', 'security', 'Student sign-ups allowed from one IP address per hour', 0],
     ['enrollment_open_message', 'Enrollment for the coming semester is now open.', 'string', 'enrollment', 'Shown on the public enrollment page', 1],
 ];
 
@@ -128,6 +129,18 @@ const PROGRAMS = [
     ['BSHM', 'Bachelor of Science in Hospitality Management', 'Hospitality, tourism, and service operations.', 'Bachelor', 4],
 ];
 
+/** code => [name, description, is_required, applies_to, sort_order] (docs/10) */
+const REQUIREMENT_TYPES = [
+    'birth_certificate'   => ['PSA Birth Certificate', 'Clear copy of your PSA-issued birth certificate.', 1, 'New,Transferee', 10],
+    'report_card'         => ['Form 138 / Report Card', 'Senior high school report card showing your final grades.', 1, 'New', 20],
+    'good_moral'          => ['Certificate of Good Moral Character', 'Issued by your previous school.', 1, 'New,Transferee', 30],
+    'transfer_credential' => ['Transfer Credential (Honorable Dismissal)', 'Issued by the school you are transferring from.', 1, 'Transferee', 40],
+    'transcript'          => ['Transcript of Records', 'Copy of your transcript from your previous school.', 1, 'Transferee', 50],
+    'id_photo'            => ['2x2 ID Photograph', 'Recent photo with a plain white background.', 1, 'All', 60],
+    'valid_id'            => ['Valid Government or School ID', 'Any valid ID showing your name and photo.', 0, 'All', 70],
+    'medical_certificate' => ['Medical Certificate', 'Issued by a licensed physician within the last six months.', 0, 'New,Transferee', 80],
+];
+
 try {
     Database::transaction(static function (): void {
         seedRoles();
@@ -137,6 +150,8 @@ try {
         seedYearLevels();
         seedPrograms();
         seedAcademicCalendar();
+        seedRequirementTypes();
+        seedEnrollmentWindows();
     });
 
     echo "\n  Seeding complete.\n";
@@ -271,4 +286,43 @@ function seedAcademicCalendar(): void
     }
 
     echo "  academic calendar .... {$code}\n";
+}
+
+function seedRequirementTypes(): void
+{
+    foreach (REQUIREMENT_TYPES as $code => [$name, $description, $required, $appliesTo, $sort]) {
+        // Keyed on code. Only the wording is refreshed on re-run; whether a
+        // document is required and who it applies to belong to the registrar
+        // once the system is in use, so they are never overwritten here.
+        Database::query(
+            'INSERT INTO requirement_types (code, name, description, is_required, applies_to, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description)',
+            [$code, $name, $description, $required, $appliesTo, $sort]
+        );
+    }
+    echo '  requirement types .... ' . count(REQUIREMENT_TYPES) . "\n";
+}
+
+/**
+ * Give each term an enrollment window if it has none: opens 60 days before the
+ * term starts and closes 7 days after. Written only while the columns are NULL,
+ * so a window the registrar has set is never overwritten.
+ */
+function seedEnrollmentWindows(): void
+{
+    $updated = Database::query(
+        "UPDATE terms
+            SET enrollment_opens_at  = DATE_SUB(start_date, INTERVAL 60 DAY),
+                enrollment_closes_at = DATE_ADD(start_date, INTERVAL 7 DAY) + INTERVAL 23 HOUR + INTERVAL 59 MINUTE
+          WHERE enrollment_opens_at IS NULL AND enrollment_closes_at IS NULL"
+    )->rowCount();
+
+    $open = Database::select(
+        "SELECT t.name, a.code FROM terms t JOIN academic_years a ON a.id = t.academic_year_id
+          WHERE NOW() BETWEEN t.enrollment_opens_at AND t.enrollment_closes_at"
+    );
+    $openLabel = $open === [] ? 'none open today' : implode(', ', array_map(static fn ($t) => "{$t['name']} {$t['code']} open", $open));
+
+    echo "  enrollment windows ... {$updated} set ({$openLabel})\n";
 }

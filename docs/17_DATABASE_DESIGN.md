@@ -44,8 +44,12 @@ Super Admin implicitly holds every permission and needs no rows here.
 | `failed_login_attempts` | SMALLINT | default 0 |
 | `locked_until` | DATETIME | nullable |
 | `last_login_at` | DATETIME | nullable |
+| `privacy_consented_at` | DATETIME | nullable — when a self-registered student accepted the data privacy notice (RA 10173) |
 
 Index `(status)`. Users are **disabled, never deleted**.
+
+Self-registered students do not choose a username: it is generated from the local part of
+their email, with a numeric suffix on collision. They may sign in with their email.
 
 ### `sessions`
 `id` VARCHAR(128) **primary key** (no auto-increment), `user_id` FK nullable,
@@ -72,11 +76,16 @@ Single-use. Index `(token_hash)`.
 
 ### `students`
 `user_id` FK unique (one student per user account),
-`student_number` VARCHAR(20) unique (format in section 9),
-`program_id` FK, `year_level_id` FK,
+`student_number` VARCHAR(20) **NULL** unique (format in section 9),
+`program_id` FK **NULL**, `year_level_id` FK **NULL**,
 `student_type` VARCHAR(20) (`New`, `Transferee`, `Continuing`, `Returning`),
 `status` VARCHAR(20) (`Applicant`, `Enrolled`, `Inactive`, `Graduated`),
 `admitted_at` DATE nullable.
+
+A student row exists from registration, as an `Applicant`. `student_number`, `program_id`,
+and `year_level_id` stay NULL until enrollment is **confirmed** (Phase 3), when the student
+number is issued through `document_sequences`. Applicants are identified by their
+application number, so a rejected or abandoned applicant never consumes a student number.
 
 ### `student_profiles`
 `student_id` FK unique, `birthdate` DATE, `sex` VARCHAR(10),
@@ -157,7 +166,8 @@ Added for symmetry with students; the original specification had no teacher tabl
 | `student_id` | FK | RESTRICT |
 | `academic_year_id`, `term_id` | FK | the period applied for |
 | `program_id`, `year_level_id` | FK | what the student applied **for** |
-| `student_type` | VARCHAR(20) | New, Transferee, Continuing, Returning |
+| `student_type` | VARCHAR(20) | New, Transferee, Continuing, Returning — fixed once the draft exists |
+| `previous_school`, `last_school_year` | VARCHAR | nullable; `previous_school` required for transferees |
 | `application_status` | VARCHAR(30) | axis 1 — see `docs/26` |
 | `payment_status` | VARCHAR(20) | axis 2 — **derived**, see `docs/26` section 3 |
 | `enrollment_state` | VARCHAR(20) | axis 3 — see `docs/26` section 4 |
@@ -171,8 +181,10 @@ Indexes `(application_status, term_id)`, `(term_id, program_id)`.
 
 ### `requirement_types`
 The configurable document list from `docs/10`.
-`name`, `description`, `is_required` TINYINT(1),
-`applies_to` VARCHAR(20) (`All`, `New`, `Transferee`, `Continuing`, `Returning`),
+`code` VARCHAR(40) unique (stable key for seeding), `name`, `description`,
+`is_required` TINYINT(1),
+`applies_to` VARCHAR(60) — `All`, or a comma-separated list of student types such as
+`New,Transferee`, matched with `FIND_IN_SET`,
 `max_file_size_kb` INT, `allowed_extensions` VARCHAR(100), `sort_order`, `is_active`.
 
 ### `term_requirements`
@@ -181,8 +193,11 @@ Per-period override, because `docs/10` gives each enrollment period its own list
 Unique `(term_id, requirement_type_id)`.
 
 ### `enrollment_requirements`
-One row per required document per application.
+One row per requested document per application, created with the draft.
 `application_id` FK, `requirement_type_id` FK,
+`is_required` TINYINT(1) — a **snapshot** of whether the document was required when the
+application was created, so later changes to the requirement list never rewrite an
+application already in progress,
 `status` VARCHAR(30) (`NOT_SUBMITTED`, `SUBMITTED`, `UNDER_REVIEW`, `VERIFIED`,
 `REJECTED`, `CORRECTION_REQUIRED`),
 `verified_by` FK nullable, `verified_at` DATETIME nullable, `remarks` TEXT.

@@ -128,7 +128,21 @@ an **audit log** entry.
   be `APPROVED` and `PARTIALLY_PAID` at the same time. Allowed transitions, permitted
   actors, and preconditions are defined in **`docs/26_STATUS_TRANSITIONS.md`** — follow
   that matrix exactly and record every transition in `enrollment_status_history`.
+- **Only `EnrollmentStatusService::transition()` changes `application_status`.** It holds
+  the docs/26 matrix as data, locks the row, re-checks role/remarks/preconditions, and
+  writes history + audit. Never `UPDATE` a status column from a controller or another
+  service. (Tests may force a state directly only as fixture setup.)
 - **`payment_status` is derived** from assessments and payments. Never set it by hand.
+- **Ownership returns 404, not 403.** Student-facing lookups go through
+  `EnrollmentApplicationService::ownedApplication()` / `EnrollmentApplication::findForStudent()`,
+  so another student's record simply doesn't exist. Roles that may never see a thing at
+  all (a teacher opening a student document) get 403.
+- **Uploads go through `DocumentUploadService`**, which checks extension, `finfo` MIME, and
+  magic bytes, stores under a random name, and supersedes instead of deleting. Files are
+  served only via `/documents/{id}` and `DocumentAccessPolicy`.
+- **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
+  calling `session_destroy()`. The latter keeps the old id for the rest of the request while
+  deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).
 - **Financial records are never deleted.** Corrections use reversal/adjustment entries.
 - Money is `DECIMAL(12,2)` (PHP peso). Never float.
 - Historical records are preserved — past terms stay readable.
@@ -189,6 +203,18 @@ enough — large headings, fills, and accents. Do not put white small text on
 Status colors are paired text/background/border sets (`success-*`, `warning-*`,
 `danger-*`) so a message is readable, and every one of them also carries a word and
 an icon — status is never color alone (docs/21).
+
+## Tests
+
+`tests/support.php` holds the fixtures (`makeStudent()`, `applicationInput()`,
+`uploadAllRequired()`, `fixtureFile()`). Fixture users are prefixed `__test_` and removed by
+`deleteTestUsers()` in each test's `finally`, together with their applications, files, and
+uploaded bytes; the application-number counter is rewound so real numbering has no gaps.
+When matching the prefix with `LIKE`, use `testPrefixPattern()` — an unescaped `_` is a
+wildcard and would match (and delete) real accounts.
+
+Upload tests use `UploadedFile::forTesting()`, which is refused outside the CLI. Real HTTP
+uploads (`move_uploaded_file`) are verified end-to-end through Apache with `curl -F`.
 
 ## Local development accounts
 

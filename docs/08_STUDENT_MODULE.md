@@ -11,7 +11,7 @@ Display:
 - Quick actions
 
 ## Profile
-- Student number
+- Student number (issued when enrollment is confirmed; shown as pending until then)
 - Full name
 - Date of birth
 - Contact details

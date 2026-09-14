@@ -39,7 +39,6 @@ final class Session
 
         if ($last !== null && (time() - (int) $last) > $timeout) {
             self::destroy();
-            session_start();
             self::flash('warning', 'Your session expired after a period of inactivity. Please sign in again.');
         }
 
@@ -74,6 +73,19 @@ final class Session
         }
     }
 
+    /**
+     * End the current session and continue on a brand-new, empty one.
+     *
+     * The old session's data is discarded and its server-side file deleted, and
+     * the browser is sent a replacement cookie for the new id. Anything written
+     * afterwards in the same request — a flash notice, a fresh CSRF token for
+     * the sign-in form — therefore lands in a session the browser actually holds.
+     *
+     * Do not "fix" this back to session_destroy() + a cookie deletion: that keeps
+     * using the OLD id for the rest of the request while telling the browser to
+     * drop its cookie. The page rendered after an idle timeout then carries a
+     * CSRF token no browser can ever submit, and the next sign-in fails with 403.
+     */
     public static function destroy(): void
     {
         $_SESSION = [];
@@ -84,11 +96,7 @@ final class Session
             return;
         }
 
-        if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
-        }
-        session_destroy();
+        session_regenerate_id(true);
     }
 
     // -- Flash messages ----------------------------------------------------

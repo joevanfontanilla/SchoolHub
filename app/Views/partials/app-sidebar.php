@@ -17,9 +17,10 @@ use App\Models\User;
 $nav = match ($user?->role_name) {
     User::ROLE_STUDENT => [
         ['/student/dashboard', 'Dashboard', true],
-        ['/student/profile', 'Profile', false],
-        ['/student/enrollment', 'Enrollment', false],
-        ['/student/requirements', 'Requirements', false],
+        ['/student/profile', 'Profile', true],
+        ['/student/enrollment', 'Enrollment', true],
+        ['/student/requirements', 'Requirements', true],
+        ['/student/status', 'Status', true],
         ['/student/schedule', 'Schedule', false],
         ['/student/grades', 'Grades', false],
         ['/student/attendance', 'Attendance', false],
@@ -79,7 +80,10 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
 
             <?php foreach ($nav as [$path, $label, $available]): ?>
                 <?php if ($available): ?>
-                    <?php $active = $currentPath === $path; ?>
+                    <?php
+                    // A section stays highlighted on its sub-pages (/student/enrollment/12).
+                    $active = $currentPath === $path || str_starts_with($currentPath, $path . '/');
+                    ?>
                     <a href="<?= e(url($path)) ?>"
                        class="nav-link <?= $active ? 'nav-link-active' : '' ?>"
                        <?= $active ? 'aria-current="page"' : '' ?>>
