@@ -37,7 +37,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
     </form>
 
     <?php if ($error !== null): ?>
-        <p class="flex items-center gap-2 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status"><?= icon('alert', 'h-5 w-5 shrink-0') ?> <?= e($error) ?></p>
+        <p class="flex items-center gap-2 rounded-xl border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status"><?= icon('alert', 'h-5 w-5 shrink-0') ?> <?= e($error) ?></p>
     <?php endif; ?>
 
     <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">

@@ -14,7 +14,8 @@ use App\Core\HttpException;
  */
 final class FileStreamer
 {
-    public static function send(string $relativePath, string $downloadName, ?string $mimeType = null): void
+    /** @param bool $inline show in the browser (images) instead of downloading */
+    public static function send(string $relativePath, string $downloadName, ?string $mimeType = null, bool $inline = false): void
     {
         $base = realpath(STORAGE_PATH);
         $full = realpath(STORAGE_PATH . '/' . ltrim($relativePath, '/\\'));
@@ -29,7 +30,7 @@ final class FileStreamer
 
         header('Content-Type: ' . ($mimeType ?: 'application/octet-stream'));
         header('Content-Length: ' . filesize($full));
-        header('Content-Disposition: attachment; filename="' . $safeName . '"');
+        header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . '; filename="' . $safeName . '"');
         header('X-Content-Type-Options: nosniff');
         header('Cache-Control: private, no-store');
 

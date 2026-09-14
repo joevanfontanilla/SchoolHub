@@ -39,6 +39,7 @@ $portalName = match ($user?->role_name) {
             <?= partial('app-topbar', ['user' => $user, 'title' => $title ?? '', 'portal' => $portal]) ?>
 
             <main id="main" tabindex="-1" class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                <?= partial('urgent-banner', ['urgent' => $portal['urgent'] ?? []]) ?>
                 <?= partial('flash') ?>
                 <?= $content ?>
             </main>

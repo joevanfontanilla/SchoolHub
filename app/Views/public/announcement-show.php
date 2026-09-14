@@ -18,6 +18,10 @@
 
         <h1 class="mt-3 text-2xl font-bold text-brand-navy sm:text-3xl"><?= e($announcement['title']) ?></h1>
 
+        <?php if (!empty($announcement['image_path'])): ?>
+            <img src="<?= e(url('/announcement-images/' . $announcement['id'])) ?>" alt="<?= e($announcement['image_alt'] ?? '') ?>" class="mt-6 max-h-96 w-full rounded-2xl object-cover">
+        <?php endif; ?>
+
         <div class="mt-6 space-y-4 text-slate-700">
             <?php foreach (preg_split('/\R{2,}/', (string) $announcement['content']) as $paragraph): ?>
                 <p><?= nl2br(e(trim($paragraph))) ?></p>

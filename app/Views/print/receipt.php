@@ -11,7 +11,7 @@ $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
 ?>
 <section class="mt-6">
     <?php if ($payment['reversal_id'] !== null): ?>
-        <div class="mb-6 rounded-lg border-2 border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger-text" role="status">
+        <div class="mb-6 rounded-lg border-2 border-danger-line bg-danger-bg px-4 py-3 text-sm text-danger-text" role="status">
             <p class="font-display text-lg font-extrabold uppercase tracking-wide">Reversed</p>
             <p>This payment was reversed on <?= e(dt($payment['reversed_at'])) ?> and no longer counts toward the account. Reason: <?= e($payment['reversal_reason']) ?></p>
         </div>

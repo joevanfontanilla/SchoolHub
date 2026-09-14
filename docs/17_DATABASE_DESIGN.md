@@ -390,6 +390,14 @@ receive the same receipt number.
 `author_user_id` FK.
 Index `(status, published_at, expires_at)`.
 
+> **As built (migrations 007, 020):** also `is_urgent` TINYINT(1), `image_mime`, `image_alt`
+> (required with an image), `published_by` FK nullable, `notified_at` DATETIME nullable (set once,
+> when the audience was notified), and `recipient_count`. Index `(status, notified_at, published_at)`
+> for delivering scheduled announcements. `announcement_targets` (`target_type` `ROLE`, `PROGRAM`,
+> or `YEAR_LEVEL`) holds the chosen groups; see docs/16 for how they combine.
+> `announcement_dismissals` (`announcement_id`, `user_id`, `dismissed_at`; primary key on the pair)
+> records who hid an urgent banner.
+
 ### `announcement_targets`
 Targeting is multi-valued (`docs/16` allows role, program, and year level), so it is a
 pivot, not a column.

@@ -128,6 +128,26 @@
         });
     });
 
+    // Announcement form: show the group choices only for "Chosen groups", and the
+    // program and year-level narrowing only when Students is ticked. Without
+    // JavaScript every field stays visible and the server validates the combination.
+    document.querySelectorAll('form[data-announcement-form]').forEach(function (form) {
+        var targets = form.querySelector('[data-targets]');
+        var narrowing = form.querySelector('[data-student-narrowing]');
+        var studentRole = form.querySelector('[data-student-role]');
+        function sync() {
+            var chosen = form.querySelector('input[data-audience]:checked');
+            if (targets) {
+                targets.hidden = !chosen || chosen.value !== 'TARGETED';
+            }
+            if (narrowing) {
+                narrowing.hidden = !studentRole || !studentRole.checked;
+            }
+        }
+        form.addEventListener('change', sync);
+        sync();
+    });
+
     // Filter forms apply as soon as a dropdown changes. The search box still
     // waits for Enter or its button, so typing does not reload the page.
     document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {

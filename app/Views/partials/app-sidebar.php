@@ -28,8 +28,8 @@ $nav = match ($user?->role_name) {
         ['/student/grades', 'Academic Records', 'book-open', true, ['/student/schedule', '/student/attendance', '/student/history']],
         ['/student/account', 'Payments & Accounts', 'credit-card', true],
         ['/student/documents', 'Document Requests', 'document', false],
-        ['/student/announcements', 'Announcements', 'megaphone', false],
-        ['/student/notifications', 'Notifications', 'bell', false],
+        ['/portal/announcements', 'Announcements', 'megaphone', true],
+        ['/portal/notifications', 'Notifications', 'bell', true],
         ['/student/settings', 'Settings', 'settings', false],
     ],
     User::ROLE_TEACHER => [
@@ -39,8 +39,10 @@ $nav = match ($user?->role_name) {
         ['/teacher/attendance', 'Attendance', 'attendance', true],
         ['/teacher/grades', 'Grades', 'chart-bar', true],
         ['/teacher/schedule', 'Schedule', 'calendar', true],
-        'Account',
-        ['/teacher/notifications', 'Notifications', 'bell', false],
+        'Communication',
+        ['/portal/announcements', 'Announcements', 'megaphone', true],
+        ['/portal/notifications', 'Notifications', 'bell', true],
+        'Reports',
         ['/teacher/reports', 'Class Reports', 'presentation', false],
     ],
     User::ROLE_REGISTRAR => [
@@ -55,6 +57,9 @@ $nav = match ($user?->role_name) {
         ['/registrar/sections', 'Sections', 'table', true, ['/registrar/classes']],
         ['/registrar/rooms', 'Rooms', 'door', true],
         ['/registrar/grading', 'Grading Periods', 'calendar-check', true],
+        'Communication',
+        ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
+        ['/portal/notifications', 'Notifications', 'bell', true],
         ['/registrar/reports', 'Reports', 'presentation', false],
     ],
     User::ROLE_CASHIER => [
@@ -64,6 +69,9 @@ $nav = match ($user?->role_name) {
         ['/cashier/accounts', 'Student Accounts', 'users', true],
         ['/cashier/fees', 'Fee Schedule', 'banknotes', true],
         ['/cashier/reports', 'Reports', 'presentation', true],
+        'Communication',
+        ['/portal/announcements', 'Announcements', 'megaphone', true],
+        ['/portal/notifications', 'Notifications', 'bell', true],
     ],
     User::ROLE_SUPER_ADMIN => [
         ['/admin/dashboard', 'Dashboard', 'dashboard', true],
@@ -73,6 +81,9 @@ $nav = match ($user?->role_name) {
         ['/admin/settings', 'System Settings', 'settings', false],
         ['/admin/audit-logs', 'Audit Logs', 'list-check', false],
         ['/admin/backups', 'Backups', 'database', false],
+        'Communication',
+        ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
+        ['/portal/notifications', 'Notifications', 'bell', true],
     ],
     default => [],
 };

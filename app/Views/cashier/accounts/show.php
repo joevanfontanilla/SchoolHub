@@ -37,7 +37,7 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
     </div>
 
     <?php if ($belowPolicy): ?>
-        <div class="flex items-start gap-3 rounded-xl border border-warning-border bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status">
+        <div class="flex items-start gap-3 rounded-xl border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status">
             <?= icon('alert', 'mt-0.5 h-5 w-5 shrink-0') ?>
             <p><strong>Below payment policy.</strong> This student is enrolled, but only <?= e(money($assessment['total_paid'])) ?> of the required <?= e(money(FinanceService::money($required))) ?> is paid, usually because a payment was reversed. The enrollment stands; follow up with the student.</p>
         </div>

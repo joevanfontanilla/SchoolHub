@@ -45,6 +45,11 @@ $icons = [
     'IN_PROGRESS'                                            => ['info', 'clock'],
     'EXCUSED'                                                => ['info', 'minus'],
     'DRP', 'DROPPED', 'CLOSED'                              => ['neutral', 'x'],
+    // Announcements and notifications (docs/16)
+    'PUBLISHED'                                              => ['success', 'send'],
+    'SCHEDULED', 'UNREAD'                                    => ['info', 'clock'],
+    'URGENT'                                                 => ['danger', 'alert'],
+    'EXPIRED', 'ARCHIVED', 'READ'                          => ['neutral', 'minus'],
     default                                                  => ['neutral', 'minus'],
 };
 

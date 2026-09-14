@@ -79,6 +79,16 @@ function deleteTestUsers(): void
 
     $in = implode(',', array_fill(0, count($ids), '?'));
 
+    // Announcements written by fixture users, with their images and the notifications
+    // they sent to real accounts (the author key would otherwise just be set to NULL).
+    foreach (Database::select("SELECT id, image_path FROM announcements WHERE author_user_id IN ({$in})", $ids) as $announcement) {
+        if ($announcement['image_path'] !== null) {
+            @unlink(STORAGE_PATH . '/' . $announcement['image_path']);
+        }
+        Database::query('DELETE FROM notifications WHERE link_url = ?', ['/portal/announcements/' . $announcement['id']]);
+        Database::query('DELETE FROM announcements WHERE id = ?', [$announcement['id']]);
+    }
+
     // Notifications addressed to fixture users go with them (FK cascade), but
     // "new application" notices also reach REAL registrars; remove those by the
     // fixture application they point at.

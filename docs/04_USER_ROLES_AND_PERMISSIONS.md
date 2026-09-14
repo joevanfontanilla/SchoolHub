@@ -51,7 +51,8 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Manage enrollment records
 - Assign students/classes
 - Generate registrar reports
-- Publish registrar announcements if permitted
+- Write, publish, schedule, and archive announcements (`announcements.manage`,
+  `announcements.publish`; docs/16)
 
 ### Cannot
 - Record payments or issue receipts
@@ -85,6 +86,7 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Manage backups
 - View system health
 - Access administrative reports
+- Write and publish announcements (holds every permission; docs/16)
 
 ### Cannot
 - Edit or delete audit log entries. Audit logs are **append-only for every role,

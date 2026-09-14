@@ -33,6 +33,10 @@ Include:
 ## Announcements
 Show published public announcements with title, date, content, and optional image.
 
+As built (Phase 6): only announcements for everyone that are marked **public website**, live
+(published, due, and not ended), appear here, urgent ones first with an "Urgent" label. Their
+images are served through `/announcement-images/{id}`, which checks the same visibility.
+
 ## Downloads
 Allow administrators to publish public documents for download.
 

@@ -120,6 +120,21 @@ final class User
         return $this->role_name === self::ROLE_CASHIER;
     }
 
+    /**
+     * Whether THIS user's role grants a permission (Super Admin holds every one). For
+     * services acting on behalf of a user; request gates use Auth::can().
+     */
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        return \App\Core\Database::scalar(
+            'SELECT 1 FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = ? AND p.`key` = ?',
+            [$this->role_id, $permission]
+        ) !== null;
+    }
+
     public function isLocked(): bool
     {
         if ($this->status === self::STATUS_LOCKED) {

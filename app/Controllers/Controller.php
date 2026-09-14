@@ -34,6 +34,10 @@ abstract class Controller
     protected function appView(string $template, array $data = [], int $status = 200): void
     {
         $user = Auth::user();
+        if ($user !== null) {
+            // Deliver scheduled announcements that have come due (there is no cron).
+            \App\Services\AnnouncementService::dispatchDue();
+        }
         $data += [
             'user'        => $user,
             'school'      => SystemSetting::publicSettings(),
@@ -42,6 +46,8 @@ abstract class Controller
             'portal'      => $user === null ? ['subtitle' => '', 'unread' => 0] : [
                 'subtitle' => $user->isStudent() ? \App\Models\Student::portalLabel($user->id) : (string) $user->role_name,
                 'unread'   => \App\Models\Notification::unreadCount($user->id),
+                'recent'   => \App\Models\Notification::latest($user->id, 5),
+                'urgent'   => \App\Models\Announcement::urgentFor($user),
             ],
         ];
         Response::html(View::render($template, $data, 'layouts/app'), $status);

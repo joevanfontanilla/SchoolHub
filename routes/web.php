@@ -21,6 +21,9 @@ use App\Controllers\Cashier\FeeController as CashierFees;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
 use App\Controllers\Cashier\ReportController as CashierReports;
 use App\Controllers\FinanceDocumentController;
+use App\Controllers\Manage\AnnouncementController as ManageAnnouncements;
+use App\Controllers\Portal\AnnouncementController as PortalAnnouncements;
+use App\Controllers\Portal\NotificationController as PortalNotifications;
 use App\Controllers\Student\AccountController as StudentAccount;
 use App\Controllers\PublicController;
 use App\Controllers\Registrar\DashboardController as RegistrarDashboard;
@@ -154,6 +157,34 @@ $router->post('/cashier/fees/{id}/edit', [CashierFees::class, 'save'],   $cashie
 $router->get('/receipts/{id}',       [FinanceDocumentController::class, 'receipt'],   ['auth'], 'receipts.show');
 $router->get('/statements/{id}',     [FinanceDocumentController::class, 'statement'], ['auth'], 'statements.show');
 $router->get('/payment-proofs/{id}', [FinanceDocumentController::class, 'proof'],     ['auth'], 'payment-proofs.show');
+
+// ---------------------------------------------------------------------------
+// Communication (Phase 6)
+//
+// Reading: any signed-in role with the permission, and only what its audience
+// includes (filtered in the query). Writing: any role holding announcements.manage
+// (Registrar, Super Admin); publishing and archiving need announcements.publish.
+// ---------------------------------------------------------------------------
+$router->get('/portal/announcements',               [PortalAnnouncements::class, 'index'],   ['auth', 'can:announcements.view'], 'portal.announcements');
+$router->get('/portal/announcements/{id}',          [PortalAnnouncements::class, 'show'],    ['auth', 'can:announcements.view']);
+$router->post('/portal/announcements/{id}/dismiss', [PortalAnnouncements::class, 'dismiss'], ['auth', 'can:announcements.view']);
+// Public announcements' images are open to visitors; the controller checks each one.
+$router->get('/announcement-images/{id}',           [PortalAnnouncements::class, 'image'],   [], 'announcement-images.show');
+
+$router->get('/portal/notifications',                [PortalNotifications::class, 'index'],       ['auth', 'can:notifications.view'], 'portal.notifications');
+$router->post('/portal/notifications/read-all',      [PortalNotifications::class, 'markAllRead'], ['auth', 'can:notifications.view']);
+$router->post('/portal/notifications/{id}/open',     [PortalNotifications::class, 'open'],        ['auth', 'can:notifications.view']);
+$router->post('/portal/notifications/{id}/archive',  [PortalNotifications::class, 'archive'],     ['auth', 'can:notifications.view']);
+$router->post('/portal/notifications/{id}/restore',  [PortalNotifications::class, 'restore'],     ['auth', 'can:notifications.view']);
+
+$router->get('/manage/announcements',              [ManageAnnouncements::class, 'index'],   ['auth', 'can:announcements.manage'], 'manage.announcements');
+$router->get('/manage/announcements/create',       [ManageAnnouncements::class, 'create'],  ['auth', 'can:announcements.manage']);
+$router->post('/manage/announcements/create',      [ManageAnnouncements::class, 'store'],   ['auth', 'can:announcements.manage']);
+$router->get('/manage/announcements/{id}/edit',    [ManageAnnouncements::class, 'edit'],    ['auth', 'can:announcements.manage']);
+$router->post('/manage/announcements/{id}/edit',   [ManageAnnouncements::class, 'update'],  ['auth', 'can:announcements.manage']);
+$router->post('/manage/announcements/{id}/archive', [ManageAnnouncements::class, 'archive'], ['auth', 'can:announcements.publish']);
+$router->post('/manage/announcements/{id}/restore', [ManageAnnouncements::class, 'restore'], ['auth', 'can:announcements.manage']);
+$router->post('/manage/announcements/{id}/delete', [ManageAnnouncements::class, 'destroy'], ['auth', 'can:announcements.manage']);
 
 // ---------------------------------------------------------------------------
 // Teacher (Phase 4)

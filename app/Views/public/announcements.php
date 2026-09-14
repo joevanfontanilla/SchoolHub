@@ -23,6 +23,9 @@
                         <?php if (!empty($announcement['category'])): ?>
                             <span class="badge bg-slate-100 text-slate-700"><?= e($announcement['category']) ?></span>
                         <?php endif; ?>
+                        <?php if (!empty($announcement['is_urgent'])): ?>
+                            <?= component('status-badge', ['status' => 'URGENT', 'label' => 'Urgent']) ?>
+                        <?php endif; ?>
                     </div>
                     <h2 class="mt-2 text-lg font-semibold text-brand-navy">
                         <a class="hover:text-brand-600 hover:underline" href="<?= e(url('/announcements/' . $announcement['slug'])) ?>">

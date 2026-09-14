@@ -22,6 +22,7 @@ php database/migrate.php --status   # show applied / pending
 php database/seed.php               # roles, permissions, settings, programs, terms (idempotent)
 php database/import_curricula.php   # the six curricula from database/seeds/curricula (skips existing)
 php database/import_curricula.php --check   # validate the curriculum files; writes nothing
+php database/dispatch_announcements.php     # deliver scheduled announcements now (safe to repeat)
 php database/create_admin.php       # interactively create the first Super Admin
 php database/backup.php             # manual database backup
 
@@ -185,8 +186,15 @@ an **audit log** entry.
   the original). Use the **amount due** (`FinanceService::dueCents()`: total + adjustments), never
   `total_amount` alone, and sum payment amounts **with their sign**. Spreadsheet exports go through
   `CsvExport`, which neutralizes formula cells; exports are audited.
-- **Notifications** are written with `NotificationService` at the moment of the event; the
-  inbox UI comes later. Links are relative paths.
+- **Communication (docs/16).** Notifications are written with `NotificationService` at the moment of
+  the event; links are relative in-app paths, and the inbox (`/portal/notifications`) follows a link
+  only through `NotificationService::safeLink()`. Who an announcement reaches is defined **once**, in
+  `Announcement::audienceSql()`, used both for reading and for the one-time `INSERT … SELECT` of
+  notifications in `AnnouncementService::dispatch()` — never filter announcements in a view or
+  with a second rule. Writing and publishing go through `AnnouncementService` (permission
+  `announcements.manage` / `announcements.publish`, re-checked with `User::hasPermission()`).
+  Scheduled announcements are delivered by `AnnouncementService::dispatchDue()` on portal page loads
+  and by `php database/dispatch_announcements.php`.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
   calling `session_destroy()`. The latter keeps the old id for the rest of the request while
   deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).

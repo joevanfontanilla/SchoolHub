@@ -13,7 +13,8 @@
 Use:
 - Summary cards
 - Recent activity
-- Important alerts
+- Important alerts (as built: urgent announcements as a dismissible banner on every portal
+  page, with the word "Urgent" and an icon, `role="alert"`; docs/16)
 - Tables
 - Filters
 - Search
