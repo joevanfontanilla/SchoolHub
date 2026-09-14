@@ -7,6 +7,7 @@
  * @var ?array $assessment
  * @var array  $items
  * @var array  $payments
+ * @var array  $adjustments
  * @var array  $submissions
  * @var int    $required     centavos needed before enrollment
  * @var string $policy
@@ -36,11 +37,12 @@ $failed = errors() !== [];
 <?php else: ?>
     <?php
     $paidCents = FinanceService::cents($assessment['total_paid']);
-    $totalCents = FinanceService::cents($assessment['total_amount']);
+    $totalCents = max(0, FinanceService::dueCents($assessment));
+    $verifiedCount = count(array_filter($payments, static fn ($p) => $p['reversed_payment_id'] === null && $p['reversal_id'] === null));
     $pendingCents = array_sum(array_map(static fn ($s) => $s['status'] === 'PENDING' ? FinanceService::cents($s['amount']) : 0, $submissions));
     $enrolled = $assessment['enrollment_state'] === 'ENROLLED';
     $toEnrollCents = max(0, $required - $paidCents);
-    $paidPercent = $totalCents > 0 ? $paidCents / $totalCents * 100 : 0;
+    $paidPercent = $totalCents > 0 ? $paidCents / $totalCents * 100 : 100;
     $suggested = $failed ? old('amount') : FinanceService::money(max(0, ($toEnrollCents > 0 ? $toEnrollCents : FinanceService::cents($assessment['balance'])) - $pendingCents));
     ?>
 
@@ -59,8 +61,8 @@ $failed = errors() !== [];
     <?php endif; ?>
 
     <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <?= component('stat-card', ['label' => 'Total assessment', 'value' => money($assessment['total_amount']), 'hint' => $assessment['term_name'] . ' · ' . $assessment['assessment_number'], 'icon' => 'receipt']) ?>
-        <?= component('stat-card', ['label' => 'Paid', 'value' => money($assessment['total_paid']), 'hint' => count($payments) . ' verified payment' . (count($payments) === 1 ? '' : 's') . ($pendingCents > 0 ? ' · ' . money(FinanceService::money($pendingCents)) . ' being verified' : ''), 'icon' => 'banknotes', 'tone' => 'success']) ?>
+        <?= component('stat-card', ['label' => $adjustments === [] ? 'Total assessment' : 'Amount due', 'value' => money(FinanceService::money($totalCents)), 'hint' => $adjustments === [] ? $assessment['term_name'] . ' · ' . $assessment['assessment_number'] : 'Assessed ' . money($assessment['total_amount']) . ', adjusted ' . signed_money(FinanceService::signedCents($assessment['total_adjustments'])), 'icon' => 'receipt']) ?>
+        <?= component('stat-card', ['label' => 'Paid', 'value' => money($assessment['total_paid']), 'hint' => $verifiedCount . ' verified payment' . ($verifiedCount === 1 ? '' : 's') . ($pendingCents > 0 ? ' · ' . money(FinanceService::money($pendingCents)) . ' being verified' : ''), 'icon' => 'banknotes', 'tone' => 'success']) ?>
         <?= component('stat-card', ['label' => 'Balance', 'value' => money($assessment['balance']), 'hint' => FinanceService::cents($assessment['balance']) === 0 ? 'Fully paid' : 'Remaining this term', 'icon' => 'credit-card', 'tone' => FinanceService::cents($assessment['balance']) === 0 ? 'success' : 'neutral']) ?>
         <?= component('stat-card', [
             'label' => 'Enrollment',
@@ -110,12 +112,18 @@ $failed = errors() !== [];
                             <?php endforeach; ?>
                         </tbody>
                         <tfoot class="bg-brand-50/60">
-                            <tr><th scope="row" colspan="3" class="px-4 py-3 text-right font-semibold text-brand-navy">Total</th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg font-bold text-brand-navy tabular-nums"><?= e(money($assessment['total_amount'])) ?></td></tr>
+                            <tr><th scope="row" colspan="3" class="px-4 py-3 text-right font-semibold text-brand-navy"><?= $adjustments === [] ? 'Total' : 'Total assessment' ?></th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg font-bold text-brand-navy tabular-nums"><?= e(money($assessment['total_amount'])) ?></td></tr>
+                            <?php foreach ($adjustments as $adjustment): ?>
+                                <tr><th scope="row" colspan="3" class="px-4 py-2 text-right font-normal text-slate-700"><?= e(FinanceService::ADJUSTMENT_TYPES[$adjustment['type']] ?? $adjustment['type']) ?> <span class="text-brand-gray">· <?= e($adjustment['reason']) ?></span></th><td class="whitespace-nowrap px-4 py-2 text-right tabular-nums"><?= e(signed_money(FinanceService::signedCents($adjustment['amount']))) ?></td></tr>
+                            <?php endforeach; ?>
+                            <?php if ($adjustments !== []): ?>
+                                <tr><th scope="row" colspan="3" class="px-4 py-3 text-right font-semibold text-brand-navy">Amount due</th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg font-bold text-brand-navy tabular-nums"><?= e(money(FinanceService::money($totalCents))) ?></td></tr>
+                            <?php endif; ?>
                         </tfoot>
                     </table>
                 </div>
                 <div class="mt-5">
-                    <?= component('progress-bar', ['percent' => $paidPercent, 'label' => 'Paid of total assessment', 'showLabel' => true, 'tone' => $enrolled ? 'success' : 'brand']) ?>
+                    <?= component('progress-bar', ['percent' => $paidPercent, 'label' => 'Paid of amount due', 'showLabel' => true, 'tone' => $enrolled ? 'success' : 'brand']) ?>
                     <?php if ($policy !== PaymentPolicy::NONE && !$enrolled): ?>
                         <p class="mt-2 text-xs text-slate-600">
                             To be enrolled: <?= $policy === PaymentPolicy::FULL ? 'pay the full assessment' : 'pay at least ' . e(money(FinanceService::money($required))) . ' (' . PaymentPolicy::downpaymentPercent() . '% down payment)' ?>. The rest of the balance can be paid within the term.
@@ -132,9 +140,19 @@ $failed = errors() !== [];
                     <ul class="divide-y divide-brand-50">
                         <?php foreach ($payments as $payment): ?>
                             <?php if ($payment['payment_submission_id'] !== null) { continue; } ?>
+                            <?php if ($payment['reversed_payment_id'] !== null): ?>
+                                <li class="py-3 text-sm">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <span><span class="font-semibold tabular-nums text-danger-text"><?= e(signed_money(FinanceService::signedCents($payment['amount']))) ?></span> · Receipt <?= e($payment['reversed_receipt_number']) ?> reversed · <?= e(d($payment['paid_at'])) ?></span>
+                                        <?= component('status-badge', ['status' => 'REJECTED', 'label' => 'Reversal']) ?>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-600">Reason: <?= e($payment['remarks']) ?></p>
+                                </li>
+                                <?php continue; ?>
+                            <?php endif; ?>
                             <li class="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                                 <span><span class="font-semibold text-brand-navy"><?= e(money($payment['amount'])) ?></span> · <?= e($payment['payment_method']) ?> at the cashier · <?= e(d($payment['paid_at'])) ?></span>
-                                <span class="flex items-center gap-2"><?= component('status-badge', ['status' => 'PAID', 'label' => 'Received']) ?> <a href="<?= e(url('/receipts/' . $payment['id'])) ?>" class="font-semibold text-brand-600 hover:underline">Receipt <?= e($payment['receipt_number']) ?></a></span>
+                                <span class="flex items-center gap-2"><?= component('status-badge', $payment['reversal_id'] !== null ? ['status' => 'CANCELLED', 'label' => 'Reversed'] : ['status' => 'PAID', 'label' => 'Received']) ?> <a href="<?= e(url('/receipts/' . $payment['id'])) ?>" class="font-semibold text-brand-600 hover:underline">Receipt <?= e($payment['receipt_number']) ?></a></span>
                             </li>
                         <?php endforeach; ?>
                         <?php foreach ($submissions as $submission): ?>
@@ -143,7 +161,7 @@ $failed = errors() !== [];
                                     <span><span class="font-semibold text-brand-navy"><?= e(money($submission['amount'])) ?></span> · <?= e($submission['method']) ?> · Ref. <?= e($submission['reference_number']) ?> · paid <?= e(d($submission['paid_on'])) ?></span>
                                     <span class="flex items-center gap-2">
                                         <?= component('status-badge', match ($submission['status']) {
-                                            'APPROVED' => ['status' => 'PAID', 'label' => 'Verified'],
+                                            'APPROVED' => $submission['reversal_id'] !== null ? ['status' => 'CANCELLED', 'label' => 'Reversed'] : ['status' => 'PAID', 'label' => 'Verified'],
                                             'REJECTED' => ['status' => 'REJECTED', 'label' => 'Not verified'],
                                             default    => ['status' => 'UNDER_REVIEW', 'label' => 'Being verified'],
                                         }) ?>

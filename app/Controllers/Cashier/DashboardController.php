@@ -9,6 +9,7 @@ use App\Core\Auth;
 use App\Core\Request;
 use App\Models\Announcement;
 use App\Models\Finance;
+use App\Models\FinanceReport;
 
 /**
  * Cashier dashboard (docs/14): payments to verify and today's collections.
@@ -19,12 +20,20 @@ final class DashboardController extends Controller
     {
         $user = Auth::user();
         $stats = Finance::cashierStats();
+        $totals = FinanceReport::dailyTotals(7);
 
         $this->appView('dashboards/cashier', [
             'title'         => 'Dashboard',
             'announcements' => Announcement::forUser($user, 5),
             'pendingQueue'  => array_slice(Finance::submissionQueue('PENDING'), 0, 6),
             'recent'        => Finance::recentPayments(),
+            'week'          => array_map(static fn (string $day, int $cents): array => [
+                'label'    => date('D', strtotime($day)),
+                'sublabel' => date('M j', strtotime($day)),
+                'value'    => max(0, $cents) / 100,
+                'display'  => ReportController::short($cents),
+            ], array_keys($totals), $totals),
+            'weekTotal'     => array_sum($totals),
             'cards'         => [
                 ['icon' => 'inbox', 'label' => 'Payments to verify', 'value' => (string) $stats['pending'], 'hint' => $stats['pending'] === 0 ? 'Queue is clear' : 'Submitted online by students', 'tone' => $stats['pending'] > 0 ? 'warning' : 'neutral'],
                 ['icon' => 'banknotes', 'label' => "Today's collections", 'value' => money($stats['collected_today']), 'hint' => $stats['payments_today'] . ' payment' . ($stats['payments_today'] === 1 ? '' : 's') . ' today', 'tone' => 'success'],

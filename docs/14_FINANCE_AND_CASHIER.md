@@ -42,7 +42,7 @@ Record:
 
 ---
 
-## As built (Phase 5, first part)
+## As built (Phase 5)
 
 ### Fee schedule (`/cashier/fees`, `fees.manage`)
 Each fee is charged **per unit** (all units), **per laboratory unit**, or **fixed** once per
@@ -75,14 +75,49 @@ The cashier sees the proof next to the account and either:
 The cashier can record a payment received in person (cash, check, and so on), with the same
 receipt, balance, and enrollment effects.
 
+### Adjustments (`/cashier/accounts/{id}`, `fees.manage`)
+The cashier applies a **discount, scholarship, waiver, additional charge, or correction**
+(`FinanceService::adjust`). Every adjustment:
+- has a positive peso amount (at most two decimals) and a **reason of 5 to 500 characters**;
+  a correction also says whether it increases or decreases what is owed;
+- is stored as a signed row in `financial_adjustments` (`ADJ-YYYY-NNNNN`); discounts,
+  scholarships, waivers, and decreasing corrections are negative, charges and increasing
+  corrections positive;
+- takes effect at once, with no second approval, and is audited (`finance.adjusted`, reason in
+  the remarks) and notified to the student;
+- may **not** bring the amount due below what has already been paid, because refunds are not
+  built. Bringing it to exactly the amount paid is allowed.
+
+The assessment's `total_amount` is never rewritten. **Amount due = `total_amount` +
+`total_adjustments`**, and the balance, `payment_status`, and payment policy all use the
+amount due. A reduction can meet the policy and enroll the student; a full scholarship
+enrolls without any payment.
+
+### Reversals (`/cashier/accounts/{id}`, `payments.record`)
+A payment recorded by mistake (wrong account, bounced cheque, duplicate) is reversed with a
+**required reason** (`FinanceService::reversePayment`):
+- a **new `payments` row** is written with the negative amount, a new transaction number,
+  **no receipt number**, and `reversed_payment_id` pointing at the original;
+- the original payment and its receipt are left exactly as they were. The receipt, when
+  printed, carries a **REVERSED** notice with the date and reason;
+- a payment can be reversed only once (a unique key backs this), and a reversal cannot
+  itself be reversed. To undo a mistaken reversal, record the payment again;
+- it is audited (`finance.payment_reversed`) and notified to the student.
+
+**If the student is already enrolled**, the enrollment stands. When the amount paid is now
+below the payment policy, the account shows a **"Below payment policy"** warning (account
+page and outstanding-balances report), and every active Registrar and Cashier is notified
+(`finance.below_policy`). Following up with the student is a manual step.
+
 ### Rules
-- `FinanceService::recalculate()` is the only writer of `total_paid`, `balance`, and the
-  application's `payment_status`.
-- Payments are never edited or deleted. Reversals and adjustments (discounts, scholarships)
-  are not built yet.
-- Every assessment, payment, verification, rejection, fee change, and proof view is audited.
+- `FinanceService::recalculate()` is the only writer of `total_adjustments`, `total_paid`,
+  `balance`, and the application's `payment_status`. It sums payments **with their sign**, so
+  reversals subtract.
+- Payments and adjustments are never edited or deleted.
+- Every assessment, payment, verification, rejection, adjustment, reversal, fee change,
+  proof view, and report export is audited.
 
 ### Not yet built
-Reversals and financial adjustments, installment schedules, collection reports, and a real
-payment gateway (which needs a merchant account and the school's authorization to add an
-external service).
+Refunds (money paid beyond the amount due), installment schedules, a second approval for
+large adjustments, and a real payment gateway (which needs a merchant account and the
+school's authorization to add an external service).

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Database;
+use App\Services\FinanceService;
+use App\Services\PaymentPolicy;
 
 /**
  * Read queries for assessments, payments, and online payment submissions
@@ -79,13 +81,35 @@ final class Finance
         return Database::select('SELECT * FROM fee_items WHERE fee_assessment_id = ? ORDER BY sort_order, id', [$assessmentId]);
     }
 
-    /** @return array<int,array<string,mixed>> */
+    /**
+     * Payments and reversals in order. A payment that was reversed carries
+     * reversal_id/reversed_at/reversal_reason; a reversal row carries
+     * reversed_receipt_number (the receipt it cancels).
+     *
+     * @return array<int,array<string,mixed>>
+     */
     public static function payments(int $assessmentId): array
     {
         return Database::select(
-            "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name
-               FROM payments pay JOIN users c ON c.id = pay.cashier_user_id
+            "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name,
+                    r.id AS reversal_id, r.created_at AS reversed_at, r.remarks AS reversal_reason,
+                    orig.receipt_number AS reversed_receipt_number
+               FROM payments pay
+               JOIN users c ON c.id = pay.cashier_user_id
+          LEFT JOIN payments r ON r.reversed_payment_id = pay.id
+          LEFT JOIN payments orig ON orig.id = pay.reversed_payment_id
               WHERE pay.fee_assessment_id = ? ORDER BY pay.paid_at, pay.id",
+            [$assessmentId]
+        );
+    }
+
+    /** @return array<int,array<string,mixed>> oldest first */
+    public static function adjustments(int $assessmentId): array
+    {
+        return Database::select(
+            "SELECT fa.*, CONCAT(u.first_name, ' ', u.last_name) AS created_by_name
+               FROM financial_adjustments fa JOIN users u ON u.id = fa.created_by
+              WHERE fa.fee_assessment_id = ? ORDER BY fa.created_at, fa.id",
             [$assessmentId]
         );
     }
@@ -94,8 +118,10 @@ final class Finance
     public static function submissions(int $assessmentId): array
     {
         return Database::select(
-            'SELECT ps.*, pay.receipt_number, pay.id AS payment_id
-               FROM payment_submissions ps LEFT JOIN payments pay ON pay.payment_submission_id = ps.id
+            'SELECT ps.*, pay.receipt_number, pay.id AS payment_id, r.id AS reversal_id
+               FROM payment_submissions ps
+          LEFT JOIN payments pay ON pay.payment_submission_id = ps.id
+          LEFT JOIN payments r ON r.reversed_payment_id = pay.id
               WHERE ps.fee_assessment_id = ? ORDER BY ps.submitted_at DESC',
             [$assessmentId]
         );
@@ -146,7 +172,8 @@ final class Finance
     {
         return Database::selectOne(
             "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name,
-                    fa.assessment_number, fa.total_amount, fa.total_paid, fa.balance,
+                    fa.assessment_number, fa.total_amount, fa.total_adjustments, fa.total_paid, fa.balance,
+                    r.id AS reversal_id, r.created_at AS reversed_at, r.remarks AS reversal_reason,
                     st.student_number, st.user_id, u.first_name, u.middle_name, u.last_name,
                     t.name AS term_name, ay.code AS academic_year_code, p.code AS program_code, yl.name AS year_level_name
                FROM payments pay
@@ -159,22 +186,47 @@ final class Finance
                JOIN academic_years ay ON ay.id = t.academic_year_id
                JOIN programs p ON p.id = ea.program_id
                JOIN year_levels yl ON yl.id = ea.year_level_id
+          LEFT JOIN payments r ON r.reversed_payment_id = pay.id
               WHERE pay.id = ?",
             [$id]
         );
     }
 
     /**
-     * Balance after each payment, in order — for the receipt's "balance after".
+     * The balance right after this payment was recorded, for the receipt: the amount
+     * due at that moment (assessment plus adjustments made by then) less everything
+     * recorded up to and including it. Later adjustments and reversals don't change
+     * a receipt already issued.
      */
     public static function balanceAfter(array $payment): string
     {
         $paidThrough = (string) Database::scalar(
-            'SELECT COALESCE(SUM(amount), 0) FROM payments WHERE fee_assessment_id = ? AND (paid_at < ? OR (paid_at = ? AND id <= ?))',
-            [$payment['fee_assessment_id'], $payment['paid_at'], $payment['paid_at'], $payment['id']]
+            'SELECT COALESCE(SUM(amount), 0) FROM payments WHERE fee_assessment_id = ? AND (created_at < ? OR (created_at = ? AND id <= ?))',
+            [$payment['fee_assessment_id'], $payment['created_at'], $payment['created_at'], $payment['id']]
         );
-        $cents = \App\Services\FinanceService::cents($payment['total_amount']) - \App\Services\FinanceService::cents($paidThrough);
-        return \App\Services\FinanceService::money(max(0, $cents));
+        $cents = FinanceService::cents($payment['total_amount']) + self::adjustedThrough($payment) - FinanceService::signedCents($paidThrough);
+        return FinanceService::money(max(0, $cents));
+    }
+
+    /** Centavos of adjustments applied to the account up to the moment this payment was recorded. */
+    public static function adjustedThrough(array $payment): int
+    {
+        return FinanceService::signedCents((string) Database::scalar(
+            'SELECT COALESCE(SUM(amount), 0) FROM financial_adjustments WHERE fee_assessment_id = ? AND created_at <= ?',
+            [$payment['fee_assessment_id'], $payment['created_at']]
+        ));
+    }
+
+    /**
+     * Enrolled students whose paid amount is below the payment policy, usually after
+     * a reversal (docs/14). The enrollment stands; the cashier and registrar follow up.
+     *
+     * @param array<string,mixed> $assessment an assessment row with enrollment_state
+     */
+    public static function belowPolicy(array $assessment): bool
+    {
+        return $assessment['enrollment_state'] === 'ENROLLED'
+            && FinanceService::cents($assessment['total_paid']) < PaymentPolicy::requiredCents($assessment);
     }
 
     /** @return array{pending:int,collected_today:string,payments_today:int,outstanding:string,assessments:int} */
@@ -184,7 +236,7 @@ final class Finance
         return [
             'pending'         => (int) Database::scalar("SELECT COUNT(*) FROM payment_submissions WHERE status = 'PENDING'"),
             'collected_today' => (string) Database::scalar('SELECT COALESCE(SUM(amount), 0) FROM payments WHERE DATE(created_at) = ?', [$today]),
-            'payments_today'  => (int) Database::scalar('SELECT COUNT(*) FROM payments WHERE DATE(created_at) = ?', [$today]),
+            'payments_today'  => (int) Database::scalar('SELECT COUNT(*) FROM payments WHERE DATE(created_at) = ? AND reversed_payment_id IS NULL', [$today]),
             'outstanding'     => (string) Database::scalar("SELECT COALESCE(SUM(balance), 0) FROM fee_assessments WHERE status = 'ACTIVE'"),
             'assessments'     => (int) Database::scalar("SELECT COUNT(*) FROM fee_assessments WHERE status = 'ACTIVE'"),
         ];

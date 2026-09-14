@@ -180,6 +180,11 @@ an **audit log** entry.
   `payment_status`. Money is handled in whole centavos (`FinanceService::cents()` / `money()`), never
   float. Payments are never edited or deleted. Receipts, statements, and proofs are opened only
   through `FinanceAccessPolicy` (owner student, else 404; listed staff roles, else 403).
+  Corrections are `FinanceService::adjust()` (signed `financial_adjustments` row, reason required)
+  and `FinanceService::reversePayment()` (a new negative `payments` row with no receipt, pointing at
+  the original). Use the **amount due** (`FinanceService::dueCents()`: total + adjustments), never
+  `total_amount` alone, and sum payment amounts **with their sign**. Spreadsheet exports go through
+  `CsvExport`, which neutralizes formula cells; exports are audited.
 - **Notifications** are written with `NotificationService` at the moment of the event; the
   inbox UI comes later. Links are relative paths.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than

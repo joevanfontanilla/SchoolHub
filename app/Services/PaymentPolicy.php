@@ -49,17 +49,18 @@ final class PaymentPolicy
 
         $paid = FinanceService::cents($assessment['total_paid']);
         $required = self::requiredCents($assessment);
-        if ($paid >= $required && ($required > 0 || $policy === self::FULL)) {
+        if ($paid >= $required) {
             return null;
         }
+        $due = money(FinanceService::money(FinanceService::dueCents($assessment)));
 
         return $policy === self::FULL
-            ? 'Waiting for payment: school policy requires the assessment of ' . money($assessment['total_amount']) . ' to be fully paid before enrollment.'
+            ? 'Waiting for payment: school policy requires the amount due of ' . $due . ' to be fully paid before enrollment.'
             : sprintf(
                 'Waiting for payment: school policy requires a down payment of at least %s (%d%% of %s) before enrollment. %s has been paid.',
                 money(FinanceService::money($required)),
                 self::downpaymentPercent(),
-                money($assessment['total_amount']),
+                $due,
                 money($assessment['total_paid'])
             );
     }
@@ -71,12 +72,13 @@ final class PaymentPolicy
      */
     public static function requiredCents(array $assessment): int
     {
-        $total = FinanceService::cents($assessment['total_amount']);
-        return match (self::current()) {
-            self::NONE => 0,
-            self::FULL => $total,
+        // The amount due: the assessment total plus discounts, scholarships, and charges.
+        $due = max(0, FinanceService::dueCents($assessment));
+        return match (true) {
+            self::current() === self::NONE, $due === 0 => 0, // nothing to pay, e.g. a full scholarship
+            self::current() === self::FULL             => $due,
             // At least one centavo, so a zero-percent setting still means "a down payment".
-            default    => max(1, (int) ceil($total * self::downpaymentPercent() / 100)),
+            default                                    => max(1, (int) ceil($due * self::downpaymentPercent() / 100)),
         };
     }
 

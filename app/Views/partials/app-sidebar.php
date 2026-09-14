@@ -63,7 +63,7 @@ $nav = match ($user?->role_name) {
         ['/cashier/payments', 'Online Payments', 'inbox', true],
         ['/cashier/accounts', 'Student Accounts', 'users', true],
         ['/cashier/fees', 'Fee Schedule', 'banknotes', true],
-        ['/cashier/reports', 'Reports', 'presentation', false],
+        ['/cashier/reports', 'Reports', 'presentation', true],
     ],
     User::ROLE_SUPER_ADMIN => [
         ['/admin/dashboard', 'Dashboard', 'dashboard', true],

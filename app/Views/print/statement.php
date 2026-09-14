@@ -6,9 +6,11 @@
  * @var array $assessment
  * @var array $items
  * @var array $payments
+ * @var array $adjustments
  * @var array $subjects
  */
 use App\Services\FeeScheduleService;
+use App\Services\FinanceService;
 
 $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
 $name = trim($assessment['last_name'] . ', ' . $assessment['first_name']);
@@ -62,6 +64,12 @@ $cell = 'border-b border-slate-200 px-3 py-2';
             </tbody>
             <tfoot class="font-semibold">
                 <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Total assessment</th><td class="px-3 py-2 text-right font-display text-brand-navy tabular-nums"><?= e(money($assessment['total_amount'])) ?></td></tr>
+                <?php foreach ($adjustments as $adjustment): ?>
+                    <tr><th scope="row" colspan="3" class="px-3 py-1 text-right font-normal text-slate-600"><?= e(FinanceService::ADJUSTMENT_TYPES[$adjustment['type']] ?? $adjustment['type']) ?> (<?= e($adjustment['adjustment_number']) ?>): <?= e($adjustment['reason']) ?></th><td class="px-3 py-1 text-right font-normal tabular-nums"><?= e(signed_money(FinanceService::signedCents($adjustment['amount']))) ?></td></tr>
+                <?php endforeach; ?>
+                <?php if ($adjustments !== []): ?>
+                    <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Amount due</th><td class="px-3 py-2 text-right font-display text-brand-navy tabular-nums"><?= e(money(FinanceService::money(max(0, FinanceService::dueCents($assessment))))) ?></td></tr>
+                <?php endif; ?>
                 <tr><th scope="row" colspan="3" class="px-3 py-1 text-right font-normal text-slate-600">Less payments</th><td class="px-3 py-1 text-right font-normal tabular-nums"><?= e(money($assessment['total_paid'])) ?></td></tr>
                 <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Balance</th><td class="px-3 py-2 text-right font-display text-lg text-brand-navy tabular-nums"><?= e(money($assessment['balance'])) ?></td></tr>
             </tfoot>
@@ -75,7 +83,11 @@ $cell = 'border-b border-slate-200 px-3 py-2';
                 <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Date</th><th scope="col" class="<?= $cell ?>">Receipt No.</th><th scope="col" class="<?= $cell ?>">Method</th><th scope="col" class="<?= $cell ?> text-right">Amount</th></tr></thead>
                 <tbody>
                     <?php foreach ($payments as $payment): ?>
-                        <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?> font-semibold"><?= e($payment['receipt_number']) ?></td><td class="<?= $cell ?>"><?= e($payment['payment_method']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
+                        <?php if ($payment['reversed_payment_id'] !== null): ?>
+                            <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?>">Reversal of <?= e($payment['reversed_receipt_number']) ?></td><td class="<?= $cell ?>"><?= e($payment['remarks']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(signed_money(FinanceService::signedCents($payment['amount']))) ?></td></tr>
+                        <?php else: ?>
+                            <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?> font-semibold"><?= e($payment['receipt_number']) ?><?= $payment['reversal_id'] !== null ? ' (reversed)' : '' ?></td><td class="<?= $cell ?>"><?= e($payment['payment_method']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </tbody>
             </table>

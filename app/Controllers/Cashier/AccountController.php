@@ -40,7 +40,10 @@ final class AccountController extends Controller
             'assessment'  => $assessment,
             'items'       => Finance::items($id),
             'payments'    => Finance::payments($id),
+            'adjustments' => Finance::adjustments($id),
             'submissions' => Finance::submissions($id),
+            'belowPolicy' => Finance::belowPolicy($assessment),
+            'adjustmentTypes' => FinanceService::ADJUSTMENT_TYPES,
             'required'    => PaymentPolicy::requiredCents($assessment),
             'policy'      => PaymentPolicy::current(),
             'methods'     => FinanceService::METHODS_CASHIER,
@@ -62,6 +65,63 @@ final class AccountController extends Controller
         $message = "Payment recorded. Official receipt {$result['receipt_number']} was issued.";
         if ($result['enrolled']) {
             $message .= ' The student is now officially enrolled.';
+        }
+        $this->success($message, "/cashier/accounts/{$id}");
+    }
+
+    /**
+     * A discount, scholarship, waiver, charge, or correction. The form's fields are
+     * prefixed so they don't collide with the payment form's old input and errors.
+     */
+    public function adjust(Request $request): void
+    {
+        $assessment = $this->assessment($request);
+        $id = (int) $assessment['id'];
+        $input = [
+            'type'      => $request->input('adjustment_type'),
+            'amount'    => $request->input('adjustment_amount'),
+            'direction' => $request->input('adjustment_direction'),
+            'reason'    => $request->input('adjustment_reason'),
+        ];
+
+        try {
+            FinanceService::adjust(Auth::user(), $id, $input);
+        } catch (ValidationException $e) {
+            $errors = [];
+            foreach ($e->errors() as $field => $messages) {
+                $errors['adjustment_' . $field] = $messages;
+            }
+            $this->failWith(ValidationException::withErrors($errors, $e->getMessage()), $request->all(), "/cashier/accounts/{$id}#adjust");
+            return;
+        }
+
+        $updated = Finance::assessment($id);
+        $message = 'Adjustment applied. The amount due is now ' . money(FinanceService::money(FinanceService::dueCents($updated))) . '.';
+        if ($assessment['enrollment_state'] !== 'ENROLLED' && $updated['enrollment_state'] === 'ENROLLED') {
+            $message .= ' The student is now officially enrolled.';
+        }
+        $this->success($message, "/cashier/accounts/{$id}");
+    }
+
+    public function reverse(Request $request): void
+    {
+        $assessment = $this->assessment($request);
+        $id = (int) $assessment['id'];
+        $payment = Finance::payment((int) $request->param('payment'));
+        if ($payment === null || (int) $payment['fee_assessment_id'] !== $id) {
+            throw HttpException::notFound('That payment was not found on this account.');
+        }
+
+        try {
+            FinanceService::reversePayment(Auth::user(), (int) $payment['id'], (string) $request->input('reason', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], "/cashier/accounts/{$id}#payment-{$payment['id']}");
+            return;
+        }
+
+        $message = "Receipt {$payment['receipt_number']} was reversed. The balance is now " . money(Finance::assessment($id)['balance']) . '.';
+        if (Finance::belowPolicy(Finance::assessment($id))) {
+            $message .= ' The student stays enrolled but is below the payment policy; the registrar was notified.';
         }
         $this->success($message, "/cashier/accounts/{$id}");
     }

@@ -40,6 +40,7 @@ final class AccountController extends Controller
             'assessment'   => $assessment,
             'items'        => $assessment === null ? [] : Finance::items((int) $assessment['id']),
             'payments'     => $assessment === null ? [] : Finance::payments((int) $assessment['id']),
+            'adjustments'  => $assessment === null ? [] : Finance::adjustments((int) $assessment['id']),
             'submissions'  => $assessment === null ? [] : Finance::submissions((int) $assessment['id']),
             'required'     => $assessment === null ? 0 : PaymentPolicy::requiredCents($assessment),
             'policy'       => PaymentPolicy::current(),

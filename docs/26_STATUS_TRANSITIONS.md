@@ -158,3 +158,15 @@ write student notifications are live for rules 4, 5, 8, 9, 11, and 12, and for c
 | `NONE` | at approval |
 | `FULL` | the balance is zero |
 | `MINIMUM_DOWNPAYMENT` (default) | total paid ≥ `minimum_downpayment_percent` (default 20) of the assessment |
+
+## 11. Amount due, adjustments, and reversals (Phase 5)
+- Every "assessment" figure in section 10 means the **amount due**: `total_amount +
+  total_adjustments` (docs/14). `PAID` means total paid ≥ amount due; an amount due of zero
+  (a full scholarship or waiver) is `PAID` with nothing paid, meets every policy, and enrolls.
+- `total_paid` is the signed sum of payments, so a **reversal** lowers it and can move
+  `payment_status` back from `PAID` to `PARTIAL` or `PENDING`.
+- A reversal **never un-enrolls**. `enrollment_state` stays `ENROLLED`; if the amount paid is now
+  below the policy, the account is flagged and the registrar and cashier are notified. There is
+  no `ENROLLED` → `NOT_ENROLLED` transition.
+- An adjustment runs `confirmIfReady` afterwards, so a reduction that meets the policy enrolls
+  the student at once.

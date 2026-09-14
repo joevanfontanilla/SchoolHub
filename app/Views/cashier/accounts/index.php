@@ -40,7 +40,7 @@
                         <tr>
                             <th scope="col" class="px-4 py-3 font-semibold">Student</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Term</th>
-                            <th scope="col" class="px-4 py-3 text-right font-semibold">Assessment</th>
+                            <th scope="col" class="px-4 py-3 text-right font-semibold">Amount due</th>
                             <th scope="col" class="px-4 py-3 text-right font-semibold">Paid</th>
                             <th scope="col" class="px-4 py-3 text-right font-semibold">Balance</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Status</th>
@@ -52,7 +52,7 @@
                             <tr class="hover:bg-brand-50/40">
                                 <td class="px-4 py-3"><span class="font-semibold text-brand-navy"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></span><span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? $row['application_number']) ?> · <?= e($row['program_code']) ?></span></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e($row['term_name']) ?><span class="block text-xs text-brand-gray"><?= e($row['assessment_number']) ?></span></td>
-                                <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums"><?= e(money($row['total_amount'])) ?></td>
+                                <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums"><?= e(money(\App\Services\FinanceService::money(max(0, \App\Services\FinanceService::dueCents($row))))) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums"><?= e(money($row['total_paid'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-brand-navy"><?= e(money($row['balance'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3"><span class="flex flex-wrap gap-1"><?= component('status-badge', ['status' => $row['payment_status']]) ?><?php if ($row['enrollment_state'] === 'ENROLLED'): ?><?= component('status-badge', ['status' => 'ENROLLED']) ?><?php endif; ?></span></td>

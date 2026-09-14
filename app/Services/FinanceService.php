@@ -124,19 +124,23 @@ final class FinanceService
     public static function recalculate(int $assessmentId): void
     {
         $assessment = Database::selectOne('SELECT * FROM fee_assessments WHERE id = ? FOR UPDATE', [$assessmentId]);
-        $paidCents = self::cents((string) Database::scalar('SELECT COALESCE(SUM(amount), 0) FROM payments WHERE fee_assessment_id = ?', [$assessmentId]));
-        $totalCents = self::cents($assessment['total_amount']);
+        // Reversals are negative payments, and adjustments are signed, so plain sums are right.
+        $paidCents = self::signedCents((string) Database::scalar('SELECT COALESCE(SUM(amount), 0) FROM payments WHERE fee_assessment_id = ?', [$assessmentId]));
+        $adjustmentCents = self::signedCents((string) Database::scalar('SELECT COALESCE(SUM(amount), 0) FROM financial_adjustments WHERE fee_assessment_id = ?', [$assessmentId]));
+        $dueCents = self::cents($assessment['total_amount']) + $adjustmentCents;
 
         $status = match (true) {
-            $assessment['status'] !== 'ACTIVE' => 'NOT_ASSESSED',
-            $paidCents <= 0                     => 'PENDING',
-            $paidCents < $totalCents            => 'PARTIAL',
-            default                             => 'PAID',
+            $assessment['status'] !== 'ACTIVE'  => 'NOT_ASSESSED',
+            $dueCents <= 0                       => 'PAID',
+            $paidCents <= 0                      => 'PENDING',
+            $paidCents < $dueCents               => 'PARTIAL',
+            default                              => 'PAID',
         };
 
         Database::update('fee_assessments', [
-            'total_paid' => self::money($paidCents),
-            'balance'    => self::money(max(0, $totalCents - $paidCents)),
+            'total_adjustments' => self::signedMoney($adjustmentCents),
+            'total_paid'        => self::money(max(0, $paidCents)),
+            'balance'           => self::money(max(0, $dueCents - $paidCents)),
         ], ['id' => $assessmentId]);
         Database::update('enrollment_applications', ['payment_status' => $status], ['id' => $assessment['application_id']]);
     }
@@ -327,6 +331,170 @@ final class FinanceService
         ));
     }
 
+    // -- Corrections (cashier) ------------------------------------------------------------
+
+    public const ADJUSTMENT_TYPES = [
+        'DISCOUNT'          => 'Discount',
+        'SCHOLARSHIP'       => 'Scholarship',
+        'WAIVER'            => 'Fee waiver',
+        'ADDITIONAL_CHARGE' => 'Additional charge',
+        'CORRECTION'        => 'Correction',
+    ];
+
+    /**
+     * A discount, scholarship, waiver, extra charge, or correction to what a student
+     * owes. Takes effect at once, always with a reason, always audited. It may not
+     * bring the amount due below what has already been paid (refunds are not built)
+     * nor below zero. A reduction can meet the payment policy and enroll the student.
+     *
+     * @param array<string,mixed> $input type, amount (positive pesos), reason, direction (CORRECTION only: increase|decrease)
+     * @return int the adjustment id
+     */
+    public static function adjust(User $cashier, int $assessmentId, array $input): int
+    {
+        self::assertCashier($cashier);
+
+        $validator = Validator::make($input, [
+            'type'   => 'required|in:' . implode(',', array_keys(self::ADJUSTMENT_TYPES)),
+            'amount' => 'required',
+            'reason' => 'required|min:5|max:500',
+        ], ['reason' => 'Reason']);
+
+        $type = (string) ($input['type'] ?? '');
+        $amountText = trim((string) ($input['amount'] ?? ''));
+        if ($amountText !== '' && (!preg_match('/^\d{1,9}(\.\d{1,2})?$/', $amountText) || self::cents($amountText) <= 0)) {
+            $validator->addError('amount', 'Enter an amount in pesos greater than zero, with at most two decimal places.');
+        }
+        $direction = (string) ($input['direction'] ?? '');
+        if ($type === 'CORRECTION' && !in_array($direction, ['increase', 'decrease'], true)) {
+            $validator->addError('direction', 'Say whether the correction increases or decreases what the student owes.');
+        }
+        if ($validator->fails()) {
+            throw ValidationException::withErrors($validator->errors());
+        }
+
+        $increase = $type === 'ADDITIONAL_CHARGE' || ($type === 'CORRECTION' && $direction === 'increase');
+        $signed = ($increase ? 1 : -1) * self::cents($amountText);
+
+        return Database::transaction(static function () use ($cashier, $assessmentId, $type, $signed, $input): int {
+            $assessment = Database::selectOne(
+                'SELECT fa.*, s.user_id FROM fee_assessments fa JOIN students s ON s.id = fa.student_id WHERE fa.id = ? FOR UPDATE',
+                [$assessmentId]
+            );
+            if ($assessment === null) {
+                throw HttpException::notFound('That account was not found.');
+            }
+            if ($assessment['status'] !== 'ACTIVE') {
+                throw ValidationException::withMessage('This assessment is no longer active.');
+            }
+
+            $dueAfter = self::cents($assessment['total_amount']) + self::signedCents($assessment['total_adjustments']) + $signed;
+            $paid = self::cents($assessment['total_paid']);
+            if ($dueAfter < $paid) {
+                throw ValidationException::withErrors(['amount' => [sprintf(
+                    'That would make the amount due %s, less than the %s already paid. Refunds are not supported; reduce the adjustment.',
+                    money(self::money(max(0, $dueAfter))), money($assessment['total_paid'])
+                )]], 'The adjustment would leave the student overpaid.');
+            }
+
+            $id = Database::insert('financial_adjustments', [
+                'adjustment_number' => SequenceService::next('adjustment', 'ADJ'),
+                'fee_assessment_id' => $assessmentId,
+                'type'              => $type,
+                'amount'            => self::signedMoney($signed),
+                'reason'            => trim((string) $input['reason']),
+                'created_by'        => $cashier->id,
+                'created_at'        => date('Y-m-d H:i:s'),
+            ]);
+            self::recalculate($assessmentId);
+
+            AuditService::log('finance.adjusted', 'finance', 'FinancialAdjustment', $id, ['balance' => $assessment['balance']], [
+                'assessment' => $assessment['assessment_number'], 'type' => $type, 'amount' => self::signedMoney($signed),
+            ], 'SUCCESS', trim((string) $input['reason']), $cashier->id, $cashier->role_name);
+
+            NotificationService::notify((int) $assessment['user_id'], 'finance.adjusted',
+                self::ADJUSTMENT_TYPES[$type] . ' of ' . money(self::money(abs($signed))) . ' applied to your account', trim((string) $input['reason']), '/student/account?assessment=' . $assessmentId);
+
+            EnrollmentConfirmationService::confirmIfReady((int) $assessment['application_id'], $cashier);
+
+            return $id;
+        });
+    }
+
+    /**
+     * Reverse a payment recorded by mistake: a new, negative payments row that points
+     * at it. The original and its receipt stay as they were. If the student was
+     * enrolled and is now below the payment policy, the enrollment stands and the
+     * registrar and cashier are told to follow up.
+     *
+     * @return int the reversal's payments id
+     */
+    public static function reversePayment(User $cashier, int $paymentId, string $reason): int
+    {
+        self::assertCashier($cashier);
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 5) {
+            throw ValidationException::withErrors(['reason' => ['Give the reason for reversing this payment (at least 5 characters).']], 'A reason is required to reverse a payment.');
+        }
+
+        return Database::transaction(static function () use ($cashier, $paymentId, $reason): int {
+            $payment = Database::selectOne(
+                'SELECT pay.*, fa.application_id, fa.assessment_number, s.user_id
+                   FROM payments pay
+                   JOIN fee_assessments fa ON fa.id = pay.fee_assessment_id
+                   JOIN students s ON s.id = pay.student_id
+                  WHERE pay.id = ?',
+                [$paymentId]
+            );
+            if ($payment === null) {
+                throw HttpException::notFound('That payment was not found.');
+            }
+            // Lock the assessment, as every payment path does, before checking for an
+            // earlier reversal. The unique key on reversed_payment_id backs this up.
+            Database::selectOne('SELECT id FROM fee_assessments WHERE id = ? FOR UPDATE', [$payment['fee_assessment_id']]);
+
+            if ($payment['reversed_payment_id'] !== null) {
+                throw ValidationException::withMessage('This entry is itself a reversal and cannot be reversed.');
+            }
+            if (Database::scalar('SELECT id FROM payments WHERE reversed_payment_id = ?', [$paymentId]) !== null) {
+                throw ValidationException::withMessage("Receipt {$payment['receipt_number']} was already reversed.");
+            }
+
+            $reversalId = Database::insert('payments', [
+                'transaction_number'  => SequenceService::next('payment', 'PAY'),
+                'receipt_number'      => null,
+                'fee_assessment_id'   => (int) $payment['fee_assessment_id'],
+                'student_id'          => (int) $payment['student_id'],
+                'amount'              => '-' . $payment['amount'],
+                'payment_method'      => $payment['payment_method'],
+                'reference_number'    => $payment['reference_number'],
+                'paid_at'             => date('Y-m-d H:i:s'),
+                'cashier_user_id'     => $cashier->id,
+                'reversed_payment_id' => $paymentId,
+                'remarks'             => $reason,
+            ]);
+            self::recalculate((int) $payment['fee_assessment_id']);
+
+            AuditService::log('finance.payment_reversed', 'finance', 'Payment', $paymentId, ['amount' => $payment['amount'], 'receipt' => $payment['receipt_number']], [
+                'reversal_id' => $reversalId, 'assessment' => $payment['assessment_number'],
+            ], 'SUCCESS', $reason, $cashier->id, $cashier->role_name);
+
+            NotificationService::notify((int) $payment['user_id'], 'finance.payment_reversed',
+                'Payment of ' . money($payment['amount']) . " (receipt {$payment['receipt_number']}) was reversed", $reason, '/student/account?assessment=' . $payment['fee_assessment_id']);
+
+            $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$payment['application_id']]);
+            if ($application['enrollment_state'] === 'ENROLLED' && PaymentPolicy::problem($application) !== null) {
+                foreach ([User::ROLE_REGISTRAR, User::ROLE_CASHIER] as $role) {
+                    NotificationService::notifyRole($role, 'finance.below_policy',
+                        "Enrolled student's account {$payment['assessment_number']} is now below the payment policy",
+                        "A payment was reversed: {$reason}", $role === User::ROLE_CASHIER ? '/cashier/accounts/' . $payment['fee_assessment_id'] : '/registrar/applications/' . $payment['application_id']);
+                }
+            }
+
+            return $reversalId;
+        });
+    }
+
     // -- Shared ---------------------------------------------------------------------------
 
     /**
@@ -414,5 +582,24 @@ final class FinanceService
     public static function money(int $cents): string
     {
         return intdiv($cents, 100) . '.' . str_pad((string) ($cents % 100), 2, '0', STR_PAD_LEFT);
+    }
+
+    /** Like cents(), keeping a leading minus: "-500.00" -> -50000. */
+    public static function signedCents(string|int|float $amount): int
+    {
+        $text = trim((string) $amount);
+        return str_starts_with($text, '-') ? -self::cents(substr($text, 1)) : self::cents($text);
+    }
+
+    /** Like money(), keeping the sign: -50000 -> "-500.00". */
+    public static function signedMoney(int $cents): string
+    {
+        return ($cents < 0 ? '-' : '') . self::money(abs($cents));
+    }
+
+    /** The amount due on an assessment row, in centavos: total plus adjustments. */
+    public static function dueCents(array $assessment): int
+    {
+        return self::cents($assessment['total_amount']) + self::signedCents((string) ($assessment['total_adjustments'] ?? '0'));
     }
 }

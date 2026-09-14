@@ -184,6 +184,14 @@ if (!function_exists('money')) {
     }
 }
 
+if (!function_exists('signed_money')) {
+    /** Centavos as a signed peso amount for adjustments and reversals: "+₱500.00", "−₱1,000.00". */
+    function signed_money(int $cents): string
+    {
+        return ($cents < 0 ? "−" : "+") . '₱' . number_format(abs($cents) / 100, 2);
+    }
+}
+
 if (!function_exists('dt')) {
     /** Format a datetime for display; returns an em dash for null. */
     function dt(?string $value, string $format = 'M j, Y g:i A'): string

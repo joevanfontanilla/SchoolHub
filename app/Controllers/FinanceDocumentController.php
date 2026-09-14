@@ -32,12 +32,14 @@ final class FinanceDocumentController extends Controller
     public function receipt(Request $request): void
     {
         $payment = Finance::payment((int) $request->param('id'));
-        $this->authorize(isset($payment['user_id']) ? (int) $payment['user_id'] : null, $payment !== null, 'receipt', [User::ROLE_CASHIER, User::ROLE_REGISTRAR]);
+        // A reversal entry issues no receipt, so there is nothing to print for it.
+        $this->authorize(isset($payment['user_id']) ? (int) $payment['user_id'] : null, $payment !== null && $payment['receipt_number'] !== null, 'receipt', [User::ROLE_CASHIER, User::ROLE_REGISTRAR]);
 
         $this->printView('print/receipt', [
             'title'        => 'Official Receipt ' . $payment['receipt_number'],
             'payment'      => $payment,
             'balanceAfter' => Finance::balanceAfter($payment),
+            'adjustedThrough' => Finance::adjustedThrough($payment),
             'back'         => $this->accountBack((int) $payment['fee_assessment_id']),
         ]);
     }
@@ -52,6 +54,7 @@ final class FinanceDocumentController extends Controller
             'assessment' => $assessment,
             'items'      => Finance::items((int) $assessment['id']),
             'payments'   => Finance::payments((int) $assessment['id']),
+            'adjustments' => Finance::adjustments((int) $assessment['id']),
             'subjects'   => \App\Services\SubjectSelectionService::chosen((int) $assessment['application_id']),
             'back'       => $this->accountBack((int) $assessment['id']),
         ]);

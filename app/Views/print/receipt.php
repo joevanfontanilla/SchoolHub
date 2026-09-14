@@ -4,11 +4,18 @@
  *
  * @var array  $payment
  * @var string $balanceAfter
+ * @var int    $adjustedThrough centavos of adjustments made before this payment
  */
 $name = trim($payment['last_name'] . ', ' . $payment['first_name'] . ($payment['middle_name'] ? ' ' . mb_substr($payment['middle_name'], 0, 1) . '.' : ''));
 $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
 ?>
 <section class="mt-6">
+    <?php if ($payment['reversal_id'] !== null): ?>
+        <div class="mb-6 rounded-lg border-2 border-danger-border bg-danger-bg px-4 py-3 text-sm text-danger-text" role="status">
+            <p class="font-display text-lg font-extrabold uppercase tracking-wide">Reversed</p>
+            <p>This payment was reversed on <?= e(dt($payment['reversed_at'])) ?> and no longer counts toward the account. Reason: <?= e($payment['reversal_reason']) ?></p>
+        </div>
+    <?php endif; ?>
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
             <h1 class="font-display text-2xl font-extrabold uppercase tracking-wide text-brand-navy">Official Receipt</h1>
@@ -44,6 +51,9 @@ $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
         <tfoot class="font-semibold">
             <tr class="border-t border-slate-300"><th scope="row" class="px-4 py-2 text-right">Amount paid</th><td class="px-4 py-2 text-right font-display text-lg text-brand-navy tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
             <tr><th scope="row" class="px-4 py-1 text-right font-normal text-slate-600">Total assessment</th><td class="px-4 py-1 text-right font-normal tabular-nums"><?= e(money($payment['total_amount'])) ?></td></tr>
+            <?php if ($adjustedThrough !== 0): ?>
+                <tr><th scope="row" class="px-4 py-1 text-right font-normal text-slate-600">Adjustments to date</th><td class="px-4 py-1 text-right font-normal tabular-nums"><?= e(signed_money($adjustedThrough)) ?></td></tr>
+            <?php endif; ?>
             <tr><th scope="row" class="px-4 py-1 pb-3 text-right font-normal text-slate-600">Balance after this payment</th><td class="px-4 py-1 pb-3 text-right font-normal tabular-nums"><?= e(money($balanceAfter)) ?></td></tr>
         </tfoot>
     </table>

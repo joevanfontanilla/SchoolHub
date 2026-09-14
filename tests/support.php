@@ -137,7 +137,14 @@ function deleteTestUsers(): void
                 @rmdir(STORAGE_PATH . '/uploads/payments/' . $proof['fee_assessment_id']);
                 Database::query('DELETE FROM notifications WHERE link_url = ?', ['/cashier/payments/' . $proof['id']]);
             }
+            // "Below payment policy" notices reach real cashiers too, linked to the account.
+            foreach (Database::select($assessments, $applicationIds) as $assessment) {
+                Database::query('DELETE FROM notifications WHERE link_url = ?', ['/cashier/accounts/' . $assessment['id']]);
+            }
+            // Reversals point at the payment they cancel, so they go first.
+            Database::query("DELETE FROM payments WHERE reversed_payment_id IS NOT NULL AND fee_assessment_id IN ({$assessments})", $applicationIds);
             Database::query("DELETE FROM payments WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
+            Database::query("DELETE FROM financial_adjustments WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
             Database::query("DELETE FROM payment_submissions WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
             Database::query("DELETE FROM fee_items WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
             Database::query("DELETE FROM fee_assessments WHERE application_id IN ({$ain})", $applicationIds);
@@ -145,6 +152,7 @@ function deleteTestUsers(): void
             resetSequence('assessment', 'ASM-', 'fee_assessments', 'assessment_number');
             resetSequence('payment', 'PAY-', 'payments', 'transaction_number');
             resetSequence('receipt', 'OR-', 'payments', 'receipt_number');
+            resetSequence('adjustment', 'ADJ-', 'financial_adjustments', 'adjustment_number');
             Database::query("DELETE FROM enrollment_requirements WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_status_history WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_applications WHERE id IN ({$ain})", $applicationIds);

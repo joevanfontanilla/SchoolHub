@@ -332,6 +332,13 @@ transaction** and are the source of the derived `payment_status` (`docs/26` sect
 **Payments are never deleted or edited** (`docs/14`). A mistake is corrected by a
 reversing entry that points back via `reversed_by_payment_id`.
 
+> **As built (migrations 018, 019).** The receipt number lives on the payment:
+> `receipt_number` VARCHAR(20) unique, **null for a reversal**. `payment_submission_id` FK
+> unique nullable links a verified online payment. A reversal is its own row with a
+> **negative `amount`** and `reversed_payment_id` FK unique nullable pointing at the payment it
+> cancels; the original row is never updated, so there is no `is_reversed` flag (a payment is
+> reversed when a row points at it). Methods are the labels in `FinanceService`.
+
 ### `payment_items`
 `payment_id` FK, `fee_item_id` FK, `amount` DECIMAL(12,2) — allocates a payment across
 the assessed items.
@@ -340,17 +347,29 @@ the assessed items.
 `receipt_number` VARCHAR(20) unique, `payment_id` FK unique,
 `issued_by` FK, `issued_at` DATETIME, `print_count` INT default 0.
 
+> **As built:** not a separate table. A receipt is one-to-one with a non-reversal payment,
+> so its number is `payments.receipt_number`, issued by the same cashier in the same
+> transaction. `payment_items` is not built either: a payment applies to the assessment as a
+> whole.
+
 ### `financial_adjustments`
 `fee_assessment_id` FK,
 `type` VARCHAR(20) (`DISCOUNT`, `SCHOLARSHIP`, `WAIVER`, `CORRECTION`, `REVERSAL`),
 `amount` DECIMAL(12,2) **signed** (negative reduces the balance),
 `reason` TEXT **required**, `created_by` FK, `approved_by` FK nullable.
 
+> **As built (migration 019):** `adjustment_number` VARCHAR(20) unique (`ADJ-YYYY-NNNNN`),
+> `fee_assessment_id` FK, `type` VARCHAR(30) (`DISCOUNT`, `SCHOLARSHIP`, `WAIVER`,
+> `ADDITIONAL_CHARGE`, `CORRECTION`), `amount` DECIMAL(12,2) signed, `reason` VARCHAR(500)
+> NOT NULL, `created_by` FK, `created_at`. There is no `REVERSAL` type (reversals are
+> payments rows) and no `approved_by` (adjustments take effect immediately; see docs/14).
+> `fee_assessments.total_adjustments` holds their sum, maintained by `FinanceService`.
+
 ### `document_sequences`
 Gapless, collision-free numbering for receipts, transactions, assessments, application
 numbers, and student numbers.
 
-`key` VARCHAR(50) unique (`receipt`, `payment`, `assessment`, `application`, `student`),
+`key` VARCHAR(50) unique (`receipt`, `payment`, `assessment`, `adjustment`, `application`, `student`),
 `prefix` VARCHAR(10), `period` VARCHAR(10) (usually the year), `current_number` INT.
 
 Numbers are issued by `SELECT ... FOR UPDATE` on this row **inside the same transaction**

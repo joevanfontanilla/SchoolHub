@@ -19,6 +19,7 @@ use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
 use App\Controllers\Cashier\FeeController as CashierFees;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
+use App\Controllers\Cashier\ReportController as CashierReports;
 use App\Controllers\FinanceDocumentController;
 use App\Controllers\Student\AccountController as StudentAccount;
 use App\Controllers\PublicController;
@@ -131,6 +132,16 @@ $router->post('/cashier/payments/{id}/reject',  [CashierPayments::class, 'reject
 $router->get('/cashier/accounts',                [CashierAccounts::class, 'index'],         $cashier('finance.view_account'), 'cashier.accounts');
 $router->get('/cashier/accounts/{id}',           [CashierAccounts::class, 'show'],          $cashier('finance.view_account'));
 $router->post('/cashier/accounts/{id}/payments', [CashierAccounts::class, 'recordPayment'], $cashier('payments.record'));
+$router->post('/cashier/accounts/{id}/payments/{payment}/reverse', [CashierAccounts::class, 'reverse'], $cashier('payments.record'));
+$router->post('/cashier/accounts/{id}/adjustments', [CashierAccounts::class, 'adjust'], $cashier('fees.manage'));
+
+$router->get('/cashier/reports',                     [CashierReports::class, 'index'],       $cashier('reports.cashier'), 'cashier.reports');
+$router->get('/cashier/reports/collections',         [CashierReports::class, 'collections'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/collections/print',   [CashierReports::class, 'collectionsPrint'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/collections/export',  [CashierReports::class, 'collectionsExport'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/outstanding',         [CashierReports::class, 'outstanding'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/outstanding/print',   [CashierReports::class, 'outstandingPrint'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/outstanding/export',  [CashierReports::class, 'outstandingExport'], $cashier('reports.cashier'));
 
 $router->get('/cashier/fees',            [CashierFees::class, 'index'],  $cashier('fees.manage'), 'cashier.fees');
 $router->get('/cashier/fees/create',     [CashierFees::class, 'create'], $cashier('fees.manage'));
