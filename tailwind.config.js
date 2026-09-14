@@ -69,8 +69,16 @@ module.exports = {
           line: '#E63946',
         },
       },
+      // Typography from the Lyceum template: Montserrat for headings, labels, and
+      // uppercase display lines; Inter for body text. Both are self-hosted in
+      // public/assets/fonts (see @font-face in src/input.css).
       fontFamily: {
-        sans: ['Inter', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+        sans:    ['Inter', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Montserrat', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+      letterSpacing: {
+        // The template's spaced-out taglines ("DISCIPLINE • INTEGRITY • SERVICE").
+        brand: '0.22em',
       },
     },
   },

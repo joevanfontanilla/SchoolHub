@@ -16,6 +16,7 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
     <title><?= e($title ?? 'Home') ?> · <?= e($schoolName) ?></title>
     <meta name="description" content="<?= e($school['school_tagline'] ?? 'School enrollment and management') ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
+    <link rel="icon" type="image/jpeg" href="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>">
 </head>
 <body class="min-h-screen bg-white font-sans">
     <a href="#main" class="skip-link">Skip to main content</a>

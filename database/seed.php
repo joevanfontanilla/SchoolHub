@@ -106,7 +106,7 @@ const ROLES = [
 
 const SETTINGS = [
     ['school_name', 'Lyceum of the East Aurora', 'string', 'school', 'Name shown across the site', 1],
-    ['school_tagline', 'Discipline · Integrity · Service', 'string', 'school', 'Tagline on the public home page', 1],
+    ['school_tagline', 'Discipline • Integrity • Service', 'string', 'school', 'Tagline on the public home page', 1],
     ['school_address', 'Baler, Aurora, Philippines', 'string', 'school', 'Official address', 1],
     ['school_email', 'info@schoolhub.test', 'string', 'school', 'Public contact email', 1],
     ['school_phone', '(042) 000-0000', 'string', 'school', 'Public contact number', 1],

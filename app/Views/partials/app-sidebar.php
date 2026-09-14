@@ -66,9 +66,10 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
        class="fixed inset-y-0 left-0 z-40 w-64 shrink-0 -translate-x-full border-r border-slate-200 bg-white transition-transform lg:static lg:translate-x-0"
        aria-label="Sidebar">
     <div class="flex h-full flex-col">
-        <div class="flex items-center gap-2.5 border-b border-slate-200 px-4 py-4">
-            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-sm font-bold text-white">SH</span>
-            <span class="truncate text-sm font-semibold text-brand-navy"><?= e($schoolName) ?></span>
+        <div class="flex items-center gap-3 border-b border-slate-200 px-4 py-4">
+            <img src="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>" alt="" width="40" height="40"
+                 class="school-seal h-10 w-10 shadow-sm">
+            <span class="font-display text-xs font-extrabold uppercase leading-tight tracking-tight text-brand-navy"><?= e($schoolName) ?></span>
         </div>
 
         <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="<?= e($user?->role_name ?? '') ?> navigation">

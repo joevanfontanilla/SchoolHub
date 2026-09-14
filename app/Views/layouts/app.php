@@ -18,6 +18,7 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? 'Dashboard') ?> · <?= e($schoolName) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
+    <link rel="icon" type="image/jpeg" href="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>">
 </head>
 <body class="min-h-screen bg-slate-50 font-sans">
     <a href="#main" class="skip-link">Skip to main content</a>

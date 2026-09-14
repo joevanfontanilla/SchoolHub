@@ -1,3 +1,41 @@
+/*
+ * Self-hosted fonts (OFL). Variable files, so one file per subset covers every
+ * weight. Paths are relative to public/assets/app.css, which keeps them working
+ * from any subdirectory. latin-ext is included because it carries the peso sign.
+ */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('fonts/inter-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('fonts/inter-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('fonts/montserrat-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('fonts/montserrat-latin-ext.woff2') format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,7 +54,7 @@
     }
 
     body {
-        @apply bg-white text-slate-700 antialiased;
+        @apply bg-white font-sans text-slate-700 antialiased;
     }
 
     /* A visible focus ring on every interactive element — keyboard users must
@@ -26,14 +64,14 @@
     }
 
     h1, h2, h3, h4 {
-        @apply font-semibold text-brand-navy;
+        @apply font-display font-bold text-brand-navy;
     }
 }
 
 @layer components {
     .btn {
         @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5
-               text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-offset-2
+               font-display text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2
                disabled:cursor-not-allowed disabled:opacity-60;
     }
     .btn-primary {
@@ -45,9 +83,12 @@
     .btn-danger {
         @apply btn bg-danger-text text-white hover:bg-brand-alert focus-visible:ring-brand-alert;
     }
+    .btn-lg {
+        @apply px-6 py-3 text-base;
+    }
 
     .card {
-        @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+        @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
     }
 
     .field-label {
@@ -90,10 +131,90 @@
                focus:rounded-lg focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-white;
     }
 
-    /* The school's website gradient, used on the public hero. */
-    .brand-gradient {
-        background-image: linear-gradient(135deg, #EAF6FF 0%, #B3DFF5 45%, #2E9AD6 100%);
+    /* -- Template elements --------------------------------------------------- */
+
+    /* Small spaced uppercase section label: "GRADIENT USAGE (FROM WEBSITE)". */
+    .eyebrow {
+        @apply font-display text-xs font-bold uppercase tracking-brand text-brand-navy;
     }
+
+    /* Spaced uppercase tagline: "DISCIPLINE • INTEGRITY • SERVICE".
+       brand-600, not the brand blue: at this size the brand blue is below the
+       4.5:1 contrast minimum on a light background (see tailwind.config.js). */
+    .tagline {
+        @apply font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-600 sm:text-sm sm:tracking-brand;
+    }
+
+    /* The short blue rule under the school name. */
+    .brand-rule {
+        @apply block h-1 w-20 rounded-full bg-brand-primary;
+    }
+
+    /* Two-tone display headline: navy with the key word in brand blue. The
+       brand blue is safe here because the text is large and bold (3:1 applies). */
+    .display-heading {
+        @apply font-display text-4xl font-extrabold uppercase leading-[1.05] tracking-tight text-brand-navy
+               sm:text-5xl lg:text-6xl;
+    }
+
+    /* The seal. The image has white corners, so it is always cropped round. */
+    .school-seal {
+        @apply shrink-0 rounded-full bg-white object-cover shadow-md ring-2 ring-white;
+    }
+
+    /* Hero backdrop: pale blue washing to white, as in the template header. */
+    .hero-backdrop {
+        background-image:
+            radial-gradient(ellipse at 15% 20%, #FFFFFF 0%, rgba(255, 255, 255, 0) 55%),
+            linear-gradient(120deg, #EAF6FF 0%, #D3ECFA 45%, #FFFFFF 100%);
+    }
+
+    /* The campus photo fades into the backdrop on its left edge (desktop) or
+       top edge (mobile), matching the template's blended header photo. */
+    .photo-fade {
+        -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+                mask-image: linear-gradient(to bottom, transparent 0%, #000 30%);
+    }
+    @media (min-width: 1024px) {
+        .photo-fade {
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.6) 22%, #000 45%);
+                    mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.6) 22%, #000 45%);
+        }
+    }
+
+    /* "Gradient usage (from website)": pale blue → sky → primary → navy.
+       Text sits on the pale end in navy; the button sits on the dark end in
+       white, so both ends keep their contrast. Vertical on small screens so the
+       text never lands on the dark end. */
+    .brand-gradient-band {
+        background-image: linear-gradient(180deg, #EAF6FF 0%, #B3DFF5 45%, #2E9AD6 75%, #0F4C5C 100%);
+    }
+    @media (min-width: 1024px) {
+        .brand-gradient-band {
+            background-image: linear-gradient(100deg, #EAF6FF 0%, #B3DFF5 50%, #2E9AD6 78%, #0F4C5C 100%);
+        }
+    }
+
+    /* The template's diagonal stripe band along the bottom edge. */
+    .brand-stripes {
+        height: 0.75rem;
+        background-image: linear-gradient(
+            115deg,
+            #0F4C5C 0 16%,
+            #1E7BAE 16% 34%,
+            #2E9AD6 34% 48%,
+            #B3DFF5 48% 60%,
+            #E8F6ED 60% 68%,
+            #2E9AD6 68% 84%,
+            #0F4C5C 84% 100%
+        );
+    }
+
+    /* Program cards take the template's color swatches as their header block. */
+    .swatch-primary { @apply bg-brand-primary text-white; }
+    .swatch-navy    { @apply bg-brand-navy text-white; }
+    .swatch-teal    { @apply bg-brand-teal text-brand-navy; }
+    .swatch-sky     { @apply bg-brand-sky text-brand-navy; }
 }
 
 @media print {
