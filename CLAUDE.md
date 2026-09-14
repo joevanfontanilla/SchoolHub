@@ -31,7 +31,21 @@ php tests/run.php --filter=auth     # a single test group
 ./tailwindcss.exe -i src/input.css -o public/assets/app.css --minify   # production
 ```
 
-Serve with XAMPP Apache. The app's document root is `public/`.
+Serve with XAMPP Apache: the project lives at `C:\xampp\htdocs\SchoolHub` and runs at
+**http://localhost/SchoolHub/public/** (the bare `/SchoolHub/` redirects there).
+
+Two `.htaccess` files make that work — do not remove either:
+
+- `public/.htaccess` rewrites every non-file request to `index.php`. Without it, every
+  route except the home page is a 404 under Apache.
+- The root `.htaccess` refuses everything outside `public/`. Because the whole project
+  sits inside htdocs, removing it makes `.git/`, `docs/`, `config/`, and
+  `tailwindcss.exe` downloadable.
+
+**Verify under Apache, not only `php -S`.** The PHP built-in server hides real
+differences: it routes everything to `index.php` on its own, and it passes through
+non-standard status codes that Apache rewrites to 500. Use only registered HTTP status
+codes — a CSRF failure is `403`, never Laravel's `419`.
 
 ## Hard constraints
 

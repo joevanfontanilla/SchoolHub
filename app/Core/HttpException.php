@@ -43,7 +43,6 @@ class HttpException extends RuntimeException
             401     => 'You need to sign in to continue.',
             403     => 'You are not allowed to perform this action.',
             404     => 'The page you requested was not found.',
-            419     => 'Your session expired. Please try again.',
             429     => 'Too many attempts. Please wait and try again.',
             default => 'Something went wrong.',
         };

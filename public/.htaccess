@@ -1,0 +1,14 @@
+# Front controller: send every request that is not a real file to index.php.
+# The PHP built-in dev server does this implicitly; Apache needs it spelled out.
+# The rewrite target is relative, so this works from any subdirectory.
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve existing files (compiled CSS/JS, images) directly.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+Options -Indexes

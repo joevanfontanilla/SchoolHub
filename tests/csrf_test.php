@@ -19,7 +19,7 @@ return [
             (new VerifyCsrf())->handle(makeRequest('POST', '/login', ['login' => 'someone']));
         });
 
-        $t->assertEquals(419, $status, 'A POST with no token must be refused');
+        $t->assertEquals(403, $status, 'A POST with no token must be refused');
     },
 
     'a POST with the wrong token is rejected' => function (TestRunner $t): void {
@@ -30,7 +30,7 @@ return [
             (new VerifyCsrf())->handle(makeRequest('POST', '/login', ['_token' => 'not-the-right-token']));
         });
 
-        $t->assertEquals(419, $status, 'A POST with a forged token must be refused');
+        $t->assertEquals(403, $status, 'A POST with a forged token must be refused');
     },
 
     'a POST with the correct token passes' => function (TestRunner $t): void {

@@ -11,7 +11,6 @@ $headings = [
     403 => 'Access denied',
     404 => 'Page not found',
     405 => 'Action not allowed',
-    419 => 'Session expired',
     429 => 'Too many attempts',
 ];
 $heading = $headings[$status] ?? 'Something went wrong';

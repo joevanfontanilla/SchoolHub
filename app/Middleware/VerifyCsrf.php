@@ -28,7 +28,10 @@ final class VerifyCsrf
         }
 
         if (!Csrf::verify(is_string($token) ? $token : null)) {
-            throw new HttpException(419, 'Your session expired or the form was invalid. Please try again.');
+            // 403, not 419: 419 is a framework convention, not a registered HTTP
+            // status. Apache does not recognize it and rewrites the response to a
+            // 500, which hides the real cause from the user and the logs.
+            throw new HttpException(403, 'Your session expired or the form was invalid. Please go back, reload the page, and try again.');
         }
     }
 }

@@ -1,0 +1,31 @@
+# Project-root guard.
+#
+# When the whole project sits inside the web root (as it does under XAMPP's
+# htdocs), everything here — .git, docs, config, the Tailwind binary — would
+# otherwise be downloadable. Only public/ may be reached from the web.
+#
+# In production, point the virtual host's DocumentRoot at public/ instead and
+# this file becomes a second line of defense (docs/23).
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # The bare project URL goes to the application. The target is built from
+    # REQUEST_URI because a relative redirect target in .htaccess gets the
+    # filesystem path prefixed ("/C:/xampp/htdocs/..."). This also keeps the
+    # rule free of any hardcoded folder name.
+    RewriteRule ^$ %{REQUEST_URI}public/ [R=302,L]
+
+    # Anything outside public/ is refused.
+    RewriteRule ^(?!public(/|$)) - [F,L]
+</IfModule>
+
+# Fallback if mod_rewrite is ever unavailable: still never serve the repository
+# or the secrets.
+<IfModule !mod_rewrite.c>
+    RedirectMatch 404 /\.git
+    RedirectMatch 404 /config/
+    RedirectMatch 404 /storage/
+</IfModule>
