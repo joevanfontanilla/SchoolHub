@@ -14,6 +14,11 @@
  * @var array $missingProfile
  * @var array $programs
  * @var array $yearLevels
+ * @var array $subjectOptions subjects offered for the program, year, and term
+ * @var array $chosenIds
+ * @var float $unitLimit
+ * @var ?array $curriculum
+ * @var ?array $assessment
  */
 use App\Models\EnrollmentApplication as Application;
 
@@ -24,15 +29,19 @@ $missingRequired = array_values(array_filter(
     $requirements,
     static fn ($r) => (int) $r['is_required'] === 1 && !in_array($r['status'], ['SUBMITTED', 'UNDER_REVIEW', 'VERIFIED'], true)
 ));
-$readyToSubmit = $canSubmit && $missingProfile === [] && $missingRequired === [];
+$readyToSubmit = $canSubmit && $missingProfile === [] && $missingRequired === [] && $chosenIds !== [];
+$number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 1, '.', ''), '0'), '.');
+$chosenUnits = array_sum(array_map(static fn ($o) => in_array((int) $o['id'], $chosenIds, true) ? (float) $o['units'] : 0.0, $subjectOptions));
 
 $nextStep = match ($application['application_status']) {
-    Application::DRAFT                   => 'Upload your required documents, then submit the application.',
+    Application::DRAFT                   => 'Check your subjects, upload your required documents, then submit the application.',
     Application::SUBMITTED               => 'Your application is waiting for the registrar. You will see every update here.',
     Application::UNDER_REVIEW            => 'The registrar is reviewing your application and documents.',
     Application::REQUIREMENTS_INCOMPLETE => 'The registrar needs new copies of some documents. Replace them below, then submit again.',
     Application::CORRECTION_REQUIRED     => 'The registrar asked for a correction. Update the details below, then submit again.',
-    Application::APPROVED                => 'Approved. The cashier will issue your fee assessment next.',
+    Application::APPROVED                => $application['enrollment_state'] === 'ENROLLED'
+        ? 'You are officially enrolled. Your schedule, subjects, and receipts are under Academic Records and Payments & Accounts.'
+        : 'Approved. Review your fee assessment and pay online under Payments & Accounts. You are enrolled once the cashier verifies your payment.',
     Application::REJECTED                => 'This application was not approved. See the registrar\'s note below.',
     Application::CANCELLED               => 'This application was cancelled.',
     default                              => '',
@@ -104,6 +113,15 @@ $nextStep = match ($application['application_status']) {
                 </details>
             <?php endif; ?>
 
+            <?= partial('enrollment/subject-selection', [
+                'application' => $application,
+                'options'     => $subjectOptions,
+                'chosenIds'   => $chosenIds,
+                'unitLimit'   => $unitLimit,
+                'curriculum'  => $curriculum,
+                'canEdit'     => $canEdit,
+            ]) ?>
+
             <?= partial('enrollment/requirements-list', [
                 'application'  => $application,
                 'requirements' => $requirements,
@@ -122,6 +140,10 @@ $nextStep = match ($application['application_status']) {
                             <li class="flex items-start gap-2">
                                 <?= $missingProfile === [] ? '<span class="font-bold text-success-text" aria-hidden="true">✓</span>' : '<span class="font-bold text-warning-text" aria-hidden="true">!</span>' ?>
                                 <span><?= $missingProfile === [] ? 'Profile complete' : 'Profile incomplete' ?></span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <?= $chosenIds !== [] ? '<span class="font-bold text-success-text" aria-hidden="true">✓</span>' : '<span class="font-bold text-warning-text" aria-hidden="true">!</span>' ?>
+                                <span><?= $chosenIds !== [] ? e(count($chosenIds)) . ' subjects chosen (' . e($number($chosenUnits)) . ' units)' : 'No subjects chosen' ?></span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <?= $missingRequired === [] ? '<span class="font-bold text-success-text" aria-hidden="true">✓</span>' : '<span class="font-bold text-warning-text" aria-hidden="true">!</span>' ?>
@@ -157,6 +179,25 @@ $nextStep = match ($application['application_status']) {
                                 Cancel application
                             </button>
                         </form>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($assessment !== null): ?>
+                <section class="card p-5" aria-labelledby="assessment-heading">
+                    <h2 id="assessment-heading" class="flex items-center gap-2 text-base"><span class="text-brand-600"><?= icon('receipt', 'h-5 w-5') ?></span> Fee assessment</h2>
+                    <dl class="mt-3 space-y-1.5 text-sm">
+                        <div class="flex justify-between"><dt class="text-slate-600">Total</dt><dd class="font-semibold text-brand-navy"><?= e(money($assessment['total_amount'])) ?></dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-600">Paid</dt><dd class="font-semibold text-success-text"><?= e(money($assessment['total_paid'])) ?></dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-600">Balance</dt><dd class="font-display text-lg font-bold text-brand-navy"><?= e(money($assessment['balance'])) ?></dd></div>
+                    </dl>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <?= component('status-badge', ['status' => $application['payment_status']]) ?>
+                        <?= component('status-badge', ['status' => $application['enrollment_state']]) ?>
+                    </div>
+                    <a href="<?= e(url('/student/account?assessment=' . $assessment['id'])) ?>" class="btn-primary mt-4 w-full"><?= icon('credit-card', 'h-5 w-5') ?> <?= $application['enrollment_state'] === 'ENROLLED' ? 'View account and receipts' : 'Review and pay' ?></a>
+                    <?php if ($application['enrollment_state'] === 'ENROLLED'): ?>
+                        <a href="<?= e(url('/student/schedule/print?term_id=' . $application['term_id'])) ?>" class="btn-secondary mt-2 w-full"><?= icon('calendar', 'h-5 w-5') ?> Print class schedule</a>
                     <?php endif; ?>
                 </section>
             <?php endif; ?>

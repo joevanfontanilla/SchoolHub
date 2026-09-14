@@ -40,13 +40,13 @@ with a validation error — not silently ignored.
 | # | From | To | Permitted actor | Preconditions | Side effects |
 |---|---|---|---|---|---|
 | 1 | *(none)* | `DRAFT` | Student (own) | No existing non-terminal application for the same academic year + term | Application row created |
-| 2 | `DRAFT` | `SUBMITTED` | Student (own) | Profile complete; program, year level, term selected; every **required** requirement has a file `SUBMITTED` | Notify registrar queue; lock student edits |
+| 2 | `DRAFT` | `SUBMITTED` | Student (own) | Profile complete; program, year level, term selected; **at least one subject chosen**; every **required** requirement has a file `SUBMITTED` | Notify registrar queue; lock student edits |
 | 3 | `SUBMITTED` | `UNDER_REVIEW` | Registrar | — | Reviewer recorded on the application |
 | 4 | `UNDER_REVIEW` | `REQUIREMENTS_INCOMPLETE` | Registrar | At least one **required** requirement is `NOT_SUBMITTED`, or any requirement is `REJECTED` or `CORRECTION_REQUIRED` (an optional document nobody uploaded does not count) | Remarks required; unlock student uploads; notify student |
 | 5 | `UNDER_REVIEW` | `CORRECTION_REQUIRED` | Registrar | — | Remarks required; unlock student form edits; notify student |
 | 6 | `REQUIREMENTS_INCOMPLETE` | `SUBMITTED` | Student (own) | All required requirements `SUBMITTED` or `VERIFIED` | Re-queue; lock student edits |
-| 7 | `CORRECTION_REQUIRED` | `SUBMITTED` | Student (own) | Form passes validation | Re-queue; lock student edits |
-| 8 | `UNDER_REVIEW` | `APPROVED` | Registrar | **Every required requirement is `VERIFIED`** | Generate fee assessment; `payment_status` → `PENDING`; notify student |
+| 7 | `CORRECTION_REQUIRED` | `SUBMITTED` | Student (own) | Form passes validation; at least one subject chosen | Re-queue; lock student edits |
+| 8 | `UNDER_REVIEW` | `APPROVED` | Registrar | **Every required requirement is `VERIFIED`**; **subjects chosen**; **a section assigned** that matches the application, is active, and has a seat | Generate fee assessment; `payment_status` → `PENDING`; notify student; enroll at once if the payment policy is `NONE` |
 | 9 | `UNDER_REVIEW` | `REJECTED` | Registrar | Reason required | Notify student. Terminal. |
 | 10 | `DRAFT` | `CANCELLED` | Student (own) | — | Terminal |
 | 11 | `SUBMITTED`, `UNDER_REVIEW`, `REQUIREMENTS_INCOMPLETE`, `CORRECTION_REQUIRED` | `CANCELLED` | Student (own) or Registrar | — | Notify the other party. Terminal. |
@@ -145,3 +145,16 @@ Until the finance module records payments, `payment_status` stays `NOT_ASSESSED`
 `FULL` or `MINIMUM_DOWNPAYMENT` confirmation correctly waits for payment. The finance module
 adds the minimum-percentage check against the assessment total. Registrar side effects that
 write student notifications are live for rules 4, 5, 8, 9, 11, and 12, and for confirmation.
+
+## 10. Payment and automatic enrollment (supersedes sections 8 and 9 where they differ)
+- Rule 8 now generates the fee assessment (`FinanceService::assess`), so `payment_status` is
+  `PENDING` from approval, and becomes `PARTIAL` or `PAID` as the cashier records payments.
+- `NOT_ENROLLED` → `ENROLLED` is performed by the **registrar** (by hand) **or by the cashier's
+  recorded payment** (automatically, through `EnrollmentConfirmationService::confirmIfReady`),
+  when the application is approved, has a section, and meets the payment policy:
+
+| Policy | Enrolled when |
+|---|---|
+| `NONE` | at approval |
+| `FULL` | the balance is zero |
+| `MINIMUM_DOWNPAYMENT` (default) | total paid ≥ `minimum_downpayment_percent` (default 20) of the assessment |

@@ -31,10 +31,10 @@ final class DashboardController extends Controller
             'title'         => 'Dashboard',
             'announcements' => Announcement::forUser($user, 5),
             'cards'         => [
-                ['label' => 'Active users',        'value' => (string) $activeUsers, 'hint' => 'Able to sign in',        'tone' => 'neutral'],
-                ['label' => 'Locked accounts',     'value' => (string) $lockedUsers, 'hint' => $lockedUsers > 0 ? 'Needs attention' : 'None locked', 'tone' => $lockedUsers > 0 ? 'warning' : 'neutral'],
-                ['label' => 'Audit entries today', 'value' => (string) $auditToday,  'hint' => 'Recorded activity',      'tone' => 'neutral'],
-                ['label' => 'Failed sign-ins today', 'value' => (string) $failedToday, 'hint' => $failedToday > 0 ? 'Review the login log' : 'None', 'tone' => $failedToday > 5 ? 'warning' : 'neutral'],
+                ['icon' => 'users', 'label' => 'Active users',        'value' => (string) $activeUsers, 'hint' => 'Able to sign in',        'tone' => 'neutral'],
+                ['icon' => 'lock', 'label' => 'Locked accounts',     'value' => (string) $lockedUsers, 'hint' => $lockedUsers > 0 ? 'Needs attention' : 'None locked', 'tone' => $lockedUsers > 0 ? 'warning' : 'neutral'],
+                ['icon' => 'list-check', 'label' => 'Audit entries today', 'value' => (string) $auditToday,  'hint' => 'Recorded activity',      'tone' => 'neutral'],
+                ['icon' => 'shield', 'label' => 'Failed sign-ins today', 'value' => (string) $failedToday, 'hint' => $failedToday > 0 ? 'Review the login log' : 'None', 'tone' => $failedToday > 5 ? 'warning' : 'neutral'],
             ],
             'health' => [
                 'PHP version'         => PHP_VERSION,

@@ -95,6 +95,9 @@ final class EnrollmentApplicationService
 
             Database::update('students', ['student_type' => (string) $input['student_type']], ['id' => $studentId]);
 
+            // Pre-check the regular load: this program's subjects for the year and term.
+            SubjectSelectionService::selectDefaults($applicationId);
+
             EnrollmentStatusService::recordCreation($applicationId, $user);
 
             AuditService::log('enrollment.application_created', 'enrollment', 'EnrollmentApplication', $applicationId, null, [
@@ -154,6 +157,11 @@ final class EnrollmentApplicationService
             'last_school_year' => trim((string) ($input['last_school_year'] ?? '')) ?: null,
         ], ['id' => $applicationId]);
 
+        // A different program or year level means a different subject list.
+        if ((int) $application['program_id'] !== (int) $input['program_id'] || (int) $application['year_level_id'] !== (int) $input['year_level_id']) {
+            SubjectSelectionService::selectDefaults($applicationId);
+        }
+
         AuditService::log('enrollment.application_updated', 'enrollment', 'EnrollmentApplication', $applicationId, [
             'program_id'    => (int) $application['program_id'],
             'year_level_id' => (int) $application['year_level_id'],
@@ -168,6 +176,33 @@ final class EnrollmentApplicationService
     {
         self::ownedApplication($user, $applicationId);
         EnrollmentStatusService::transition($applicationId, App::SUBMITTED, $user);
+    }
+
+    /**
+     * The registrar approves (docs/26 rule 8), placing the student in a section.
+     * The section is saved and the approval made in one transaction, so a refused
+     * approval leaves the section unchanged too.
+     */
+    public static function approve(User $registrar, int $applicationId, int $sectionId, ?string $remarks = null): void
+    {
+        if (!$registrar->isRegistrar()) {
+            throw HttpException::forbidden('Only the registrar can approve applications.');
+        }
+
+        Database::transaction(static function () use ($registrar, $applicationId, $sectionId, $remarks): void {
+            $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ? FOR UPDATE', [$applicationId]);
+            if ($application === null) {
+                throw HttpException::notFound('That application was not found.');
+            }
+            $section = Database::selectOne('SELECT * FROM sections WHERE id = ?', [$sectionId]);
+            $problem = EnrollmentConfirmationService::sectionProblem($section, $application);
+            if ($problem !== null) {
+                throw ValidationException::withErrors(['section_id' => [$problem]], $problem);
+            }
+
+            Database::update('enrollment_applications', ['section_id' => $sectionId], ['id' => $applicationId]);
+            EnrollmentStatusService::transition($applicationId, App::APPROVED, $registrar, $remarks);
+        });
     }
 
     /** Withdraw the application (docs/26 rules 10, 11). */

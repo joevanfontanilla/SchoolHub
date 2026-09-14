@@ -153,6 +153,22 @@ if (!function_exists('component')) {
     }
 }
 
+if (!function_exists('icon')) {
+    /**
+     * An inline SVG icon from app/Helpers/icons.php, decorative (aria-hidden).
+     * Pair it with visible or sr-only text that says what it means.
+     */
+    function icon(string $name, string $class = 'h-5 w-5'): string
+    {
+        static $icons = null;
+        $icons ??= require __DIR__ . '/icons.php';
+
+        $paths = $icons[$name] ?? $icons['info'];
+        return '<svg class="shrink-0 ' . e($class) . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
+            . ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $paths . '</svg>';
+    }
+}
+
 if (!function_exists('auth_user')) {
     function auth_user(): ?App\Models\User
     {

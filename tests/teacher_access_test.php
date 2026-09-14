@@ -93,6 +93,29 @@ return [
         }
     },
 
+    'every cashier route requires the Cashier role and a permission, and no other role passes' => function (TestRunner $t): void {
+        try {
+            $router = new Router();
+            $routes = academicRoutes('/cashier/', ['/cashier/dashboard']);
+            $t->assertTrue(count($routes) >= 12, 'Found the cashier routes (' . count($routes) . ')');
+
+            $cashier = makeUser(User::ROLE_CASHIER);
+            $others = [makeUser(User::ROLE_STUDENT), makeUser(User::ROLE_TEACHER), makeUser(User::ROLE_REGISTRAR), makeUser(User::ROLE_SUPER_ADMIN)];
+            foreach ($routes as $route) {
+                $label = "{$route['method']} {$route['pattern']}";
+                $t->assertTrue(in_array('role:' . User::ROLE_CASHIER, $route['middleware'], true), "{$label} is gated to the Cashier role");
+                $t->assertTrue(array_filter($route['middleware'], static fn ($m) => str_starts_with($m, 'can:')) !== [], "{$label} names a permission");
+                $t->assertNull(academicAccessStatus($router, $route, $cashier), "The cashier may reach {$label}");
+                foreach ($others as $other) {
+                    $t->assertEquals(403, academicAccessStatus($router, $route, $other), "{$other->role_name} must be refused {$label}");
+                }
+            }
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
     'a signed-out visitor is refused teacher and student academic routes' => function (TestRunner $t): void {
         $router = new Router();
         foreach ([...academicRoutes('/teacher/'), ...array_filter(academicRoutes('/student/'), static fn ($r) => in_array($r['pattern'], STUDENT_ACADEMIC_ROUTES, true))] as $route) {

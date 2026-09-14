@@ -1,24 +1,29 @@
 <?php
 /**
- * Dashboard summary card (docs/21).
+ * Dashboard summary card with an icon tile (docs/21). The tone colors the tile
+ * and value; the value and hint always say the same thing in words.
  *
- * @var string $label
- * @var string $value
- * @var string $hint
- * @var string $tone  neutral | warning | danger | success
+ * @var string  $label
+ * @var string  $value
+ * @var string  $hint
+ * @var string  $tone  neutral | warning | danger | success
+ * @var ?string $icon  icon name (app/Helpers/icons.php)
  */
 $tone = $tone ?? 'neutral';
-$accent = match ($tone) {
-    'warning' => 'text-warning-text',
-    'danger'  => 'text-danger-text',
-    'success' => 'text-success-text',
-    default   => 'text-brand-navy',
+[$accent, $tile] = match ($tone) {
+    'warning' => ['text-warning-text', 'bg-warning-bg text-warning-text'],
+    'danger'  => ['text-danger-text', 'bg-danger-bg text-danger-text'],
+    'success' => ['text-success-text', 'bg-success-bg text-success-text'],
+    default   => ['text-brand-navy', 'bg-brand-50 text-brand-600'],
 };
 ?>
-<div class="card p-5">
-    <p class="text-sm font-medium text-brand-gray"><?= e($label) ?></p>
-    <p class="mt-2 text-2xl font-semibold <?= $accent ?>"><?= e($value) ?></p>
-    <?php if (!empty($hint)): ?>
-        <p class="mt-1 text-xs text-brand-gray"><?= e($hint) ?></p>
-    <?php endif; ?>
+<div class="card flex items-start gap-4 p-5">
+    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl <?= $tile ?>"><?= icon($icon ?? 'chart-bar', 'h-6 w-6') ?></span>
+    <div class="min-w-0">
+        <p class="text-sm font-medium text-brand-gray"><?= e($label) ?></p>
+        <p class="mt-1 truncate font-display text-2xl font-bold <?= $accent ?>"><?= e($value) ?></p>
+        <?php if (!empty($hint)): ?>
+            <p class="mt-0.5 text-xs text-brand-gray"><?= e($hint) ?></p>
+        <?php endif; ?>
+    </div>
 </div>

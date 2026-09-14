@@ -129,6 +129,22 @@ function deleteTestUsers(): void
             Database::query("DELETE FROM grades WHERE class_enlistment_id IN ({$enlistments})", $applicationIds);
             Database::query("DELETE ce FROM class_enlistments ce JOIN enrollments en ON en.id = ce.enrollment_id WHERE en.application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollments WHERE application_id IN ({$ain})", $applicationIds);
+
+            // Finance: payments, proofs (and their files), fee lines, assessments.
+            $assessments = "SELECT id FROM fee_assessments WHERE application_id IN ({$ain})";
+            foreach (Database::select("SELECT id, storage_path, fee_assessment_id FROM payment_submissions WHERE fee_assessment_id IN ({$assessments})", $applicationIds) as $proof) {
+                @unlink(STORAGE_PATH . '/' . $proof['storage_path']);
+                @rmdir(STORAGE_PATH . '/uploads/payments/' . $proof['fee_assessment_id']);
+                Database::query('DELETE FROM notifications WHERE link_url = ?', ['/cashier/payments/' . $proof['id']]);
+            }
+            Database::query("DELETE FROM payments WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
+            Database::query("DELETE FROM payment_submissions WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
+            Database::query("DELETE FROM fee_items WHERE fee_assessment_id IN ({$assessments})", $applicationIds);
+            Database::query("DELETE FROM fee_assessments WHERE application_id IN ({$ain})", $applicationIds);
+            Database::query("DELETE FROM application_subjects WHERE application_id IN ({$ain})", $applicationIds);
+            resetSequence('assessment', 'ASM-', 'fee_assessments', 'assessment_number');
+            resetSequence('payment', 'PAY-', 'payments', 'transaction_number');
+            resetSequence('receipt', 'OR-', 'payments', 'receipt_number');
             Database::query("DELETE FROM enrollment_requirements WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_status_history WHERE application_id IN ({$ain})", $applicationIds);
             Database::query("DELETE FROM enrollment_applications WHERE id IN ({$ain})", $applicationIds);
@@ -184,12 +200,14 @@ function deleteTestCatalog(): void
         'DELETE e FROM enrollments e JOIN sections sec ON sec.id = e.section_id WHERE sec.code LIKE ?',
         [$like]
     );
+    Database::query('UPDATE enrollment_applications SET section_id = NULL WHERE section_id IN (SELECT id FROM sections WHERE code LIKE ?)', [$like]);
     Database::query('DELETE FROM sections WHERE code LIKE ?', [$like]);
 
     $fixtureSubjects = 'SELECT s.id FROM subjects s LEFT JOIN curricula c ON c.id = s.curriculum_id WHERE s.code LIKE ? OR c.code LIKE ?';
     $subjectIds = array_column(Database::select($fixtureSubjects, [$like, $like]), 'id');
     if ($subjectIds !== []) {
         $in = implode(',', array_fill(0, count($subjectIds), '?'));
+        Database::query("DELETE FROM application_subjects WHERE subject_id IN ({$in})", $subjectIds);
         Database::query("DELETE FROM subject_prerequisites WHERE subject_id IN ({$in}) OR prerequisite_subject_id IN ({$in})", array_merge($subjectIds, $subjectIds));
         Database::query("DELETE FROM subjects WHERE id IN ({$in})", $subjectIds);
     }
@@ -200,6 +218,15 @@ function deleteTestCatalog(): void
         'DELETE FROM programs WHERE code LIKE ? AND id NOT IN (SELECT program_id FROM enrollment_applications)',
         [$like]
     );
+}
+
+/** Rewind a PREFIX-YYYY-NNNNN counter to the highest number still in use. */
+function resetSequence(string $key, string $prefix, string $table, string $column): void
+{
+    $period = date('Y');
+    $highest = (string) Database::scalar("SELECT MAX(`{$column}`) FROM `{$table}` WHERE `{$column}` LIKE ?", ["{$prefix}{$period}-%"]);
+    $number = $highest === '' ? 0 : (int) substr($highest, strrpos($highest, '-') + 1);
+    Database::query('UPDATE document_sequences SET current_number = ? WHERE `key` = ? AND period = ?', [$number, $key, $period]);
 }
 
 /** Rewind the student-number counter to the highest number still assigned. */
@@ -422,6 +449,14 @@ function makeSectionFor(int $applicationId, int $capacity = 40): int
     ]);
 }
 
+/** Fixture setup: give an application a matching section, as the registrar does when approving. */
+function assignSectionForTest(int $applicationId): int
+{
+    $sectionId = makeSectionFor($applicationId);
+    Database::update('enrollment_applications', ['section_id' => $sectionId], ['id' => $applicationId]);
+    return $sectionId;
+}
+
 /** A submitted application whose required documents are all uploaded. @return array{0:User,1:int} */
 function submittedApplication(string $studentType = 'New'): array
 {
@@ -447,7 +482,7 @@ function approvedApplication(): array
             App\Services\RequirementReviewService::review($registrar, (int) $requirement['id'], 'VERIFIED', null);
         }
     }
-    App\Services\EnrollmentStatusService::transition($id, 'APPROVED', $registrar);
+    App\Services\EnrollmentApplicationService::approve($registrar, $id, makeSectionFor($id));
 
     return [$student, $registrar, $id];
 }
@@ -553,9 +588,23 @@ function meeting(int $day, string $start, string $end, ?int $roomId = null): arr
     return ['day_of_week' => $day, 'start_time' => $start, 'end_time' => $end, 'room_id' => $roomId];
 }
 
-/** A class built through ClassScheduleService. @param array<int,array> $meetings */
+/** A class built through ClassScheduleService. With no teacher given, a fixture teacher is made. @param array<int,array> $meetings */
 function makeClass(User $registrar, int $sectionId, int $subjectId, ?int $teacherId, array $meetings): int
 {
+    // Every class needs a teacher; a fresh one per class keeps teacher clashes out of tests about other things.
+    $teacherId ??= makeUser(User::ROLE_TEACHER)->id;
+
+    // Students choose their subjects (docs/09) and are enlisted only in those. A class
+    // made for a test is a subject the fixture students of that program, year, and
+    // term have chosen, so block enlistment behaves as it did before selection existed.
+    $section = Database::selectOne('SELECT * FROM sections WHERE id = ?', [$sectionId]);
+    Database::query(
+        'INSERT IGNORE INTO application_subjects (application_id, subject_id)
+         SELECT ea.id, ? FROM enrollment_applications ea
+           JOIN students st ON st.id = ea.student_id JOIN users u ON u.id = st.user_id
+          WHERE u.username LIKE ? AND ea.program_id = ? AND ea.year_level_id = ? AND ea.term_id = ?',
+        [$subjectId, testPrefixPattern(), $section['program_id'], $section['year_level_id'], $section['term_id']]
+    );
     return App\Services\ClassScheduleService::saveClass($registrar, $sectionId, null, [
         'subject_id' => $subjectId, 'teacher_user_id' => $teacherId, 'meetings' => $meetings,
     ])['class_id'];

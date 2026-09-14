@@ -176,21 +176,86 @@ final class AcademicRecordService
      */
     public static function progressPercent(int $studentId, int $curriculumId): int
     {
+        return self::unitsEarned($studentId, $curriculumId)['percent'];
+    }
+
+    /**
+     * Units of a curriculum's subjects the student has passed, out of its total.
+     *
+     * @return array{earned:float,total:float,percent:int} percent is rounded down
+     */
+    public static function unitsEarned(int $studentId, int $curriculumId): array
+    {
         $total = Curriculum::totalUnits($curriculumId);
-        if ($total <= 0) {
-            return 0;
-        }
-
         $passed = self::passedSubjectIds($studentId);
-        if ($passed === []) {
-            return 0;
-        }
-        $in = implode(',', array_fill(0, count($passed), '?'));
-        $units = (float) Database::scalar(
-            "SELECT COALESCE(SUM(units), 0) FROM subjects WHERE curriculum_id = ? AND is_active = 1 AND id IN ({$in})",
-            array_merge([$curriculumId], $passed)
-        );
+        $earned = 0.0;
 
-        return (int) floor($units / $total * 100);
+        if ($total > 0 && $passed !== []) {
+            $in = implode(',', array_fill(0, count($passed), '?'));
+            $earned = (float) Database::scalar(
+                "SELECT COALESCE(SUM(units), 0) FROM subjects WHERE curriculum_id = ? AND is_active = 1 AND id IN ({$in})",
+                array_merge([$curriculumId], $passed)
+            );
+        }
+
+        return [
+            'earned'  => $earned,
+            'total'   => $total,
+            'percent' => $total > 0 ? (int) floor($earned / $total * 100) : 0,
+        ];
+    }
+
+    /**
+     * Every term the student was enrolled in, newest first, without classes —
+     * for term pickers and summaries.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function enrollmentsOf(int $studentId): array
+    {
+        return Database::select(
+            'SELECT e.*, t.name AS term_name, t.sequence AS term_sequence, t.start_date, t.end_date,
+                    ay.code AS academic_year_code, sec.code AS section_code,
+                    p.code AS program_code, p.name AS program_name, yl.name AS year_level_name, yl.sequence AS year_sequence
+               FROM enrollments e
+               JOIN terms t           ON t.id  = e.term_id
+               JOIN academic_years ay ON ay.id = t.academic_year_id
+               JOIN sections sec      ON sec.id = e.section_id
+               JOIN programs p        ON p.id  = sec.program_id
+               JOIN year_levels yl    ON yl.id = sec.year_level_id
+              WHERE e.student_id = ?
+              ORDER BY t.start_date DESC',
+            [$studentId]
+        );
+    }
+
+    /**
+     * One term at a glance: GWA (docs/27), units taken and passed, and an overall
+     * remark — PASSED when every class passed, IN_PROGRESS while any final is
+     * pending, FAILED when any class failed, INC when any is incomplete.
+     *
+     * @param array<int,array<string,mixed>> $classes classesForEnrollment()
+     * @return array{gwa:?string,units:float,units_passed:float,remark:?string,taken:int}
+     */
+    public static function termSummary(array $classes): array
+    {
+        $taken = array_values(array_filter($classes, static fn ($c) => $c['enlistment_status'] !== EnlistmentService::DROPPED));
+        $remarks = array_map(static fn ($c) => $c['final']['remark'], $taken);
+
+        $remark = match (true) {
+            $taken === []                                                   => null,
+            in_array(GradeCalculator::REMARK_IN_PROGRESS, $remarks, true)   => GradeCalculator::REMARK_IN_PROGRESS,
+            in_array(GradeCalculator::REMARK_FAILED, $remarks, true)        => GradeCalculator::REMARK_FAILED,
+            in_array(GradeCalculator::REMARK_INC, $remarks, true)           => GradeCalculator::REMARK_INC,
+            default                                                         => GradeCalculator::REMARK_PASSED,
+        };
+
+        return [
+            'gwa'          => GradeCalculator::gwa($taken),
+            'units'        => array_sum(array_map(static fn ($c) => (float) $c['units'], $taken)),
+            'units_passed' => array_sum(array_map(static fn ($c) => $c['final']['remark'] === GradeCalculator::REMARK_PASSED ? (float) $c['units'] : 0.0, $taken)),
+            'remark'       => $remark,
+            'taken'        => count($taken),
+        ];
     }
 }

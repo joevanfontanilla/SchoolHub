@@ -32,6 +32,45 @@ final class EnrollmentConfirmationService
             throw HttpException::forbidden('Only the registrar can confirm enrollment.');
         }
 
+        return self::perform($user, $applicationId, $sectionId);
+    }
+
+    /**
+     * Enroll automatically once everything is in place (docs/09): the application
+     * is approved, a section was assigned at approval, and the payment policy is
+     * met. Called after approval (policy NONE) and after every payment the cashier
+     * records. Every check runs BEFORE anything is written, so a student who is not
+     * ready yet — or whose section filled up — leaves no trace; in the second case
+     * the registrar is told to assign another section.
+     *
+     * @return array{enrollment_id:int,student_number:string,number_issued:bool,enlistment:array}|null null when not enrolled now
+     */
+    public static function confirmIfReady(int $applicationId, User $actor): ?array
+    {
+        $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$applicationId]);
+        if ($application === null
+            || $application['application_status'] !== Application::APPROVED
+            || $application['enrollment_state'] !== 'NOT_ENROLLED'
+            || $application['section_id'] === null
+            || PaymentPolicy::problem($application) !== null) {
+            return null;
+        }
+
+        $section = Database::selectOne('SELECT * FROM sections WHERE id = ?', [$application['section_id']]);
+        $sectionProblem = self::sectionProblem($section, $application);
+        if ($sectionProblem !== null) {
+            NotificationService::notifyRole(User::ROLE_REGISTRAR, 'enrollment.section_problem',
+                "Application {$application['application_number']} is paid but could not be enrolled",
+                $sectionProblem . ' Assign another section and confirm the enrollment.', "/registrar/applications/{$applicationId}/confirm");
+            return null;
+        }
+
+        return self::perform($actor, $applicationId, (int) $application['section_id']);
+    }
+
+    /** @return array{enrollment_id:int,student_number:string,number_issued:bool,enlistment:array} */
+    private static function perform(User $user, int $applicationId, int $sectionId): array
+    {
         return Database::transaction(static function () use ($user, $applicationId, $sectionId): array {
             $application = Database::selectOne(
                 'SELECT ea.*, s.user_id AS owner_user_id
@@ -105,6 +144,9 @@ final class EnrollmentConfirmationService
                 'enrolled_by'    => $user->id,
                 'status'         => 'ENROLLED',
             ]);
+
+            // The section actually used, which the registrar may have changed at confirmation.
+            Database::update('enrollment_applications', ['section_id' => $sectionId], ['id' => $applicationId]);
 
             EnrollmentStatusService::transitionEnrollment($applicationId, 'ENROLLED', $user);
 

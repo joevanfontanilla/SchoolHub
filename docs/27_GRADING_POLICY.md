@@ -96,5 +96,14 @@ An unchanged re-save writes nothing.
 
 - A deadline for completing an `INC`, and automatic conversion of an unresolved INC to
   5.00. The registrar tracks these manually.
-- A general weighted average (GWA) and honors computation.
+- Honors computation (the GWA itself is below).
 - Printable grade sheets and report cards (reporting phase).
+
+## General weighted average (GWA)
+Shown to the student per term and cumulatively (Academic Records). **School policy to confirm.**
+
+- GWA = Σ(final grade × units) ÷ Σ(units), rounded half up to two decimals.
+- Counted: classes with a numeric final — passing grades and 5.00 failures.
+- Not counted: INC, DRP, and classes still in progress; and **NSTP** (including CWTS, LTS,
+  ROTC) and **physical education** (PATH-FIT, PE, PED), which by common Philippine college
+  practice carry no weight in the GWA. `GradeCalculator::countsTowardGwa()` holds that rule.

@@ -40,6 +40,7 @@ module.exports = {
           700: '#186490',
           800: '#134E70',
           900: '#0F4C5C',  // Navy Blue
+          950: '#0A3642',  // deep navy: the end of the portal sidebar's gradient
           // Named aliases, so views can read as the palette does
           primary: '#2E9AD6',
           navy:    '#0F4C5C',
@@ -50,6 +51,7 @@ module.exports = {
           gray:    '#6B7280',
           alert:   '#E63946',
           warning: '#FFC947',
+          canvas:  '#F3F8FC',  // portal page background, a whisper of the pale blue
         },
         // Darkened teal and amber for TEXT on their light backgrounds, so
         // success and warning messages stay readable.

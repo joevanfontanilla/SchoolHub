@@ -15,7 +15,9 @@ use App\Models\EnrollmentApplication as Application;
 use App\Models\Program;
 use App\Models\RegistrarQueue;
 use App\Models\Student;
+use App\Services\EnrollmentApplicationService;
 use App\Services\EnrollmentStatusService;
+use App\Services\SubjectSelectionService;
 use App\Services\PaymentPolicy;
 use App\Services\RequirementReviewService;
 
@@ -66,6 +68,9 @@ final class ApplicationController extends Controller
             )),
             'targets'       => EnrollmentStatusService::availableTargets($application, Auth::user()),
             'paymentProblem' => PaymentPolicy::problem($application),
+            'subjects'      => SubjectSelectionService::chosen((int) $application['id']),
+            'sections'      => Catalog::sectionsForApplication($application),
+            'assessment'    => \App\Models\Finance::assessmentForApplication((int) $application['id']),
             'enrollment'    => Database::selectOne(
                 'SELECT e.*, sec.code AS section_code FROM enrollments e JOIN sections sec ON sec.id = e.section_id WHERE e.application_id = ?',
                 [$application['id']]
@@ -88,9 +93,23 @@ final class ApplicationController extends Controller
         $this->decide($request, Application::CORRECTION_REQUIRED, 'The application was returned to the student for correction.');
     }
 
+    /** Approve and place the student in a section (docs/09, docs/26 rule 8). */
     public function approve(Request $request): void
     {
-        $this->decide($request, Application::APPROVED, 'Application approved.');
+        $application = $this->application($request);
+        $id = (int) $application['id'];
+
+        try {
+            EnrollmentApplicationService::approve(Auth::user(), $id, (int) $request->input('section_id', 0), (string) $request->input('remarks', '') ?: null);
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), "/registrar/applications/{$id}#decision");
+            return;
+        }
+
+        $enrolled = Database::scalar('SELECT enrollment_state FROM enrollment_applications WHERE id = ?', [$id]) === 'ENROLLED';
+        $this->success($enrolled
+            ? 'Application approved and the student enrolled (no payment is required by school policy).'
+            : 'Application approved. The fee assessment was issued to the student, who is enrolled once the payment policy is met.', "/registrar/applications/{$id}");
     }
 
     public function reject(Request $request): void

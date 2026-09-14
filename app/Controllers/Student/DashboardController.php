@@ -10,6 +10,7 @@ use App\Core\Request;
 use App\Models\Announcement;
 use App\Models\EnrollmentApplication as Application;
 use App\Models\Term;
+use App\Services\AcademicRecordService;
 use App\Services\RegistrationService;
 use App\Services\StudentProfileService;
 
@@ -54,8 +55,28 @@ final class DashboardController extends Controller
             ['Pay your assessment', false, null],
         ];
 
+        // Once enrolled: this term's classes, what meets today, and curriculum progress.
+        $enrollment = AcademicRecordService::currentEnrollment($studentId);
+        $classes = $enrollment === null ? [] : AcademicRecordService::classesForEnrollment((int) $enrollment['id']);
+        $today = [];
+        foreach ($classes as $class) {
+            foreach ($class['enlistment_status'] === 'ENLISTED' ? $class['meetings'] : [] as $meeting) {
+                if ((int) $meeting['day_of_week'] === (int) date('N') && $enrollment['start_date'] <= date('Y-m-d') && date('Y-m-d') <= $enrollment['end_date']) {
+                    $today[] = ['class' => $class, 'meeting' => $meeting];
+                }
+            }
+        }
+        usort($today, static fn ($a, $b) => $a['meeting']['start_time'] <=> $b['meeting']['start_time']);
+        $curriculumId = $student['curriculum_id'] === null ? null : (int) $student['curriculum_id'];
+
         $this->appView('dashboards/student', [
             'title'         => 'Dashboard',
+            'enrollment'    => $enrollment,
+            'classes'       => $classes,
+            'todayClasses'  => $today,
+            'termSummary'   => AcademicRecordService::termSummary($classes),
+            'progress'      => $curriculumId === null ? null : AcademicRecordService::unitsEarned($studentId, $curriculumId),
+            'yearLevel'     => AcademicRecordService::enrollmentsOf($studentId)[0]['year_sequence'] ?? null,
             'announcements' => Announcement::forUser($user, 5),
             'current'       => $current,
             'steps'         => $steps,
@@ -63,6 +84,7 @@ final class DashboardController extends Controller
             'cards'         => [
                 [
                     'label' => 'Application status',
+                    'icon'  => 'enrollment',
                     'value' => $current !== null ? Application::label($status) : 'No application',
                     'hint'  => $current['application_number'] ?? ($openTerms !== [] ? 'Enrollment is open' : 'Enrollment is closed'),
                     'tone'  => match ($status) {
@@ -74,18 +96,21 @@ final class DashboardController extends Controller
                 ],
                 [
                     'label' => 'Term',
+                    'icon'  => 'calendar',
                     'value' => $current !== null ? $current['term_name'] : '—',
                     'hint'  => $current !== null ? 'A.Y. ' . $current['academic_year_code'] : 'Set when you apply',
                     'tone'  => 'neutral',
                 ],
                 [
                     'label' => 'Required documents',
+                    'icon'  => 'requirements',
                     'value' => $current !== null ? "{$requiredDone} of {$requiredTotal}" : '—',
                     'hint'  => $current !== null ? ($requiredDone === $requiredTotal ? 'All uploaded' : 'Still to upload') : 'Listed when you apply',
                     'tone'  => $current !== null && $requiredDone < $requiredTotal ? 'warning' : 'neutral',
                 ],
                 [
                     'label' => 'Profile',
+                    'icon'  => 'user',
                     'value' => $missingProfile === [] ? 'Complete' : 'Incomplete',
                     'hint'  => $missingProfile === [] ? 'Ready for review' : count($missingProfile) . ' item' . (count($missingProfile) === 1 ? '' : 's') . ' missing',
                     'tone'  => $missingProfile === [] ? 'success' : 'warning',

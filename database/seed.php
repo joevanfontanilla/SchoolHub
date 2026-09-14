@@ -115,6 +115,7 @@ const SETTINGS = [
     ['minimum_downpayment_percent', '20', 'int', 'enrollment', 'Percent of assessment required to confirm enrollment', 0],
     ['max_units_per_term', '27', 'int', 'academic', 'Maximum units a student may enlist in per term', 0],
     ['registration_limit_per_hour', '5', 'int', 'security', 'Student sign-ups allowed from one IP address per hour', 0],
+    ['payment_instructions', "GCash: 0917 000 0000 (Lyceum of the East Aurora)\nBank deposit: Landbank, Account No. 0000-0000-00, Lyceum of the East Aurora\nKeep your reference number and a screenshot or photo of the receipt.", 'string', 'finance', 'Where students send online payments. SAMPLE details: replace with the school\'s real accounts.', 0],
     ['enrollment_open_message', 'Enrollment for the coming semester is now open.', 'string', 'enrollment', 'Shown on the public enrollment page', 1],
 ];
 
@@ -156,6 +157,7 @@ try {
         seedRequirementTypes();
         seedEnrollmentWindows();
         seedGradePeriods();
+        seedFeeTypes();
     });
 
     echo "\n  Seeding complete.\n";
@@ -361,4 +363,30 @@ function seedGradePeriods(): void
     }
 
     echo "  grade periods ........ {$added} added\n";
+}
+
+/**
+ * A starter fee schedule (docs/14). The amounts are SAMPLES, marked as such, for
+ * the cashier to replace with the school's real fees on the Fee Schedule page.
+ * Insert-only: a fee the cashier has already set is never overwritten.
+ */
+function seedFeeTypes(): void
+{
+    $fees = [
+        // code, name, basis, amount, sort
+        ['TUITION', 'Tuition fee', 'PER_UNIT', '450.00', 10],
+        ['LAB', 'Laboratory fee', 'PER_LAB_UNIT', '800.00', 20],
+        ['REGISTRATION', 'Registration fee', 'FIXED', '500.00', 30],
+        ['LIBRARY', 'Library fee', 'FIXED', '400.00', 40],
+        ['TECHNOLOGY', 'Technology fee', 'FIXED', '600.00', 50],
+        ['MISC', 'Miscellaneous fee', 'FIXED', '1500.00', 60],
+    ];
+    $added = 0;
+    foreach ($fees as [$code, $name, $basis, $amount, $sort]) {
+        $added += Database::query(
+            'INSERT IGNORE INTO fee_types (code, name, description, basis, amount, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)',
+            [$code, $name, 'Sample amount. Set the school\'s actual fee.', $basis, $amount, $sort]
+        )->rowCount();
+    }
+    echo "  fee types ............ {$added} added\n";
 }

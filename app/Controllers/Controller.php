@@ -33,10 +33,16 @@ abstract class Controller
     /** Render a view inside the authenticated application shell. */
     protected function appView(string $template, array $data = [], int $status = 200): void
     {
+        $user = Auth::user();
         $data += [
-            'user'        => Auth::user(),
+            'user'        => $user,
             'school'      => SystemSetting::publicSettings(),
             'currentPath' => (new \App\Core\Request())->path(),
+            // The line under the user's name in the top bar, and the bell's count.
+            'portal'      => $user === null ? ['subtitle' => '', 'unread' => 0] : [
+                'subtitle' => $user->isStudent() ? \App\Models\Student::portalLabel($user->id) : (string) $user->role_name,
+                'unread'   => \App\Models\Notification::unreadCount($user->id),
+            ],
         ];
         Response::html(View::render($template, $data, 'layouts/app'), $status);
     }

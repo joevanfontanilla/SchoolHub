@@ -8,24 +8,28 @@ use App\Controllers\Controller;
 use App\Core\Auth;
 use App\Core\Request;
 use App\Models\Announcement;
+use App\Models\Finance;
 
 /**
- * Cashier dashboard (docs/14). Fees, payments, and receipts arrive in Phase 5.
+ * Cashier dashboard (docs/14): payments to verify and today's collections.
  */
 final class DashboardController extends Controller
 {
     public function index(Request $request): void
     {
         $user = Auth::user();
+        $stats = Finance::cashierStats();
 
         $this->appView('dashboards/cashier', [
             'title'         => 'Dashboard',
             'announcements' => Announcement::forUser($user, 5),
+            'pendingQueue'  => array_slice(Finance::submissionQueue('PENDING'), 0, 6),
+            'recent'        => Finance::recentPayments(),
             'cards'         => [
-                ['label' => "Today's collections", 'value' => money(0), 'hint' => 'No payments recorded', 'tone' => 'neutral'],
-                ['label' => 'Payments today',      'value' => '0',      'hint' => 'No transactions',      'tone' => 'neutral'],
-                ['label' => 'Outstanding balances', 'value' => money(0), 'hint' => 'No assessments yet',  'tone' => 'neutral'],
-                ['label' => 'Assessments issued',  'value' => '0',      'hint' => 'None this term',       'tone' => 'neutral'],
+                ['icon' => 'inbox', 'label' => 'Payments to verify', 'value' => (string) $stats['pending'], 'hint' => $stats['pending'] === 0 ? 'Queue is clear' : 'Submitted online by students', 'tone' => $stats['pending'] > 0 ? 'warning' : 'neutral'],
+                ['icon' => 'banknotes', 'label' => "Today's collections", 'value' => money($stats['collected_today']), 'hint' => $stats['payments_today'] . ' payment' . ($stats['payments_today'] === 1 ? '' : 's') . ' today', 'tone' => 'success'],
+                ['icon' => 'credit-card', 'label' => 'Outstanding balances', 'value' => money($stats['outstanding']), 'hint' => 'Across active assessments', 'tone' => 'neutral'],
+                ['icon' => 'document', 'label' => 'Active assessments', 'value' => (string) $stats['assessments'], 'hint' => 'Issued at approval', 'tone' => 'neutral'],
             ],
         ]);
     }

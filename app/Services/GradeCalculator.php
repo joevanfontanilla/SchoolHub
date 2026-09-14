@@ -150,6 +150,45 @@ final class GradeCalculator
         return number_format(min($rounded, 300) / 100, 2, '.', '');
     }
 
+    /**
+     * General weighted average (docs/27): the unit-weighted mean of the numeric
+     * finals — passing grades and 5.00 failures — rounded to two decimals.
+     * INC, DRP, and in-progress classes have no numeric final and are left out, as
+     * are NSTP and physical education, which by school practice carry no weight
+     * in the GWA. Null when nothing counts yet.
+     *
+     * @param array<int,array{code:string,units:mixed,final:array{grade:?string,remark:string}}> $classes
+     */
+    public static function gwa(array $classes): ?string
+    {
+        $points = 0.0;
+        $units = 0.0;
+        foreach ($classes as $class) {
+            $grade = $class['final']['grade'] ?? null;
+            if ($grade === null || !self::countsTowardGwa((string) $class['code'])) {
+                continue;
+            }
+            $points += (float) $grade * (float) $class['units'];
+            $units += (float) $class['units'];
+        }
+        if ($units <= 0) {
+            return null;
+        }
+
+        // Rounded half up in whole hundredths, like the finals themselves.
+        return number_format(round($points / $units + 1e-9, 2), 2, '.', '');
+    }
+
+    /**
+     * Whether a subject counts toward the GWA. NSTP (and its components CWTS,
+     * LTS, ROTC) and physical education (PATH-FIT, PE n, PED n) do not.
+     */
+    public static function countsTowardGwa(string $code): bool
+    {
+        $compact = preg_replace('/[\s._-]+/', '', strtoupper($code));
+        return !preg_match('/^(NSTP|CWTS|LTS|ROTC|PATHFIT|PED?\d)/', (string) $compact);
+    }
+
     public static function remarkLabel(string $remark): string
     {
         return match ($remark) {

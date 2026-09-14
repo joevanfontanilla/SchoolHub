@@ -38,11 +38,7 @@ final class EnlistmentService
             $enrollment = self::lockEnrollment($enrollmentId);
             $report = ['enlisted' => [], 'skipped' => []];
 
-            $classes = Database::select(
-                "SELECT cs.id, sub.code FROM class_schedules cs JOIN subjects sub ON sub.id = cs.subject_id
-                  WHERE cs.section_id = ? AND cs.status = 'ACTIVE' ORDER BY sub.code",
-                [$enrollment['section_id']]
-            );
+            $classes = self::sectionClassesFor($enrollment);
 
             foreach ($classes as $class) {
                 // Already in it, or deliberately dropped by the registrar: leave it alone.
@@ -274,8 +270,9 @@ final class EnlistmentService
             return [];
         }
 
+        $chosen = self::chosenSubjectIds($enrollment);
         $rows = Database::select(
-            "SELECT cs.id, sub.code, sub.title, ce.status AS enlistment_status
+            "SELECT cs.id, cs.subject_id, sub.code, sub.title, ce.status AS enlistment_status
                FROM class_schedules cs
                JOIN subjects sub ON sub.id = cs.subject_id
           LEFT JOIN class_enlistments ce ON ce.class_schedule_id = cs.id AND ce.enrollment_id = ?
@@ -285,6 +282,10 @@ final class EnlistmentService
             [$enrollmentId, $enrollment['section_id']]
         );
 
+        if ($chosen !== null) {
+            $rows = array_values(array_filter($rows, static fn ($row) => in_array((int) $row['subject_id'], $chosen, true)));
+        }
+
         return array_map(static fn (array $row) => [
             'class_id' => (int) $row['id'],
             'code'     => $row['code'],
@@ -292,6 +293,40 @@ final class EnlistmentService
             'dropped'  => $row['enlistment_status'] === 'DROPPED',
             'problems' => self::problems($enrollment, (int) $row['id']),
         ], $rows);
+    }
+
+    /**
+     * The subjects the student chose on their application (docs/09), or null for an
+     * enrollment made before subject selection existed, which takes the whole block.
+     *
+     * @param array<string,mixed> $enrollment
+     * @return array<int,int>|null
+     */
+    public static function chosenSubjectIds(array $enrollment): ?array
+    {
+        $ids = SubjectSelectionService::chosenIds((int) $enrollment['application_id']);
+        return $ids === [] ? null : $ids;
+    }
+
+    /**
+     * The section's active classes this enrollment should be in: all of them for a
+     * block enrollment, or only those for the subjects the student chose.
+     *
+     * @param array<string,mixed> $enrollment
+     * @return array<int,array{id:int,code:string,subject_id:int}>
+     */
+    private static function sectionClassesFor(array $enrollment): array
+    {
+        $classes = Database::select(
+            "SELECT cs.id, cs.subject_id, sub.code FROM class_schedules cs JOIN subjects sub ON sub.id = cs.subject_id
+              WHERE cs.section_id = ? AND cs.status = 'ACTIVE' ORDER BY sub.code",
+            [$enrollment['section_id']]
+        );
+        $chosen = self::chosenSubjectIds($enrollment);
+        if ($chosen === null) {
+            return $classes;
+        }
+        return array_values(array_filter($classes, static fn ($class) => in_array((int) $class['subject_id'], $chosen, true)));
     }
 
     /** @return array<int,string> codes of prerequisites the student has not passed */

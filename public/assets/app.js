@@ -63,6 +63,52 @@
         });
     }
 
+    // Subject selection: keep the unit total in step with the ticked subjects.
+    // The server re-checks the limit; this only helps the student see it.
+    document.querySelectorAll('form[data-units-form]').forEach(function (form) {
+        var total = document.querySelector('[data-units-total]');
+        if (!total) {
+            return;
+        }
+        form.addEventListener('change', function () {
+            var units = 0;
+            form.querySelectorAll('input[data-units]:checked').forEach(function (box) {
+                units += parseFloat(box.getAttribute('data-units')) || 0;
+            });
+            total.textContent = String(Math.round(units * 10) / 10);
+        });
+    });
+
+    // Printable documents: the Print button opens the browser's print dialog.
+    document.querySelectorAll('[data-print]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            window.print();
+        });
+    });
+
+    // Dropdown menus built on <details>: close on an outside click or Escape.
+    var dropdowns = document.querySelectorAll('details[data-dropdown]');
+    if (dropdowns.length > 0) {
+        document.addEventListener('click', function (event) {
+            dropdowns.forEach(function (menu) {
+                if (menu.open && !menu.contains(event.target)) {
+                    menu.open = false;
+                }
+            });
+        });
+        document.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            dropdowns.forEach(function (menu) {
+                if (menu.open) {
+                    menu.open = false;
+                    menu.querySelector('summary').focus();
+                }
+            });
+        });
+    }
+
     // Confirmation before a destructive action (docs/21).
     document.querySelectorAll('[data-confirm]').forEach(function (element) {
         element.addEventListener('submit', function (event) {

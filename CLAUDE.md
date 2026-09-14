@@ -170,6 +170,16 @@ an **audit log** entry.
   `AttendanceService`; both find the class with `GradingService::ownedClass()`, so another
   teacher's class is a **404**. Only the registrar opens and closes grading periods, and the
   registrar never enters grades.
+- **Enrollment flow (docs/09).** Students choose subjects on the application through
+  `SubjectSelectionService` (only their program curriculum's subjects for the year and term;
+  locked when a prerequisite is unmet). The registrar approves with a section
+  (`EnrollmentApplicationService::approve`), which issues the assessment. Students pay online by
+  sending proof; the cashier verifies it. `EnrollmentConfirmationService::confirmIfReady()` enrolls
+  automatically once the payment policy is met, enlisting only the chosen subjects.
+- **Finance (docs/14).** `FinanceService` is the only writer of assessments, payments, balances, and
+  `payment_status`. Money is handled in whole centavos (`FinanceService::cents()` / `money()`), never
+  float. Payments are never edited or deleted. Receipts, statements, and proofs are opened only
+  through `FinanceAccessPolicy` (owner student, else 404; listed staff roles, else 403).
 - **Notifications** are written with `NotificationService` at the moment of the event; the
   inbox UI comes later. Links are relative paths.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than

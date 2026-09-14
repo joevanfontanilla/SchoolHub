@@ -17,6 +17,9 @@
  * @var array  $targets
  * @var ?string $paymentProblem
  * @var ?array $enrollment
+ * @var array  $subjects    the subjects the student chose
+ * @var array  $sections    sections matching the application
+ * @var ?array $assessment
  */
 use App\Models\EnrollmentApplication as Application;
 use App\Models\Download;
@@ -62,6 +65,23 @@ $oldRemarksFor = (int) old('remarks_for', 0);
     <div class="grid gap-6 lg:grid-cols-3">
         <!-- Left: the applicant and their documents -->
         <div class="space-y-6 lg:col-span-2">
+            <?php $subjectUnits = array_sum(array_map(static fn ($s) => (float) $s['units'], $subjects)); ?>
+            <section class="card" aria-labelledby="subjects-heading">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                    <h2 id="subjects-heading" class="flex items-center gap-2 text-base"><span class="text-brand-600"><?= icon('book-open', 'h-5 w-5') ?></span> Subjects chosen</h2>
+                    <p class="text-sm text-slate-700"><span class="font-display font-bold text-brand-navy"><?= e(count($subjects)) ?></span> subjects · <span class="font-display font-bold text-brand-navy"><?= e(rtrim(rtrim(number_format($subjectUnits, 1, '.', ''), '0'), '.')) ?></span> units</p>
+                </div>
+                <?php if ($subjects === []): ?>
+                    <p class="px-5 py-4 text-sm text-warning-text">The student has not chosen any subjects. Return the application for correction so they can choose.</p>
+                <?php else: ?>
+                    <ul class="grid gap-x-6 px-5 py-3 text-sm sm:grid-cols-2">
+                        <?php foreach ($subjects as $subject): ?>
+                            <li class="flex justify-between gap-3 border-b border-slate-100 py-2"><span><span class="font-semibold text-brand-navy"><?= e($subject['code']) ?></span> <?= e($subject['title']) ?></span><span class="whitespace-nowrap text-slate-600"><?= e(rtrim(rtrim((string) $subject['units'], '0'), '.')) ?> u</span></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+            </section>
+
             <section class="card" aria-labelledby="applicant-heading">
                 <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
                     <h2 id="applicant-heading" class="text-base">Applicant</h2>
@@ -165,7 +185,7 @@ $oldRemarksFor = (int) old('remarks_for', 0);
 
         <!-- Right: decisions and history -->
         <div class="space-y-6">
-            <section class="card p-5" aria-labelledby="decision-heading">
+            <section id="decision" class="card p-5" aria-labelledby="decision-heading">
                 <h2 id="decision-heading" class="text-base">Decision</h2>
 
                 <?php if ($enrollment !== null): ?>
@@ -174,10 +194,19 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                         <p class="mt-0.5">Student number <?= e($student['student_number']) ?> · <?= e(dt($enrollment['enrolled_at'])) ?></p>
                     </div>
                 <?php elseif ($status === Application::APPROVED): ?>
+                    <?php if ($assessment !== null): ?>
+                        <dl class="mt-3 space-y-1 rounded-lg bg-slate-50 px-4 py-3 text-sm">
+                            <div class="flex justify-between"><dt class="text-slate-600">Assessment <?= e($assessment['assessment_number']) ?></dt><dd class="font-semibold"><?= e(money($assessment['total_amount'])) ?></dd></div>
+                            <div class="flex justify-between"><dt class="text-slate-600">Paid</dt><dd class="font-semibold"><?= e(money($assessment['total_paid'])) ?></dd></div>
+                            <div class="flex justify-between"><dt class="text-slate-600">Section assigned</dt><dd class="font-semibold"><?= e($assessment['section_code'] ?? '—') ?></dd></div>
+                        </dl>
+                        <a href="<?= e(url('/statements/' . $assessment['id'])) ?>" class="mt-2 inline-block text-sm font-semibold text-brand-600 hover:underline">Statement of account</a>
+                    <?php endif; ?>
                     <?php if ($paymentProblem !== null): ?>
                         <p class="mt-3 rounded-lg border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text"><?= e($paymentProblem) ?></p>
                     <?php endif; ?>
-                    <a href="<?= e(url("/registrar/applications/{$id}/confirm")) ?>" class="btn-primary mt-3 w-full">Confirm enrollment</a>
+                    <p class="mt-3 text-xs text-brand-gray">The student is enrolled automatically when the cashier verifies enough payment. Confirm by hand only to use a different section.</p>
+                    <a href="<?= e(url("/registrar/applications/{$id}/confirm")) ?>" class="btn-secondary mt-2 w-full">Confirm enrollment by hand</a>
                 <?php endif; ?>
 
                 <?php if ($can(Application::UNDER_REVIEW)): ?>
@@ -198,9 +227,24 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                             <p class="mt-1 text-warning-text"><span aria-hidden="true">!</span> <?= e(count($turnedBack)) ?> document<?= count($turnedBack) === 1 ? '' : 's' ?> turned back</p>
                         <?php endif; ?>
                     </div>
-                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/approve")) ?>" class="mt-3"
-                          data-confirm="Approve this application? The student will be notified.">
+                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/approve")) ?>" class="mt-3 space-y-3"
+                          data-confirm="Approve this application? The fee assessment is issued to the student.">
                         <?= csrf_field() ?>
+                        <?php $sectionError = error_for('section_id'); ?>
+                        <div>
+                            <label for="approve-section" class="field-label">Section <span class="text-brand-alert" aria-hidden="true">*</span></label>
+                            <select id="approve-section" name="section_id" class="field-input <?= $sectionError ? 'field-input-error' : '' ?>" required>
+                                <option value="">Choose a section</option>
+                                <?php foreach ($sections as $option): ?>
+                                    <?php $full = (int) $option['enrolled_count'] >= (int) $option['capacity']; ?>
+                                    <option value="<?= e($option['id']) ?>" <?= (string) old('section_id', (string) ($application['section_id'] ?? '')) === (string) $option['id'] ? 'selected' : '' ?> <?= $full ? 'disabled' : '' ?>>
+                                        <?= e($option['code'] . ' · ' . $option['enrolled_count'] . '/' . $option['capacity'] . ($full ? ' (full)' : '')) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <?php if ($sectionError): ?><p class="field-error"><span><?= e($sectionError) ?></span></p><?php endif; ?>
+                            <?php if ($sections === []): ?><p class="mt-1 text-xs text-warning-text">No section exists for this program, year level, and term. Create one under Sections first.</p><?php endif; ?>
+                        </div>
                         <button type="submit" class="btn w-full bg-success-text text-white hover:brightness-110" <?= $allVerified ? '' : 'aria-describedby="approve-hint"' ?>>Approve</button>
                         <?php if (!$allVerified): ?>
                             <p id="approve-hint" class="mt-2 text-xs text-brand-gray">Every required document must be verified first.</p>

@@ -18,6 +18,7 @@ use App\Services\EnrollmentApplicationService;
 use App\Services\EnrollmentStatusService;
 use App\Services\RegistrationService;
 use App\Services\StudentProfileService;
+use App\Services\SubjectSelectionService;
 
 /**
  * The student's enrollment applications (docs/09).
@@ -70,7 +71,7 @@ final class EnrollmentController extends Controller
         }
 
         $number = Database::scalar('SELECT application_number FROM enrollment_applications WHERE id = ?', [$id]);
-        $this->success("Application {$number} created. Upload your documents next.", "/student/enrollment/{$id}");
+        $this->success("Application {$number} created. Check your subjects and upload your documents next.", "/student/enrollment/{$id}#subjects");
     }
 
     public function show(Request $request): void
@@ -90,7 +91,27 @@ final class EnrollmentController extends Controller
             'missingProfile' => StudentProfileService::missingFields((int) $application['student_id']),
             'programs'       => Program::active(),
             'yearLevels'     => Database::select('SELECT id, name FROM year_levels ORDER BY sequence'),
+            'subjectOptions' => SubjectSelectionService::options($application),
+            'chosenIds'      => SubjectSelectionService::chosenIds((int) $application['id']),
+            'unitLimit'      => SubjectSelectionService::unitLimit($application),
+            'curriculum'     => SubjectSelectionService::curriculumFor($application),
+            'assessment'     => \App\Models\Finance::assessmentForApplication((int) $application['id']),
         ]);
+    }
+
+    /** Save the subjects the student chose (docs/09). */
+    public function saveSubjects(Request $request): void
+    {
+        $id = (int) $request->param('id');
+
+        try {
+            SubjectSelectionService::save(Auth::user(), $id, (array) $request->input('subjects', []));
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), "/student/enrollment/{$id}#subjects");
+            return;
+        }
+
+        $this->success('Your subjects were saved.', "/student/enrollment/{$id}#subjects");
     }
 
     public function update(Request $request): void

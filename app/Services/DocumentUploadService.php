@@ -152,6 +152,21 @@ final class DocumentUploadService
      */
     private static function validateFile(?UploadedFile $file, array $requirement): string
     {
+        return self::assertGenuineFile($file, RequirementType::extensions($requirement), (int) $requirement['max_file_size_kb'] * 1024, (string) $requirement['name']);
+    }
+
+    /**
+     * Refuse a file unless it is present, within the size limit, has an allowed
+     * extension, AND its contents (finfo MIME type and magic bytes, and for images
+     * a readable image) match that extension. Shared by every upload: requirement
+     * documents and payment proofs.
+     *
+     * @param array<int,string> $allowedExtensions e.g. ['pdf', 'jpg', 'png']
+     * @return string the validated, lower-case extension
+     * @throws ValidationException
+     */
+    public static function assertGenuineFile(?UploadedFile $file, array $allowedExtensions, int $maxBytes, string $label): string
+    {
         if ($file === null || $file->error() === UPLOAD_ERR_NO_FILE) {
             throw ValidationException::withMessage('Please choose a file to upload.');
         }
@@ -159,12 +174,11 @@ final class DocumentUploadService
             throw ValidationException::withMessage($file->errorMessage());
         }
 
-        $maxBytes = (int) $requirement['max_file_size_kb'] * 1024;
         if ($file->size() > $maxBytes) {
             throw ValidationException::withMessage(sprintf(
                 'That file is %s. The limit for %s is %s.',
                 self::megabytes($file->size()),
-                $requirement['name'],
+                $label,
                 self::megabytes($maxBytes)
             ));
         }
@@ -173,12 +187,12 @@ final class DocumentUploadService
         }
 
         $extension = $file->clientExtension();
-        $allowed = array_values(array_intersect(RequirementType::extensions($requirement), array_keys(self::MIME)));
+        $allowed = array_values(array_intersect($allowedExtensions, array_keys(self::MIME)));
 
         if (!in_array($extension, $allowed, true)) {
             throw ValidationException::withMessage(
                 'Upload a ' . strtoupper(implode(', ', array_unique(array_map(static fn ($e) => $e === 'jpeg' ? 'jpg' : $e, $allowed))))
-                . ' file for ' . $requirement['name'] . '.'
+                . ' file for ' . $label . '.'
             );
         }
 

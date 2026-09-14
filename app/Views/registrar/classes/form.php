@@ -22,9 +22,9 @@ $currentTeacher = (string) old('teacher_user_id', (string) ($class['teacher_user
     <form method="POST" action="<?= e(url('/registrar/classes/' . $class['id'] . '/edit')) ?>" class="card space-y-5 p-5 sm:p-6" novalidate>
         <?= csrf_field() ?>
         <div class="max-w-sm">
-            <label for="field-teacher_user_id" class="field-label">Teacher</label>
+            <label for="field-teacher_user_id" class="field-label">Teacher <span class="text-brand-alert" aria-hidden="true">*</span></label>
             <select id="field-teacher_user_id" name="teacher_user_id" class="field-input <?= $teacherError ? 'field-input-error' : '' ?>">
-                <option value="">Not assigned</option>
+                <option value="">Choose a teacher</option>
                 <?php foreach ($teachers as $teacher): ?>
                     <option value="<?= e($teacher['id']) ?>" <?= $currentTeacher === (string) $teacher['id'] ? 'selected' : '' ?>><?= e($teacher['last_name'] . ', ' . $teacher['first_name']) ?></option>
                 <?php endforeach; ?>

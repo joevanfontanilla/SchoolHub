@@ -15,7 +15,12 @@ declare(strict_types=1);
 
 use App\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Controllers\AuthController;
+use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
+use App\Controllers\Cashier\FeeController as CashierFees;
+use App\Controllers\Cashier\PaymentController as CashierPayments;
+use App\Controllers\FinanceDocumentController;
+use App\Controllers\Student\AccountController as StudentAccount;
 use App\Controllers\PublicController;
 use App\Controllers\Registrar\DashboardController as RegistrarDashboard;
 use App\Controllers\DocumentController;
@@ -94,6 +99,7 @@ $router->get('/student/enrollment/{id}',   [EnrollmentController::class, 'show']
 $router->post('/student/enrollment/{id}/update', [EnrollmentController::class, 'update'], $student);
 $router->post('/student/enrollment/{id}/submit', [EnrollmentController::class, 'submit'], $student);
 $router->post('/student/enrollment/{id}/cancel', [EnrollmentController::class, 'cancel'], $student);
+$router->post('/student/enrollment/{id}/subjects', [EnrollmentController::class, 'saveSubjects'], [...$student, 'can:enrollment.apply']);
 $router->post('/student/enrollment/{id}/requirements/{requirementId}/upload', [RequirementController::class, 'upload'], $student);
 
 $router->get('/student/requirements', [EnrollmentController::class, 'requirements'], $student, 'student.requirements');
@@ -104,6 +110,39 @@ $router->get('/student/schedule',   [StudentAcademic::class, 'schedule'],   [...
 $router->get('/student/grades',     [StudentAcademic::class, 'grades'],     [...$student, 'can:grades.view'],     'student.grades');
 $router->get('/student/attendance', [StudentAcademic::class, 'attendance'], [...$student, 'can:attendance.view'], 'student.attendance');
 $router->get('/student/history',    [StudentAcademic::class, 'history'],    [...$student, 'can:grades.view'],     'student.history');
+$router->get('/student/schedule/print', [FinanceDocumentController::class, 'schedule'], [...$student, 'can:schedule.view'], 'student.schedule.print');
+
+// Payments & Accounts (Phase 5): the student's own assessments, online payments, receipts.
+$router->get('/student/account',                [StudentAccount::class, 'index'],         [...$student, 'can:finance.view_account'], 'student.account');
+$router->post('/student/account/{id}/payments', [StudentAccount::class, 'submitPayment'], [...$student, 'can:finance.view_account']);
+
+// ---------------------------------------------------------------------------
+// Cashier (Phase 5)
+//
+// The Cashier role AND the permission for the action.
+// ---------------------------------------------------------------------------
+$cashier = static fn (string $permission): array => ['auth', 'role:' . User::ROLE_CASHIER, 'can:' . $permission];
+
+$router->get('/cashier/payments',               [CashierPayments::class, 'index'],   $cashier('payments.record'), 'cashier.payments');
+$router->get('/cashier/payments/{id}',          [CashierPayments::class, 'show'],    $cashier('payments.record'));
+$router->post('/cashier/payments/{id}/approve', [CashierPayments::class, 'approve'], $cashier('payments.record'));
+$router->post('/cashier/payments/{id}/reject',  [CashierPayments::class, 'reject'],  $cashier('payments.record'));
+
+$router->get('/cashier/accounts',                [CashierAccounts::class, 'index'],         $cashier('finance.view_account'), 'cashier.accounts');
+$router->get('/cashier/accounts/{id}',           [CashierAccounts::class, 'show'],          $cashier('finance.view_account'));
+$router->post('/cashier/accounts/{id}/payments', [CashierAccounts::class, 'recordPayment'], $cashier('payments.record'));
+
+$router->get('/cashier/fees',            [CashierFees::class, 'index'],  $cashier('fees.manage'), 'cashier.fees');
+$router->get('/cashier/fees/create',     [CashierFees::class, 'create'], $cashier('fees.manage'));
+$router->post('/cashier/fees/create',    [CashierFees::class, 'save'],   $cashier('fees.manage'));
+$router->get('/cashier/fees/{id}/edit',  [CashierFees::class, 'edit'],   $cashier('fees.manage'));
+$router->post('/cashier/fees/{id}/edit', [CashierFees::class, 'save'],   $cashier('fees.manage'));
+
+// Receipts, statements of account, and payment proofs: signed-in users only; who may
+// open which is decided in FinanceDocumentController (owner student, cashier, registrar).
+$router->get('/receipts/{id}',       [FinanceDocumentController::class, 'receipt'],   ['auth'], 'receipts.show');
+$router->get('/statements/{id}',     [FinanceDocumentController::class, 'statement'], ['auth'], 'statements.show');
+$router->get('/payment-proofs/{id}', [FinanceDocumentController::class, 'proof'],     ['auth'], 'payment-proofs.show');
 
 // ---------------------------------------------------------------------------
 // Teacher (Phase 4)

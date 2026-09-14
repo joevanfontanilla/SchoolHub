@@ -29,6 +29,27 @@ final class Student
         return Database::selectOne('SELECT * FROM students WHERE id = ?', [$id]);
     }
 
+    /**
+     * The short line under a student's name in the portal: the section of their
+     * latest enrollment ("BSIT-2A"), else their program, else "Applicant".
+     */
+    public static function portalLabel(int $userId): string
+    {
+        $row = Database::selectOne(
+            "SELECT sec.code AS section_code, p.code AS program_code
+               FROM students st
+          LEFT JOIN programs p ON p.id = st.program_id
+          LEFT JOIN enrollments e ON e.student_id = st.id AND e.status = 'ENROLLED'
+          LEFT JOIN terms t ON t.id = e.term_id
+          LEFT JOIN sections sec ON sec.id = e.section_id
+              WHERE st.user_id = ?
+              ORDER BY t.start_date DESC
+              LIMIT 1",
+            [$userId]
+        );
+        return (string) ($row['section_code'] ?? $row['program_code'] ?? 'Applicant');
+    }
+
     /** @return array<string,mixed> profile row, or an empty set of fields */
     public static function profile(int $studentId): array
     {

@@ -11,14 +11,10 @@ use App\Models\SystemSetting;
  * enrollment confirmation (docs/26 section 4, `enrollment_payment_policy`).
  *
  *   NONE                 no payment needed
- *   FULL                 payment_status must be PAID
- *   MINIMUM_DOWNPAYMENT  payment_status must be PARTIAL or PAID
+ *   FULL                 the whole assessment must be paid
+ *   MINIMUM_DOWNPAYMENT  total paid must reach minimum_downpayment_percent of the assessment
  *
- * payment_status is derived from assessments and payments, which arrive with the
- * finance module. Until then it stays NOT_ASSESSED, so under FULL or
- * MINIMUM_DOWNPAYMENT confirmation is correctly refused ("waiting for payment").
- * The finance module also adds the minimum-percentage check against the
- * assessment total; this class is where it belongs.
+ * Read from the fee assessment, whose totals FinanceService maintains.
  */
 final class PaymentPolicy
 {
@@ -34,21 +30,59 @@ final class PaymentPolicy
 
     /**
      * @param array<string,mixed> $application
-     * @return string|null null when satisfied, otherwise why not (shown to the registrar)
+     * @return string|null null when satisfied, otherwise why not (shown to the registrar and student)
      */
     public static function problem(array $application): ?string
     {
-        $status = (string) $application['payment_status'];
+        $policy = self::current();
+        if ($policy === self::NONE) {
+            return null;
+        }
 
+        $assessment = \App\Core\Database::selectOne(
+            "SELECT * FROM fee_assessments WHERE application_id = ? AND status = 'ACTIVE'",
+            [$application['id']]
+        );
+        if ($assessment === null) {
+            return 'Waiting for payment: the fee assessment has not been issued yet.';
+        }
+
+        $paid = FinanceService::cents($assessment['total_paid']);
+        $required = self::requiredCents($assessment);
+        if ($paid >= $required && ($required > 0 || $policy === self::FULL)) {
+            return null;
+        }
+
+        return $policy === self::FULL
+            ? 'Waiting for payment: school policy requires the assessment of ' . money($assessment['total_amount']) . ' to be fully paid before enrollment.'
+            : sprintf(
+                'Waiting for payment: school policy requires a down payment of at least %s (%d%% of %s) before enrollment. %s has been paid.',
+                money(FinanceService::money($required)),
+                self::downpaymentPercent(),
+                money($assessment['total_amount']),
+                money($assessment['total_paid'])
+            );
+    }
+
+    /**
+     * The amount that must be paid, in centavos, before the student is enrolled.
+     *
+     * @param array<string,mixed> $assessment
+     */
+    public static function requiredCents(array $assessment): int
+    {
+        $total = FinanceService::cents($assessment['total_amount']);
         return match (self::current()) {
-            self::NONE => null,
-            self::FULL => $status === 'PAID'
-                ? null
-                : 'Waiting for payment: school policy requires the assessment to be fully paid before enrollment is confirmed.',
-            default => in_array($status, ['PARTIAL', 'PAID'], true)
-                ? null
-                : 'Waiting for payment: school policy requires a down payment before enrollment is confirmed.',
+            self::NONE => 0,
+            self::FULL => $total,
+            // At least one centavo, so a zero-percent setting still means "a down payment".
+            default    => max(1, (int) ceil($total * self::downpaymentPercent() / 100)),
         };
+    }
+
+    public static function downpaymentPercent(): int
+    {
+        return max(0, min(100, (int) SystemSetting::get('minimum_downpayment_percent', 20)));
     }
 
     public static function label(?string $policy = null): string

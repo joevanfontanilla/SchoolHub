@@ -41,7 +41,7 @@ final class EnrollmentStatusService
         'UNDER_REVIEW>CORRECTION_REQUIRED'  => [5,  [self::REGISTRAR], true,  null],
         'REQUIREMENTS_INCOMPLETE>SUBMITTED' => [6,  [self::STUDENT],   false, 'requiredDocumentsSubmitted'],
         'CORRECTION_REQUIRED>SUBMITTED'     => [7,  [self::STUDENT],   false, 'formIsValid'],
-        'UNDER_REVIEW>APPROVED'             => [8,  [self::REGISTRAR], false, 'allRequiredVerified'],
+        'UNDER_REVIEW>APPROVED'             => [8,  [self::REGISTRAR], false, 'readyToApprove'],
         'UNDER_REVIEW>REJECTED'             => [9,  [self::REGISTRAR], true,  null],
         'DRAFT>CANCELLED'                   => [10, [self::STUDENT],   false, null],
         'SUBMITTED>CANCELLED'               => [11, [self::STUDENT, self::REGISTRAR], false, null],
@@ -157,7 +157,7 @@ final class EnrollmentStatusService
     /**
      * The enrollment axis (docs/26 section 4): NOT_ENROLLED -> ENROLLED.
      *
-     * Registrar only; the application must be APPROVED and the payment policy
+     * Registrar or cashier; the application must be APPROVED and the payment policy
      * satisfied. Call it from EnrollmentConfirmationService, which also creates
      * the enrollment record and issues the student number in the same
      * transaction — never on its own.
@@ -181,8 +181,10 @@ final class EnrollmentStatusService
                     strtolower(App::label($to))
                 ));
             }
-            if (!$actor->isRegistrar()) {
-                throw HttpException::forbidden('Only the registrar can confirm enrollment.');
+            // The registrar confirms by hand; the cashier's recorded payment confirms
+            // automatically once the payment policy is met (docs/26 section 4).
+            if (!$actor->isRegistrar() && !$actor->isCashier()) {
+                throw HttpException::forbidden('Only the registrar, or a verified payment, can confirm enrollment.');
             }
             if ($application['application_status'] !== App::APPROVED) {
                 throw ValidationException::withMessage('Only an approved application can be confirmed for enrollment.');
@@ -233,6 +235,13 @@ final class EnrollmentStatusService
             );
         }
 
+        // Rule 8: issue the fee assessment (payment_status becomes PENDING). With no
+        // payment required, the student is enrolled at once.
+        if ($to === App::APPROVED) {
+            FinanceService::assess($application + ['application_status' => App::APPROVED], $actor);
+            EnrollmentConfirmationService::confirmIfReady($id, $actor);
+        }
+
         // Rules 2, 6, 7: the registrar's queue has new work.
         if ($to === App::SUBMITTED) {
             NotificationService::notifyRole(
@@ -249,7 +258,7 @@ final class EnrollmentStatusService
             $message = match ($to) {
                 App::REQUIREMENTS_INCOMPLETE => 'Some documents need to be replaced',
                 App::CORRECTION_REQUIRED     => 'Your application needs a correction',
-                App::APPROVED                => 'Your application was approved',
+                App::APPROVED                => 'Your application was approved. Your fee assessment is ready',
                 App::REJECTED                => 'Your application was not approved',
                 App::CANCELLED               => 'Your application was cancelled by the registrar',
                 default                      => null,
@@ -310,6 +319,7 @@ final class EnrollmentStatusService
     {
         return self::profileProblem($application)
             ?? EnrollmentApplicationService::formProblem($application)
+            ?? SubjectSelectionService::problem($application)
             ?? self::requiredDocumentsSubmitted($application);
     }
 
@@ -317,7 +327,8 @@ final class EnrollmentStatusService
     private static function formIsValid(array $application): ?string
     {
         return self::profileProblem($application)
-            ?? EnrollmentApplicationService::formProblem($application);
+            ?? EnrollmentApplicationService::formProblem($application)
+            ?? SubjectSelectionService::problem($application);
     }
 
     /** @param array<string,mixed> $application */
@@ -358,6 +369,25 @@ final class EnrollmentStatusService
         return $count > 0
             ? null
             : 'Mark at least one document as rejected or needing correction before returning the application for incomplete requirements.';
+    }
+
+    /**
+     * Rule 8: documents verified, subjects chosen, and a section assigned that
+     * fits the application and still has a seat.
+     *
+     * @param array<string,mixed> $application
+     */
+    private static function readyToApprove(array $application): ?string
+    {
+        $problem = self::allRequiredVerified($application) ?? SubjectSelectionService::problem($application);
+        if ($problem !== null) {
+            return $problem;
+        }
+        if ($application['section_id'] === null) {
+            return 'Assign a section before approving.';
+        }
+        $section = Database::selectOne('SELECT * FROM sections WHERE id = ?', [$application['section_id']]);
+        return EnrollmentConfirmationService::sectionProblem($section, $application);
     }
 
     /** @param array<string,mixed> $application */

@@ -183,6 +183,7 @@ return [
             $t->assertThrows(static fn () => Status::transition($id, Application::APPROVED, $registrar), 'must be verified');
 
             Database::query("UPDATE enrollment_requirements SET status = 'VERIFIED' WHERE application_id = ? AND is_required = 1", [$id]);
+            assignSectionForTest($id);
             $row = Status::transition($id, Application::APPROVED, $registrar);
             $t->assertEquals(Application::APPROVED, $row['application_status']);
         } finally {
@@ -226,10 +227,11 @@ return [
             Status::transition($id, Application::UNDER_REVIEW, $registrar);
 
             Database::query("UPDATE enrollment_requirements SET status = 'VERIFIED' WHERE application_id = ? AND is_required = 1", [$id]);
+            assignSectionForTest($id);
             $row = Status::transition($id, Application::APPROVED, $registrar);
 
             $t->assertEquals(Application::APPROVED, $row['application_status']);
-            $t->assertEquals('NOT_ASSESSED', $row['payment_status'], 'payment_status is derived and is never set by this machine');
+            $t->assertEquals('PENDING', Database::scalar('SELECT payment_status FROM enrollment_applications WHERE id = ?', [$id]), 'Approval issues the assessment; payment_status is then derived from it (docs/26 section 3)');
 
             // none->DRAFT, ->SUBMITTED, ->UNDER_REVIEW, ->REQUIREMENTS_INCOMPLETE, ->SUBMITTED, ->UNDER_REVIEW, ->APPROVED
             $t->assertEquals(7, historyCount($id), 'Every step is in the history');

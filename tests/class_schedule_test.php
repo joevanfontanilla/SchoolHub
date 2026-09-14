@@ -149,23 +149,35 @@ return [
                 'subject_id' => $subject, 'teacher_user_id' => $busy->id, 'meetings' => [meeting(4, '10:00', '11:00')],
             ]));
             $t->assertContains('The teacher already teaches', $refusal);
-            $t->assertNull(Database::scalar('SELECT teacher_user_id FROM class_schedules WHERE id = ?', [$classId]), 'The class was left unchanged');
+            $t->assertTrue((int) Database::scalar('SELECT teacher_user_id FROM class_schedules WHERE id = ?', [$classId]) !== $busy->id, 'The class was left unchanged');
         } finally {
             actingAs(null);
             deleteTestUsers();
         }
     },
 
-    'a new class enlists the students already enrolled in the section' => function (TestRunner $t): void {
+    'a new class enlists the enrolled students who chose its subject, and no one else' => function (TestRunner $t): void {
         try {
             $enrolled = enrolledStudent();
-            $result = Schedule::saveClass($enrolled['registrar'], $enrolled['section_id'], null, [
-                'subject_id' => makeSubject(3), 'meetings' => [meeting(1, '08:00', '09:00')],
-            ]);
+            $chosen = makeSubject(3);
+            $notChosen = makeSubject(3);
+            Database::insert('application_subjects', ['application_id' => $enrolled['application_id'], 'subject_id' => $chosen]);
 
+            $result = Schedule::saveClass($enrolled['registrar'], $enrolled['section_id'], null, [
+                'subject_id' => $chosen, 'teacher_user_id' => makeUser(User::ROLE_TEACHER)->id, 'meetings' => [meeting(1, '08:00', '09:00')],
+            ]);
             $t->assertNotNull(enlistmentIdFor($enrolled['enrollment_id'], $result['class_id']));
             $t->assertEquals(1, count($result['sync'][$enrolled['enrollment_id']]['enlisted']));
             $t->assertEquals(3.0, (float) Database::scalar('SELECT total_units FROM enrollments WHERE id = ?', [$enrolled['enrollment_id']]));
+
+            $other = Schedule::saveClass($enrolled['registrar'], $enrolled['section_id'], null, [
+                'subject_id' => $notChosen, 'teacher_user_id' => makeUser(User::ROLE_TEACHER)->id, 'meetings' => [meeting(2, '08:00', '09:00')],
+            ]);
+            $t->assertNull(enlistmentIdFor($enrolled['enrollment_id'], $other['class_id']), 'A subject the student did not choose is not enlisted');
+
+            $t->assertContains('Teacher', scheduleRefusal(static fn () => Schedule::saveClass($enrolled['registrar'], $enrolled['section_id'], null, [
+                'subject_id' => makeSubject(), 'meetings' => [meeting(3, '08:00', '09:00')],
+            ])), 'A class needs a teacher');
         } finally {
             actingAs(null);
             deleteTestUsers();

@@ -20,7 +20,41 @@ function g(string $value): array
 
 const W = ['prelim' => 30, 'midterm' => 30, 'finals' => 40];
 
+/** A class row as AcademicRecordService returns it, for GWA tests. */
+function gwaRow(string $code, float $units, ?string $grade, string $remark = 'PASSED'): array
+{
+    return ['code' => $code, 'units' => $units, 'final' => ['grade' => $grade, 'remark' => $remark]];
+}
+
 return [
+    'the GWA is unit-weighted over numeric finals, leaving out NSTP, PE, INC, DRP, and in-progress classes' => function (TestRunner $t): void {
+        $classes = [
+            gwaRow('CORE 1', 3, '1.50'),
+            gwaRow('CLJ 4', 4, '2.00'),
+            gwaRow('CORE 2', 3, '5.00', 'FAILED'),     // a failure counts
+            gwaRow('NSTP 01', 3, '1.00'),              // does not count
+            gwaRow('PATH-FIT 1', 2, '1.00'),           // does not count
+            gwaRow('PED1', 2, '1.00'),                 // does not count (Criminology PE)
+            gwaRow('GE001', 3, null, 'INC'),
+            gwaRow('GE002', 3, null, 'DRP'),
+            gwaRow('GE003', 3, null, 'IN_PROGRESS'),
+        ];
+        // (1.50×3 + 2.00×4 + 5.00×3) ÷ 10 = 27.5 ÷ 10 = 2.75
+        $t->assertEquals('2.75', G::gwa($classes));
+        $t->assertNull(G::gwa([gwaRow('NSTP 02', 3, '1.25'), gwaRow('GE004', 3, null, 'INC')]), 'Nothing counts yet');
+        $t->assertEquals('1.83', G::gwa([gwaRow('A', 3, '1.75'), gwaRow('B', 3, '1.75'), gwaRow('C', 3, '2.00')]), '1.8333 rounds to 1.83');
+        $t->assertEquals('1.88', G::gwa([gwaRow('A', 3, '1.75'), gwaRow('B', 3, '2.00')]), '1.875 rounds half up to 1.88');
+    },
+
+    'only NSTP and physical education codes are left out of the GWA' => function (TestRunner $t): void {
+        foreach (['NSTP 01', 'nstp02', 'CWTS 1', 'ROTC 2', 'LTS 1', 'PATH-FIT 3', 'PATHFIT 4', 'PE 1', 'PED4', 'PED 2'] as $excluded) {
+            $t->assertFalse(G::countsTowardGwa($excluded), "{$excluded} is left out");
+        }
+        foreach (['GE010', 'PEACE 1', 'PUB AD 1', 'PROF1', 'PED', 'EPC', 'CORE 1', 'PRACTICUM 1'] as $counted) {
+            $t->assertTrue(G::countsTowardGwa($counted), "{$counted} counts");
+        }
+    },
+
     'only the scale steps, INC, and DRP are valid entries' => function (TestRunner $t): void {
         foreach (['1', '1.00', '1.25', '1.5', '2.75', '3.00', '5', '5.00', 'inc', 'DRP', ' 2.00 '] as $good) {
             $t->assertTrue(G::isValid($good), "{$good} should be valid");

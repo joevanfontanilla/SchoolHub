@@ -8,8 +8,17 @@
  * @var string $content
  * @var string $title
  * @var App\Models\User|null $user
+ * @var array $portal
  */
+use App\Models\User;
+
 $schoolName = $school['school_name'] ?? 'SchoolHub';
+$portal = $portal ?? ['subtitle' => '', 'unread' => 0];
+$portalName = match ($user?->role_name) {
+    User::ROLE_SUPER_ADMIN => 'Admin Portal',
+    null => 'Portal',
+    default => $user->role_name . ' Portal',
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -20,22 +29,32 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
     <link rel="icon" type="image/jpeg" href="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>">
 </head>
-<body class="min-h-screen bg-slate-50 font-sans">
+<body class="min-h-screen bg-brand-canvas font-sans">
     <a href="#main" class="skip-link">Skip to main content</a>
 
     <div class="flex min-h-screen">
-        <?= partial('app-sidebar', ['user' => $user, 'currentPath' => $currentPath ?? '', 'school' => $school]) ?>
+        <?= partial('app-sidebar', ['user' => $user, 'currentPath' => $currentPath ?? '', 'school' => $school, 'portal' => $portal]) ?>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <?= partial('app-topbar', ['user' => $user, 'title' => $title ?? '']) ?>
+            <?= partial('app-topbar', ['user' => $user, 'title' => $title ?? '', 'portal' => $portal]) ?>
 
             <main id="main" tabindex="-1" class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
                 <?= partial('flash') ?>
                 <?= $content ?>
             </main>
 
-            <footer class="border-t border-slate-200 px-4 py-4 text-center text-xs text-brand-gray sm:px-6">
-                <?= e($schoolName) ?> · SchoolHub v1.0.0
+            <footer class="bg-brand-950 px-4 py-5 text-sm text-white/80 sm:px-6 lg:px-8">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p>
+                        <span class="font-display font-semibold uppercase tracking-wide text-white"><?= e($schoolName) ?></span>
+                        <span class="mx-2 text-white/40" aria-hidden="true">|</span><?= e($portalName) ?>
+                    </p>
+                    <nav aria-label="Footer" class="flex flex-wrap gap-x-6 gap-y-1">
+                        <a href="<?= e(url('/about')) ?>" class="hover:text-white hover:underline">About</a>
+                        <a href="<?= e(url('/contact')) ?>" class="hover:text-white hover:underline">Contact</a>
+                        <a href="<?= e(url('/announcements')) ?>" class="hover:text-white hover:underline">Announcements</a>
+                    </nav>
+                </div>
             </footer>
         </div>
     </div>

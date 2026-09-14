@@ -51,7 +51,8 @@ final class ClassScheduleService
             }
         }
 
-        $validator = Validator::make($input, ['subject_id' => 'required|integer', 'teacher_user_id' => 'nullable|integer'], ['subject_id' => 'Subject', 'teacher_user_id' => 'Teacher']);
+        // Every class has a teacher: students' printed schedules show one for each subject.
+        $validator = Validator::make($input, ['subject_id' => 'required|integer', 'teacher_user_id' => 'required|integer'], ['subject_id' => 'Subject', 'teacher_user_id' => 'Teacher']);
         $subjectId = (int) ($input['subject_id'] ?? 0);
         $teacherId = (int) ($input['teacher_user_id'] ?? 0) ?: null;
 

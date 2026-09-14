@@ -69,6 +69,7 @@ return [
                     Review::review($registrar, (int) $requirement['id'], 'VERIFIED', null);
                 }
             }
+            assignSectionForTest($id);
             $row = Status::transition($id, 'APPROVED', $registrar);
 
             $t->assertEquals('APPROVED', $row['application_status']);
