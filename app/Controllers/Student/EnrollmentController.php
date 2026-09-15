@@ -6,10 +6,10 @@ namespace App\Controllers\Student;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
-use App\Core\Database;
 use App\Core\Request;
 use App\Core\Session;
 use App\Core\ValidationException;
+use App\Models\Catalog;
 use App\Models\EnrollmentApplication;
 use App\Models\Program;
 use App\Models\Student;
@@ -54,7 +54,7 @@ final class EnrollmentController extends Controller
             'openTerms'      => $openTerms,
             'anyTermOpen'    => Term::openForEnrollment() !== [],
             'programs'       => Program::active(),
-            'yearLevels'     => Database::select('SELECT id, name FROM year_levels ORDER BY sequence'),
+            'yearLevels'     => Catalog::yearLevels(),
             'studentTypes'   => Student::TYPES,
             'missingProfile' => StudentProfileService::missingFields($studentId),
             'current'        => EnrollmentApplication::currentForStudent($studentId),
@@ -70,7 +70,7 @@ final class EnrollmentController extends Controller
             return;
         }
 
-        $number = Database::scalar('SELECT application_number FROM enrollment_applications WHERE id = ?', [$id]);
+        $number = EnrollmentApplication::find($id)['application_number'] ?? '';
         $this->success("Application {$number} created. Check your subjects and upload your documents next.", "/student/enrollment/{$id}#subjects");
     }
 
@@ -90,7 +90,7 @@ final class EnrollmentController extends Controller
             'canUpload'      => in_array($status, EnrollmentApplication::UPLOADS_UNLOCKED, true),
             'missingProfile' => StudentProfileService::missingFields((int) $application['student_id']),
             'programs'       => Program::active(),
-            'yearLevels'     => Database::select('SELECT id, name FROM year_levels ORDER BY sequence'),
+            'yearLevels'     => Catalog::yearLevels(),
             'subjectOptions' => SubjectSelectionService::options($application),
             'chosenIds'      => SubjectSelectionService::chosenIds((int) $application['id']),
             'unitLimit'      => SubjectSelectionService::unitLimit($application),

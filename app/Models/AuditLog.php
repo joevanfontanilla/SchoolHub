@@ -36,7 +36,9 @@ final class AuditLog
     public static function count(array $filters): int
     {
         [$where, $bindings] = self::where($filters);
-        return (int) Database::scalar("SELECT COUNT(*) FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id WHERE {$where}", $bindings);
+        // The users join is needed only to filter by who; counting 100,000+ rows without it is much faster.
+        $join = ($filters['actor'] ?? '') !== '' ? ' LEFT JOIN users u ON u.id = a.user_id' : '';
+        return (int) Database::scalar("SELECT COUNT(*) FROM audit_logs a{$join} WHERE {$where}", $bindings);
     }
 
     /** @return array<string,mixed>|null */

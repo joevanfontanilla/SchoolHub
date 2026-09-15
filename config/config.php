@@ -10,7 +10,7 @@
 return [
     'app' => [
         'name'     => 'SchoolHub',
-        'version'  => '0.7.0',          // shown in System Health and written into backups
+        'version'  => '1.0.0-rc.1',          // shown in System Health and written into backups
         'env'      => 'local',          // local | production
         'debug'    => true,             // MUST be false in production
         'timezone' => 'Asia/Manila',

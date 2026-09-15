@@ -6,6 +6,12 @@
       "runtimeExecutable": "C:\\xampp\\php\\php.exe",
       "runtimeArgs": ["-S", "localhost:8123", "-t", "public"],
       "port": 8123
+    },
+    {
+      "name": "schoolhub-perf",
+      "runtimeExecutable": "C:\\xampp\\php\\php.exe",
+      "runtimeArgs": ["-S", "127.0.0.1:8099", "-t", "public", "tests/perf/router.php"],
+      "port": 8099
     }
   ]
 }

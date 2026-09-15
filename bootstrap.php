@@ -8,6 +8,7 @@
 
 declare(strict_types=1);
 
+define('SCHOOLHUB_START', microtime(true));
 define('BASE_PATH', __DIR__);
 define('APP_PATH', BASE_PATH . '/app');
 define('STORAGE_PATH', BASE_PATH . '/storage');
@@ -51,6 +52,13 @@ if (is_file($localConfig)) {
 }
 
 App\Core\Config::load($config);
+
+// Outside production, SCHOOLHUB_DATABASE points the app at another database, such as
+// the throwaway performance database (tests/perf). Production ignores it.
+$databaseOverride = getenv('SCHOOLHUB_DATABASE');
+if (is_string($databaseOverride) && preg_match('/^schoolhub_[a-z0-9_]+$/', $databaseOverride) && App\Core\Config::get('app.env') !== 'production') {
+    App\Core\Config::set('db.database', $databaseOverride);
+}
 
 date_default_timezone_set(App\Core\Config::get('app.timezone', 'Asia/Manila'));
 

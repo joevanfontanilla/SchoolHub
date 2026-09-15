@@ -6,7 +6,10 @@
  * @var ?int  $programId
  * @var array $terms
  * @var array $programs
- * @var array $report
+ * @var array $report  every account and the totals
+ * @var array $rows    this page's accounts
+ * @var int   $page
+ * @var int   $pages
  */
 use App\Models\Finance;
 use App\Services\FinanceService;
@@ -72,7 +75,7 @@ $collectedPercent = $report['due'] > 0 ? $report['paid'] / $report['due'] * 100 
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-brand-50 bg-white">
-                        <?php foreach ($report['rows'] as $row): ?>
+                        <?php foreach ($rows as $row): ?>
                             <tr class="hover:bg-brand-50/40">
                                 <td class="px-4 py-3"><a href="<?= e(url('/cashier/accounts/' . $row['id'])) ?>" class="font-semibold text-brand-navy hover:underline"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></a><span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? $row['application_number']) ?> · <?= e($row['assessment_number']) ?></span></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e($row['program_code']) ?><span class="block text-xs text-brand-gray"><?= e($row['year_level_name'] . ($row['section_code'] ? ' · ' . $row['section_code'] : '')) ?></span></td>
@@ -105,6 +108,7 @@ $collectedPercent = $report['due'] > 0 ? $report['paid'] / $report['due'] * 100 
                     </tfoot>
                 </table>
             </div>
+            <?= partial('pagination', ['page' => $page, 'pages' => $pages, 'total' => count($report['rows']), 'path' => '/cashier/reports/outstanding', 'query' => array_filter(['term_id' => $termId, 'program_id' => $programId]), 'noun' => 'account']) ?>
         <?php endif; ?>
     </section>
 </div>

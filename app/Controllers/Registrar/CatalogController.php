@@ -6,7 +6,6 @@ namespace App\Controllers\Registrar;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
-use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\ValidationException;
@@ -84,7 +83,7 @@ final class CatalogController extends Controller
         $this->appView('registrar/catalog/curriculum-form', [
             'title'      => 'Edit ' . $curriculum['code'],
             'curriculum' => $curriculum,
-            'programs'   => Database::select('SELECT id, code, name FROM programs ORDER BY is_active DESC, code'),
+            'programs'   => Catalog::allPrograms(),
         ]);
     }
 
@@ -145,7 +144,7 @@ final class CatalogController extends Controller
             return;
         }
 
-        $saved = Database::selectOne('SELECT curriculum_id FROM subjects WHERE id = ?', [$savedId]);
+        $saved = Catalog::row('subjects', $savedId);
         $this->success(
             $id === null ? 'Subject created.' : 'Subject saved.',
             $saved['curriculum_id'] !== null ? '/registrar/curricula/' . $saved['curriculum_id'] : '/registrar/subjects'
@@ -221,10 +220,7 @@ final class CatalogController extends Controller
     /** @param array<string,mixed>|null $section */
     private function sectionForm(?array $section): void
     {
-        $enrolled = $section === null ? 0 : (int) Database::scalar(
-            "SELECT COUNT(*) FROM enrollments WHERE section_id = ? AND status = 'ENROLLED'",
-            [$section['id']]
-        );
+        $enrolled = $section === null ? 0 : Catalog::enrolledInSection((int) $section['id']);
 
         $this->appView('registrar/catalog/section-form', [
             'title'      => $section === null ? 'New section' : 'Edit ' . $section['code'],
@@ -240,7 +236,7 @@ final class CatalogController extends Controller
     /** @return array<string,mixed> */
     private function find(string $table, int $id, string $label): array
     {
-        $row = Database::selectOne("SELECT * FROM `{$table}` WHERE id = ?", [$id]);
+        $row = Catalog::row($table, $id);
         if ($row === null) {
             throw HttpException::notFound("That {$label} was not found.");
         }

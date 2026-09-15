@@ -54,7 +54,25 @@ final class Finance
      *
      * @return array<int,array<string,mixed>>
      */
-    public static function accounts(string $q = '', string $balance = ''): array
+    public static function accounts(string $q = '', string $balance = '', int $limit = 50, int $offset = 0): array
+    {
+        [$where, $bindings] = self::accountFilter($q, $balance);
+        $limit = max(1, $limit);
+        $offset = max(0, $offset);
+        return Database::select(
+            'SELECT ' . self::ASSESSMENT_COLUMNS . ' ' . self::ASSESSMENT_JOINS . ' WHERE ' . $where . " ORDER BY fa.assessed_at DESC, fa.id DESC LIMIT {$limit} OFFSET {$offset}",
+            $bindings
+        );
+    }
+
+    public static function accountCount(string $q = '', string $balance = ''): int
+    {
+        [$where, $bindings] = self::accountFilter($q, $balance);
+        return (int) Database::scalar('SELECT COUNT(*) ' . self::ASSESSMENT_JOINS . ' WHERE ' . $where, $bindings);
+    }
+
+    /** @return array{0:string,1:array<int,mixed>} */
+    private static function accountFilter(string $q, string $balance): array
     {
         $where = ["fa.status = 'ACTIVE'"];
         $bindings = [];
@@ -68,11 +86,7 @@ final class Finance
         } elseif ($balance === 'paid') {
             $where[] = 'fa.balance <= 0';
         }
-
-        return Database::select(
-            'SELECT ' . self::ASSESSMENT_COLUMNS . ' ' . self::ASSESSMENT_JOINS . ' WHERE ' . implode(' AND ', $where) . ' ORDER BY fa.assessed_at DESC LIMIT 200',
-            $bindings
-        );
+        return [implode(' AND ', $where), $bindings];
     }
 
     /** @return array<int,array<string,mixed>> */

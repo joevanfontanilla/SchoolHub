@@ -71,6 +71,10 @@ The cashier sees the proof next to the account and either:
   notified, and the student enrolled if the payment policy is now met; or
 - **rejects** it with a reason the student sees. Nothing is recorded.
 
+### Student accounts (`/cashier/accounts`)
+Every assessment, newest first, searchable by name or by student, application, or assessment
+number, and filterable by balance (owing or paid), 50 per page.
+
 ### Window payments (`/cashier/accounts/{id}`)
 The cashier can record a payment received in person (cash, check, and so on), with the same
 receipt, balance, and enrollment effects.

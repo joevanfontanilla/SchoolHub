@@ -72,6 +72,8 @@ its days, times, room, section, and **teacher**, and the week at a glance.
   method, and every entry. This covers daily and monthly collections and payment history.
 - **Outstanding balances** lists the amount due, paid, balance, payment status, last payment,
   and whether an enrolled student is below the payment policy, largest balance first.
+- On screen, the entry lists show 100 rows per page; totals, the chart, the printout, and the
+  CSV export always cover every row.
 - The cashier dashboard shows net collections for each of the last 7 days.
 - **CSV export** uses native `fputcsv` with a UTF-8 BOM. Any text cell starting with `=`,
   `+`, `-`, `@`, a tab, or a carriage return is prefixed with an apostrophe so a spreadsheet

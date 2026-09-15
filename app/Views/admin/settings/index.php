@@ -75,6 +75,7 @@ $enumLabels = [
                     <div class="flex flex-wrap items-center gap-4">
                         <img src="<?= e(school_logo_url()) ?>" alt="Current school logo" class="h-20 w-20 rounded-full object-cover ring-2 ring-brand-100">
                         <div class="min-w-0 flex-1 space-y-2">
+                            <label for="field-logo" class="field-label">Upload a new logo</label>
                             <input id="field-logo" type="file" name="logo" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-max-bytes="<?= SettingsService::LOGO_MAX_BYTES ?>"
                                    class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100" aria-describedby="field-logo-help">
                             <p id="field-logo-help" class="text-xs text-brand-gray">Square JPG or PNG, up to 1 MB. Used on every page and printout.</p>

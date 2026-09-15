@@ -27,6 +27,9 @@ final class ReportController extends Controller
     /** Longest range a collections report covers, so a typo can't scan years of payments. */
     private const MAX_DAYS = 366;
 
+    /** Rows shown per page on screen; print and CSV always include every row. */
+    private const PER_PAGE = 100;
+
     public function index(Request $request): void
     {
         Response::redirect('/cashier/reports/collections');
@@ -36,6 +39,8 @@ final class ReportController extends Controller
     {
         [$from, $to, $error] = $this->range($request);
         $report = FinanceReport::collections($from, $to);
+        $pages = max(1, (int) ceil(count($report['rows']) / self::PER_PAGE));
+        $page = min($pages, max(1, (int) $request->input('page', 1)));
 
         $this->appView('cashier/reports/collections', [
             'title'  => 'Collections Report',
@@ -43,6 +48,9 @@ final class ReportController extends Controller
             'to'     => $to,
             'error'  => $error,
             'report' => $report,
+            'rows'   => array_slice($report['rows'], ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            'page'   => $page,
+            'pages'  => $pages,
             'chart'  => $this->chart($report['by_day'], $from, $to),
             'daily'  => self::daily($from, $to),
         ]);
@@ -91,13 +99,19 @@ final class ReportController extends Controller
     public function outstanding(Request $request): void
     {
         [$termId, $programId] = $this->filters($request);
+        $report = FinanceReport::outstanding($termId, $programId);
+        $pages = max(1, (int) ceil(count($report['rows']) / self::PER_PAGE));
+        $page = min($pages, max(1, (int) $request->input('page', 1)));
         $this->appView('cashier/reports/outstanding', [
             'title'     => 'Outstanding Balances',
             'termId'    => $termId,
             'programId' => $programId,
             'terms'     => Catalog::allTerms(),
             'programs'  => Program::active(),
-            'report'    => FinanceReport::outstanding($termId, $programId),
+            'report'    => $report,
+            'rows'      => array_slice($report['rows'], ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            'page'      => $page,
+            'pages'     => $pages,
         ]);
     }
 

@@ -5,6 +5,7 @@
  * @var string $state
  * @var string $q
  * @var array  $announcements
+ * @var array  $labels        id => audience label
  * @var bool   $canPublish
  */
 use App\Models\Announcement;
@@ -64,7 +65,7 @@ $states = ['' => 'All', 'DRAFT' => 'Drafts', 'SCHEDULED' => 'Scheduled', 'PUBLIS
                                         <?php if ((int) $row['is_public'] === 1): ?><span class="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">Public website</span><?php endif; ?>
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-slate-700"><?= e(Announcement::audienceLabel($row)) ?></td>
+                                <td class="px-4 py-3 text-slate-700"><?= e($labels[(int) $row['id']] ?? '') ?></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= component('status-badge', ['status' => $row['state'], 'label' => ucfirst(strtolower($row['state']))]) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-600"><?= e($row['published_at'] ? dt($row['published_at']) : 'When published') ?><?php if ($row['expires_at']): ?><span class="block text-xs text-brand-gray">Until <?= e(dt($row['expires_at'])) ?></span><?php endif; ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums"><?= $row['recipient_count'] === null ? '<span class="text-brand-gray">Not yet</span>' : e(number_format((int) $row['recipient_count'])) ?></td>

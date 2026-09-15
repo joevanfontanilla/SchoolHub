@@ -6,9 +6,9 @@ namespace App\Controllers\Student;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
-use App\Core\Database;
 use App\Core\Request;
 use App\Core\ValidationException;
+use App\Models\EnrollmentApplication;
 use App\Services\DocumentUploadService;
 
 /**
@@ -33,10 +33,7 @@ final class RequirementController extends Controller
             return;
         }
 
-        $name = (string) Database::scalar(
-            'SELECT rt.name FROM enrollment_requirements er JOIN requirement_types rt ON rt.id = er.requirement_type_id WHERE er.id = ?',
-            [$requirementId]
-        );
+        $name = EnrollmentApplication::requirementName($requirementId);
         $this->success("{$name} uploaded.", $back . "#requirement-{$requirementId}");
     }
 }

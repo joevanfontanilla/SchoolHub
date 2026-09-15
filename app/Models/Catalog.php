@@ -194,4 +194,24 @@ final class Catalog
     {
         return Database::select('SELECT id, name, sequence FROM year_levels ORDER BY sequence');
     }
+
+    /** @return array<int,array<string,mixed>> every program, active ones first (for choosing a curriculum's program) */
+    public static function allPrograms(): array
+    {
+        return Database::select('SELECT id, code, name FROM programs ORDER BY is_active DESC, code');
+    }
+
+    /** One catalog row by id. Only the catalog tables can be named. */
+    public static function row(string $table, int $id): ?array
+    {
+        if (!in_array($table, ['programs', 'curricula', 'subjects', 'sections'], true)) {
+            throw new \InvalidArgumentException("Not a catalog table: {$table}");
+        }
+        return Database::selectOne("SELECT * FROM `{$table}` WHERE id = ?", [$id]);
+    }
+
+    public static function enrolledInSection(int $sectionId): int
+    {
+        return (int) Database::scalar("SELECT COUNT(*) FROM enrollments WHERE section_id = ? AND status = 'ENROLLED'", [$sectionId]);
+    }
 }

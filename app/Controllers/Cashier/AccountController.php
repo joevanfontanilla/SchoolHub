@@ -22,11 +22,17 @@ final class AccountController extends Controller
     {
         $q = trim((string) $request->input('q', ''));
         $balance = (string) $request->input('balance', '');
+        $total = Finance::accountCount($q, $balance);
+        $pages = max(1, (int) ceil($total / 50));
+        $page = min($pages, max(1, (int) $request->input('page', 1)));
         $this->appView('cashier/accounts/index', [
             'title'    => 'Student Accounts',
             'q'        => $q,
             'balance'  => $balance,
-            'accounts' => Finance::accounts($q, $balance),
+            'accounts' => Finance::accounts($q, $balance, 50, ($page - 1) * 50),
+            'total'    => $total,
+            'page'     => $page,
+            'pages'    => $pages,
         ]);
     }
 

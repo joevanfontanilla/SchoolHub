@@ -4,7 +4,10 @@
  *
  * @var string $q
  * @var string $balance
- * @var array  $accounts
+ * @var array  $accounts this page
+ * @var int    $total
+ * @var int    $page
+ * @var int    $pages
  */
 ?>
 <div class="space-y-6">
@@ -62,6 +65,7 @@
                     </tbody>
                 </table>
             </div>
+            <?= partial('pagination', ['page' => $page, 'pages' => $pages, 'total' => $total, 'path' => '/cashier/accounts', 'query' => ['q' => $q, 'balance' => $balance], 'noun' => 'account']) ?>
         <?php endif; ?>
     </section>
 </div>

@@ -22,6 +22,6 @@
     </style>
 </head>
 <body>
-    <div class="wrap"><?= $content ?></div>
+    <main class="wrap"><?= $content ?></main>
 </body>
 </html>

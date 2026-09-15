@@ -29,6 +29,12 @@ if (!function_exists('base_path_uri')) {
 
         $configured = App\Core\Config::get('app.base_url');
         if (is_string($configured) && $configured !== '') {
+            // A full address ("https://enroll.school.edu.ph/portal") contributes only its
+            // path. The base is also the session cookie path and is stripped from each
+            // request path, so it must never contain the scheme and host.
+            if (preg_match('#^https?://#i', $configured)) {
+                $configured = (string) parse_url($configured, PHP_URL_PATH);
+            }
             return $base = rtrim($configured, '/');
         }
 

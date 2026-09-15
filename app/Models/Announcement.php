@@ -271,28 +271,54 @@ final class Announcement
     /** "Everyone", or e.g. "Students (BSA, BSTM · First Year), Teachers". */
     public static function audienceLabel(array $announcement): string
     {
-        if ($announcement['audience'] === 'EVERYONE') {
-            return 'Everyone';
-        }
-        $targets = self::targets((int) $announcement['id']);
-        $roleNames = array_column(Database::select('SELECT id, name FROM roles'), 'name', 'id');
-        $parts = [];
-        foreach ($targets['roles'] as $roleId) {
-            $name = ($roleNames[$roleId] ?? 'Role') === 'Super Admin' ? 'Super Admins' : ($roleNames[$roleId] ?? 'Role') . 's';
-            if (($roleNames[$roleId] ?? '') === User::ROLE_STUDENT && ($targets['programs'] !== [] || $targets['year_levels'] !== [])) {
-                $narrow = [];
-                if ($targets['programs'] !== []) {
-                    $in = implode(',', array_fill(0, count($targets['programs']), '?'));
-                    $narrow[] = implode(', ', array_column(Database::select("SELECT code FROM programs WHERE id IN ({$in}) ORDER BY code", $targets['programs']), 'code'));
-                }
-                if ($targets['year_levels'] !== []) {
-                    $in = implode(',', array_fill(0, count($targets['year_levels']), '?'));
-                    $narrow[] = implode(', ', array_column(Database::select("SELECT name FROM year_levels WHERE id IN ({$in}) ORDER BY sequence", $targets['year_levels']), 'name'));
-                }
-                $name .= ' (' . implode(' · ', $narrow) . ')';
+        return self::audienceLabels([$announcement])[(int) $announcement['id']] ?? '';
+    }
+
+    /**
+     * Audience labels for many announcements at once (the targets and names are read
+     * once for the whole list, not per row).
+     *
+     * @param array<int,array<string,mixed>> $announcements rows with id and audience
+     * @return array<int,string> id => label
+     */
+    public static function audienceLabels(array $announcements): array
+    {
+        $labels = [];
+        $targetedIds = [];
+        foreach ($announcements as $announcement) {
+            if ($announcement['audience'] === 'EVERYONE') {
+                $labels[(int) $announcement['id']] = 'Everyone';
+            } else {
+                $targetedIds[] = (int) $announcement['id'];
             }
-            $parts[] = $name;
         }
-        return implode(', ', $parts);
+        if ($targetedIds === []) {
+            return $labels;
+        }
+
+        $in = implode(',', array_fill(0, count($targetedIds), '?'));
+        $targets = [];
+        foreach (Database::select("SELECT announcement_id, target_type, target_id FROM announcement_targets WHERE announcement_id IN ({$in}) ORDER BY target_id", $targetedIds) as $row) {
+            $targets[(int) $row['announcement_id']][$row['target_type']][] = (int) $row['target_id'];
+        }
+        $roleNames = array_column(Database::select('SELECT id, name FROM roles'), 'name', 'id');
+        $programCodes = array_column(Database::select('SELECT id, code FROM programs ORDER BY code'), 'code', 'id');
+        $yearNames = array_column(Database::select('SELECT id, name FROM year_levels ORDER BY sequence'), 'name', 'id');
+
+        foreach ($targetedIds as $id) {
+            $programs = array_values(array_intersect_key($programCodes, array_flip($targets[$id][self::TARGET_PROGRAM] ?? [])));
+            $years = array_values(array_intersect_key($yearNames, array_flip($targets[$id][self::TARGET_YEAR_LEVEL] ?? [])));
+            $parts = [];
+            foreach ($targets[$id][self::TARGET_ROLE] ?? [] as $roleId) {
+                $role = $roleNames[$roleId] ?? 'Role';
+                $name = $role === User::ROLE_SUPER_ADMIN ? 'Super Admins' : $role . 's';
+                if ($role === User::ROLE_STUDENT && ($programs !== [] || $years !== [])) {
+                    $name .= ' (' . implode(' · ', array_filter([implode(', ', $programs), implode(', ', $years)])) . ')';
+                }
+                $parts[] = $name;
+            }
+            $labels[$id] = implode(', ', $parts);
+        }
+        return $labels;
     }
 }

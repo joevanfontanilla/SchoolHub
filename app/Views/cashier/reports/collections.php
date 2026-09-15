@@ -6,7 +6,10 @@
  * @var string  $from
  * @var string  $to
  * @var ?string $error
- * @var array   $report
+ * @var array   $report  every entry and the totals
+ * @var array   $rows    this page's entries
+ * @var int     $page
+ * @var int     $pages
  * @var array   $chart
  * @var bool    $daily   one bar per day (otherwise per month)
  */
@@ -88,7 +91,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-brand-50 bg-white">
-                        <?php foreach ($report['rows'] as $row): ?>
+                        <?php foreach ($rows as $row): ?>
                             <?php $reversal = $row['reversed_payment_id'] !== null; ?>
                             <tr class="hover:bg-brand-50/40">
                                 <td class="whitespace-nowrap px-4 py-3"><?= e(dt($row['created_at'])) ?></td>
@@ -107,10 +110,11 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot class="bg-brand-50/60 font-semibold text-brand-navy">
-                        <tr><th scope="row" colspan="4" class="px-4 py-3 text-right">Net total</th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg tabular-nums"><?= e($net) ?></td><td></td></tr>
+                        <tr><th scope="row" colspan="4" class="px-4 py-3 text-right">Net total<?= $pages > 1 ? ' (all pages)' : '' ?></th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg tabular-nums"><?= e($net) ?></td><td></td></tr>
                     </tfoot>
                 </table>
             </div>
+            <?= partial('pagination', ['page' => $page, 'pages' => $pages, 'total' => count($report['rows']), 'path' => '/cashier/reports/collections', 'query' => ['from' => $from, 'to' => $to], 'noun' => 'entry']) ?>
         <?php endif; ?>
     </section>
 </div>

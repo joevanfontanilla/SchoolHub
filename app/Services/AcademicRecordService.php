@@ -59,13 +59,20 @@ final class AcademicRecordService
             [$enrollmentId]
         );
 
-        foreach ($classes as &$class) {
-            $class['meetings'] = self::meetings((int) $class['class_id']);
-
-            $grades = [];
-            foreach (Database::select('SELECT grade_period_id, grade, remark FROM grades WHERE class_enlistment_id = ?', [$class['enlistment_id']]) as $row) {
-                $grades[(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+        // Meetings and grades for all the classes at once (two queries, not two per class).
+        $meetingsByClass = self::meetingsFor(array_map(static fn ($c) => (int) $c['class_id'], $classes));
+        $gradesByEnlistment = [];
+        if ($classes !== []) {
+            $enlistmentIds = array_map(static fn ($c) => (int) $c['enlistment_id'], $classes);
+            $in = implode(',', array_fill(0, count($enlistmentIds), '?'));
+            foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, remark FROM grades WHERE class_enlistment_id IN ({$in})", $enlistmentIds) as $row) {
+                $gradesByEnlistment[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
             }
+        }
+
+        foreach ($classes as &$class) {
+            $class['meetings'] = $meetingsByClass[(int) $class['class_id']] ?? [];
+            $grades = $gradesByEnlistment[(int) $class['enlistment_id']] ?? [];
             $class['period_grades'] = $grades;
 
             if ($class['enlistment_status'] === EnlistmentService::DROPPED) {
@@ -79,6 +86,29 @@ final class AcademicRecordService
         unset($class);
 
         return $classes;
+    }
+
+    /**
+     * Meetings of many classes in one query.
+     *
+     * @param array<int,int> $classIds
+     * @return array<int,array<int,array<string,mixed>>> class id => meetings, in day and time order
+     */
+    public static function meetingsFor(array $classIds): array
+    {
+        if ($classIds === []) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($classIds), '?'));
+        $byClass = [];
+        foreach (Database::select(
+            "SELECT m.*, r.code AS room_code FROM class_meetings m LEFT JOIN rooms r ON r.id = m.room_id
+              WHERE m.class_schedule_id IN ({$in}) ORDER BY m.day_of_week, m.start_time",
+            array_values($classIds)
+        ) as $meeting) {
+            $byClass[(int) $meeting['class_schedule_id']][] = $meeting;
+        }
+        return $byClass;
     }
 
     /** @return array<int,array<string,mixed>> */
@@ -150,20 +180,42 @@ final class AcademicRecordService
      */
     public static function passedSubjectIds(int $studentId): array
     {
-        $enrollmentIds = Database::select(
-            "SELECT DISTINCT e.id
+        // Every enlisted class with its grades in two queries; the final is computed
+        // with the term's weights exactly as classesForEnrollment() does.
+        $classes = Database::select(
+            "SELECT ce.id AS enlistment_id, cs.subject_id, e.term_id
                FROM enrollments e
                JOIN class_enlistments ce ON ce.enrollment_id = e.id AND ce.status = 'ENLISTED'
+               JOIN class_schedules cs   ON cs.id = ce.class_schedule_id
               WHERE e.student_id = ?",
             [$studentId]
         );
+        if ($classes === []) {
+            return [];
+        }
 
+        $in = implode(',', array_fill(0, count($classes), '?'));
+        $grades = [];
+        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
+            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+        }
+
+        $weightsByTerm = [];
         $passed = [];
-        foreach ($enrollmentIds as $row) {
-            foreach (self::classesForEnrollment((int) $row['id']) as $class) {
-                if ($class['final']['remark'] === GradeCalculator::REMARK_PASSED) {
-                    $passed[(int) $class['subject_id']] = true;
+        foreach ($classes as $class) {
+            $termId = (int) $class['term_id'];
+            if (!isset($weightsByTerm[$termId])) {
+                $weightsByTerm[$termId] = [];
+                foreach (self::periods($termId) as $period) {
+                    $weightsByTerm[$termId][(int) $period['id']] = (float) $period['weight'];
                 }
+            }
+            if ($weightsByTerm[$termId] === []) {
+                continue;
+            }
+            $final = GradeCalculator::final($grades[(int) $class['enlistment_id']] ?? [], $weightsByTerm[$termId]);
+            if ($final['remark'] === GradeCalculator::REMARK_PASSED) {
+                $passed[(int) $class['subject_id']] = true;
             }
         }
 

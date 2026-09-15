@@ -26,9 +26,12 @@ php database/dispatch_announcements.php     # deliver scheduled announcements no
 php database/create_admin.php       # interactively create the first Super Admin
 php database/backup.php             # backup: database + uploads (--scheduled for Task Scheduler, --verify=ID)
 php database/restore.php <file>     # restore a backup: command line only, typed confirmation, safety backup first
+php database/check_deployment.php --url=https://…/   # deployment preflight (docs/23); exit 1 on any FAIL
 
 php tests/run.php                   # full test suite (hand-rolled runner, no PHPUnit)
 php tests/run.php --filter=auth     # a single test group
+php tests/http/crawl.php            # every route × every role through Apache: status, headers, XSS, injection, CSRF, a11y
+# performance pass with 2,000 students: see docs/22 §4 (tests/perf, SCHOOLHUB_DATABASE=schoolhub_perf)
 
 # CSS — Tailwind standalone CLI (tailwindcss.exe in the project root, gitignored)
 ./tailwindcss.exe -i src/input.css -o public/assets/app.css --watch
@@ -83,27 +86,29 @@ This applies to inline JavaScript too — pass URLs in from PHP via `url()` or a
 
 **Request flow:** `public/index.php` (the only web-reachable PHP file)
 → `routes/web.php` → Middleware → Controller (thin) → Service (business rules)
-→ Repository / Model (PDO) → View.
+→ Model (PDO, prepared statements) → View.
 
 ```
 public/            front controller + compiled assets; the ONLY public directory
 app/Core/          Router, Request, Response, View, Database, Validator, Csrf, Session, Auth
 app/Controllers/   request handling only — no business logic, no SQL
 app/Services/      business workflows, transactions, audit writes
-app/Repositories/  database access (prepared statements)
-app/Models/        entities
-app/Middleware/    RequireAuth, RequireRole, RequirePermission, VerifyCsrf, SecurityHeaders
+app/Models/        database access (prepared statements) and entities
+app/Middleware/    RequireAuth, RequireGuest, RequireRole, RequirePermission, VerifyCsrf
 app/Views/         PHP templates: layouts/, partials/, components/, and per-module folders
-app/Helpers/       url(), asset(), e(), old(), flash(), money(), dt()
+app/Helpers/       url(), asset(), e(), old(), flash(), money(), dt(); icons.php
 config/            config.php (committed) + config.local.php (gitignored secrets)
-routes/            web.php, api.php
-database/          migrations/, seeds/, and the migrate/seed/backup runners
+routes/            web.php
+database/          migrations/, seeds/, and the migrate/seed/backup/restore/preflight scripts
 storage/           uploads, logs, backups — deny-all, never web-reachable
-tests/             run.php + test files
+tests/             run.php + *_test.php; http/crawl.php; perf/ (dataset generator + timing)
 src/input.css      Tailwind source
 ```
 
-Keep controllers thin and SQL out of views. Multi-table workflows (enrollment
+Keep controllers thin, SQL out of controllers and views (`tests/security_test.php` enforces it).
+Security headers (CSP `script-src 'self'`, so no inline scripts) are sent by `Response::securityHeaders()`.
+With `app.debug` on outside production, pages carry `X-Debug-Queries` and `X-Debug-Time-Ms`; a list,
+report, or dashboard should stay well under 60 statements (docs/22 §4). Multi-table workflows (enrollment
 approval, payment recording, class assignment) run inside a **transaction** and write
 an **audit log** entry.
 
@@ -283,6 +288,14 @@ their classes, enlistments, grades, and attendance. Phase 4 fixtures: `enrolledS
 `makeClass()`, `meeting()`, `makeSubject()`, `makeRoom()`. Tests that open or re-weight a real term's
 grading periods must run inside `withGradePeriods()`, which restores them. Attendance tests use
 `currentTermId()` and `lastWeekday()`, because a date in the future or outside the term is refused.
+
+Source-wide rules live in `tests/security_test.php`: view output through `e()` (or a reviewed safe form),
+`csrf_field()` in every POST form, and a per-file list of reviewed variables inside SQL strings. A new
+interpolated variable fails the suite until it is bound with `?` or reviewed and listed.
+
+`SCHOOLHUB_DATABASE=schoolhub_<name>` points the app and scripts at another database (only when
+`app.env` is not production); the performance harness uses `schoolhub_perf`. `app.base_url`
+may be a full `https://` address; only its path is used for URLs and the cookie path.
 
 Upload tests use `UploadedFile::forTesting()`, which is refused outside the CLI. Real HTTP
 uploads (`move_uploaded_file`) are verified end-to-end through Apache with `curl -F`.

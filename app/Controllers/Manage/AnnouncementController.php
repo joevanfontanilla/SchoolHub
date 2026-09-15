@@ -25,11 +25,13 @@ final class AnnouncementController extends Controller
     {
         $state = (string) $request->input('state', '');
         $q = trim((string) $request->input('q', ''));
+        $announcements = Announcement::manageList($state, $q);
         $this->appView('manage/announcements/index', [
             'title'         => 'Announcements',
             'state'         => $state,
             'q'             => $q,
-            'announcements' => Announcement::manageList($state, $q),
+            'announcements' => $announcements,
+            'labels'        => Announcement::audienceLabels($announcements),
             'canPublish'    => Auth::can('announcements.publish'),
         ]);
     }

@@ -17,6 +17,14 @@ final class Database
     private static ?PDO $pdo = null;
     private static int $transactionDepth = 0;
 
+    /** Statements run in this request. Reported in a response header in local debug mode (docs/22). */
+    private static int $queryCount = 0;
+
+    public static function queryCount(): int
+    {
+        return self::$queryCount;
+    }
+
     public static function connection(): PDO
     {
         if (self::$pdo instanceof PDO) {
@@ -71,6 +79,7 @@ final class Database
 
     public static function query(string $sql, array $bindings = []): PDOStatement
     {
+        self::$queryCount++;
         $statement = self::connection()->prepare($sql);
         $statement->execute($bindings);
         return $statement;

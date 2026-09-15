@@ -65,6 +65,30 @@ final class EnrollmentApplication
         return Database::selectOne(self::SELECT . ' WHERE ea.id = ?', [$id]);
     }
 
+    /** @return array<string,mixed>|null the enrollment made from this application, with its section code */
+    public static function enrollment(int $applicationId): ?array
+    {
+        return Database::selectOne(
+            'SELECT e.*, sec.code AS section_code FROM enrollments e JOIN sections sec ON sec.id = e.section_id WHERE e.application_id = ?',
+            [$applicationId]
+        );
+    }
+
+    /** The application a requirement belongs to, or 0. */
+    public static function applicationIdForRequirement(int $requirementId): int
+    {
+        return (int) Database::scalar('SELECT application_id FROM enrollment_requirements WHERE id = ?', [$requirementId]);
+    }
+
+    /** The document name of a requirement, e.g. "PSA Birth Certificate". */
+    public static function requirementName(int $requirementId): string
+    {
+        return (string) Database::scalar(
+            'SELECT rt.name FROM enrollment_requirements er JOIN requirement_types rt ON rt.id = er.requirement_type_id WHERE er.id = ?',
+            [$requirementId]
+        );
+    }
+
     /** @return array<int,array<string,mixed>> newest first */
     public static function listForStudent(int $studentId): array
     {

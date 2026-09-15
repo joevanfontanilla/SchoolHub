@@ -60,7 +60,10 @@ final class SubjectSelectionService
             "SELECT s.*,
                     (SELECT GROUP_CONCAT(pre.code ORDER BY pre.id SEPARATOR ', ')
                        FROM subject_prerequisites sp JOIN subjects pre ON pre.id = sp.prerequisite_subject_id
-                      WHERE sp.subject_id = s.id) AS prerequisite_codes
+                      WHERE sp.subject_id = s.id) AS prerequisite_codes,
+                    (SELECT GROUP_CONCAT(CONCAT(pre.id, ':', pre.code) ORDER BY pre.id SEPARATOR '|')
+                       FROM subject_prerequisites sp JOIN subjects pre ON pre.id = sp.prerequisite_subject_id
+                      WHERE sp.subject_id = s.id) AS prerequisite_pairs
                FROM subjects s
               WHERE s.curriculum_id = ? AND s.year_level_id = ? AND s.term_sequence = ? AND s.is_active = 1
               ORDER BY s.id",
@@ -68,18 +71,27 @@ final class SubjectSelectionService
         );
 
         $studentId = (int) $application['student_id'];
+        // The student's record is read once for the whole list, not once per subject.
         $passed = array_flip(AcademicRecordService::passedSubjectIds($studentId));
+        $progress = null;
         $options = [];
 
         foreach ($subjects as $subject) {
             if (isset($passed[(int) $subject['id']])) {
                 continue; // already passed: never offered again
             }
-            $missing = EnlistmentService::missingPrerequisites($studentId, (int) $subject['id']);
+            $missing = [];
+            foreach (array_filter(explode('|', (string) $subject['prerequisite_pairs'])) as $pair) {
+                [$prerequisiteId, $code] = explode(':', $pair, 2);
+                if (!isset($passed[(int) $prerequisiteId])) {
+                    $missing[] = $code;
+                }
+            }
+            unset($subject['prerequisite_pairs']);
             $reason = $missing !== [] ? 'Requires ' . implode(', ', $missing) . ' first.' : null;
 
             if ($reason === null && $subject['min_progress_percent'] !== null) {
-                $progress = AcademicRecordService::progressPercent($studentId, (int) $curriculum['id']);
+                $progress ??= AcademicRecordService::progressPercent($studentId, (int) $curriculum['id']);
                 if ($progress < (int) $subject['min_progress_percent']) {
                     $reason = "Requires {$subject['min_progress_percent']}% of the curriculum passed (you have {$progress}%).";
                 }

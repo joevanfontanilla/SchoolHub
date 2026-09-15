@@ -35,11 +35,7 @@ final class ErrorHandler
         }
 
         $request = new Request();
-        $debug = (bool) Config::get('app.debug', false);
-
-        $message = $e instanceof HttpException
-            ? $e->getMessage()
-            : ($debug ? $e->getMessage() : 'An unexpected error occurred. The problem has been logged.');
+        [$status, $message, $detail] = self::describe($e);
 
         if ($request->expectsJson()) {
             Response::json(['success' => false, 'message' => $message], $status);
@@ -50,12 +46,30 @@ final class ErrorHandler
             Response::html(View::render('errors/error', [
                 'status'  => $status,
                 'message' => $message,
-                'detail'  => ($debug && $status >= 500) ? self::detail($e) : null,
+                'detail'  => $detail,
             ], 'layouts/plain'), $status);
         } catch (Throwable) {
             // The error page itself failed — fall back to plain text.
             Response::html('<h1>' . $status . '</h1><p>' . e($message) . '</p>', $status);
         }
+    }
+
+    /**
+     * What a visitor is told about an error: its status, a message, and (debug only)
+     * the technical detail. A deliberate HttpException keeps its plain message; any other
+     * failure says only that something went wrong, unless debug is on.
+     *
+     * @return array{0:int,1:string,2:?string}
+     */
+    public static function describe(Throwable $e): array
+    {
+        $status = $e instanceof HttpException ? $e->status() : 500;
+        $debug = (bool) Config::get('app.debug', false);
+        $message = $e instanceof HttpException
+            ? $e->getMessage()
+            : ($debug ? $e->getMessage() : 'An unexpected error occurred. The problem has been logged.');
+
+        return [$status, $message, ($debug && $status >= 500) ? self::detail($e) : null];
     }
 
     public static function handleShutdown(): void

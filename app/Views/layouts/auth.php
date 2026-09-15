@@ -29,8 +29,10 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
                 <span class="brand-rule mx-auto mt-4" aria-hidden="true"></span>
             </div>
 
-            <?= partial('flash') ?>
-            <?= $content ?>
+            <main id="main">
+                <?= partial('flash') ?>
+                <?= $content ?>
+            </main>
 
             <p class="mt-8 text-center text-sm text-brand-gray">
                 <a href="<?= e(url('/')) ?>" class="font-medium text-brand-600 hover:underline">Back to the website</a>

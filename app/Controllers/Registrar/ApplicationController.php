@@ -6,7 +6,6 @@ namespace App\Controllers\Registrar;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
-use App\Core\Database;
 use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\ValidationException;
@@ -71,10 +70,7 @@ final class ApplicationController extends Controller
             'subjects'      => SubjectSelectionService::chosen((int) $application['id']),
             'sections'      => Catalog::sectionsForApplication($application),
             'assessment'    => \App\Models\Finance::assessmentForApplication((int) $application['id']),
-            'enrollment'    => Database::selectOne(
-                'SELECT e.*, sec.code AS section_code FROM enrollments e JOIN sections sec ON sec.id = e.section_id WHERE e.application_id = ?',
-                [$application['id']]
-            ),
+            'enrollment'    => Application::enrollment((int) $application['id']),
         ]);
     }
 
@@ -106,7 +102,7 @@ final class ApplicationController extends Controller
             return;
         }
 
-        $enrolled = Database::scalar('SELECT enrollment_state FROM enrollment_applications WHERE id = ?', [$id]) === 'ENROLLED';
+        $enrolled = (Application::find($id)['enrollment_state'] ?? null) === 'ENROLLED';
         $this->success($enrolled
             ? 'Application approved and the student enrolled (no payment is required by school policy).'
             : 'Application approved. The fee assessment was issued to the student, who is enrolled once the payment policy is met.', "/registrar/applications/{$id}");
@@ -126,7 +122,7 @@ final class ApplicationController extends Controller
     public function reviewRequirement(Request $request): void
     {
         $requirementId = (int) $request->param('requirementId');
-        $applicationId = (int) Database::scalar('SELECT application_id FROM enrollment_requirements WHERE id = ?', [$requirementId]);
+        $applicationId = Application::applicationIdForRequirement($requirementId);
         if ($applicationId === 0) {
             throw HttpException::notFound('That document was not found.');
         }
