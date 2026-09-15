@@ -305,6 +305,26 @@ final class DeploymentCheck
         $add('Debug headers', $header('X-Debug-Queries') === '' ? 'OK' : 'FAIL', $header('X-Debug-Queries') === '' ? 'Not sent' : 'Sent: debug mode is on.');
         $add('Server version headers', $header('X-Powered-By') === '' ? 'OK' : 'WARN', $header('X-Powered-By') === '' ? 'Not sent' : 'X-Powered-By: ' . $header('X-Powered-By'));
 
+        // The Apache server header should not name its exact version. SchoolHub cannot remove it
+        // (Apache sends it); docs/23 sets ServerTokens Prod.
+        $server = $header('Server');
+        $add('Apache version banner', preg_match('#/\d#', $server) ? 'WARN' : 'OK',
+            preg_match('#/\d#', $server) ? "{$server}: set ServerTokens Prod and ServerSignature Off (docs/23)." : ($server !== '' ? $server : 'Not sent'));
+
+        // Apache status and info pages, and the TRACE method, expose the server. They are on by
+        // default in XAMPP and must be turned off (docs/23).
+        $origin = rtrim((string) preg_replace('#(https?://[^/]+).*#', '$1', $baseUrl), '/');
+        foreach (['server-status' => '/server-status', 'server-info' => '/server-info'] as $label => $path) {
+            $probe = self::fetch($origin . $path, $verifyTls, 2048);
+            $exposed = $probe['status'] === 200 && stripos($probe['body'], 'Apache') !== false;
+            $add('Apache ' . $label, $exposed ? 'FAIL' : 'OK', $exposed
+                ? "{$origin}{$path} is readable and exposes server internals. Remove or restrict mod_status/mod_info (docs/23)."
+                : 'Not reachable');
+        }
+        $trace = self::fetch($baseUrl . 'login', $verifyTls, 512, 'TRACE');
+        $add('TRACE method', in_array($trace['status'], [200, 501], true) && $trace['status'] === 200 ? 'WARN' : 'OK',
+            $trace['status'] === 200 ? 'Enabled: set TraceEnable Off (docs/23).' : 'Disabled');
+
         $cookie = array_values(array_filter($home['headers']['set-cookie'] ?? [], static fn ($c) => str_starts_with($c, Config::get('session.name', 'schoolhub_session') . '=')))[0] ?? '';
         if ($cookie === '') {
             $add('Session cookie', 'WARN', 'The sign-in page set no session cookie to inspect.');
@@ -380,7 +400,7 @@ final class DeploymentCheck
     }
 
     /** @return array{status:int,headers:array<string,array<int,string>>,body:string,location:string,error:string} */
-    private static function fetch(string $url, bool $verifyTls, int $maxBytes = 1048576): array
+    private static function fetch(string $url, bool $verifyTls, int $maxBytes = 1048576, string $method = 'GET'): array
     {
         $curl = curl_init($url);
         $headers = [];
@@ -388,6 +408,7 @@ final class DeploymentCheck
         curl_setopt_array($curl, [
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_TIMEOUT        => 15,
+            CURLOPT_CUSTOMREQUEST  => $method,
             CURLOPT_SSL_VERIFYPEER => $verifyTls,
             CURLOPT_SSL_VERIFYHOST => $verifyTls ? 2 : 0,
             CURLOPT_HEADERFUNCTION => static function ($c, string $line) use (&$headers): int {

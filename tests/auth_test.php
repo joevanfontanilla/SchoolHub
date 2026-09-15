@@ -179,7 +179,16 @@ return [
         $t->assertNotNull(AuthService::passwordPolicyProblem('short1'), 'Too short must be rejected');
         $t->assertNotNull(AuthService::passwordPolicyProblem('alphabetsonly'), 'No digit must be rejected');
         $t->assertNotNull(AuthService::passwordPolicyProblem('12345678'), 'No letter must be rejected');
+        // A NUL byte truncates the string before bcrypt on PHP < 8.2.19 (CVE-2024-3096); refuse it,
+        // and other control characters, and anything past bcrypt's 72-byte limit.
+        $t->assertNotNull(AuthService::passwordPolicyProblem("Reasonable1\0extra"), 'A NUL byte must be rejected');
+        $t->assertNotNull(AuthService::passwordPolicyProblem("Reasonable1\tx"), 'A control character must be rejected');
+        $t->assertNotNull(AuthService::passwordPolicyProblem(str_repeat('a', 72) . '1'), 'Over 72 bytes must be rejected');
+        // The truncation attack itself: a policy-passing password with a NUL is refused, so its
+        // hash is never stored and cannot be matched by the prefix alone.
+        $t->assertNotNull(AuthService::passwordPolicyProblem("Secret123\0" . str_repeat('x', 30)), 'The CVE-2024-3096 payload is refused');
         $t->assertNull(AuthService::passwordPolicyProblem('Reasonable1'), 'A valid password must pass');
+        $t->assertNull(AuthService::passwordPolicyProblem('Str0ng p@ssphrase!'), 'Ordinary symbols and spaces are allowed');
     },
 
     'a changed password takes effect and clears must_change_password' => function (TestRunner $t): void {

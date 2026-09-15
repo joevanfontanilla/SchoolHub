@@ -31,7 +31,13 @@
 A user must not access a dashboard belonging to another role.
 
 ## Password Rules
-Password policy must be configurable but should require reasonable minimum strength.
+Password policy must be configurable but should require reasonable minimum strength. As built
+(`AuthService::passwordPolicyProblem()`): at least `password_min_length` characters (default 8) with
+a letter and a number; and it rejects NUL and other control characters, and anything past 72 bytes.
+Refusing the NUL byte matters because bcrypt truncates at the first NUL on PHP before 8.2.19 /
+8.1.28 / 8.3.7 (CVE-2024-3096), so a hash made from `secret\0…` would verify against `secret`; the
+policy keeps such a hash from ever being stored, whatever the PHP version. The preflight and System
+Health also warn when PHP itself is older than the patched release.
 
 ## Audit
 Log login success/failure, logout, password changes, permission changes, and other security-sensitive actions.

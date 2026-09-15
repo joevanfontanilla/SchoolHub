@@ -415,6 +415,32 @@ storage log were 404, no debug headers were sent, the first sign-in went straigh
 password*, "Forgot password?" gave the same answer for a known and an unknown address and refused
 to build a link without an `https://` address, and the preflight found the moved web folder.
 
+## D.1 Web-server hardening
+
+The preflight's live checks also flag server exposure that comes from the web server, not from
+SchoolHub. Turn these off on the deployed server:
+
+- **Apache version banner.** `ServerTokens Prod` and `ServerSignature Off` (in `httpd.conf` on
+  XAMPP, or `/etc/apache2/conf-available/security.conf` on Ubuntu) so error pages and the `Server`
+  header do not name the exact Apache, OpenSSL, and PHP versions. Also set `expose_php = Off` in
+  php.ini.
+- **Status and info pages.** XAMPP's `mod_status` (`/server-status`) and `mod_info`
+  (`/server-info`) list every request and the whole configuration. On XAMPP they are opened to the
+  local machine in `httpd-xampp.conf` — remove those `<Location>` blocks, or restrict them to a
+  trusted address, and do not `LoadModule` `mod_info` in production. On a fresh Ubuntu Apache they
+  are already limited to localhost.
+- **TRACE method.** `TraceEnable Off` at the top of `httpd.conf`, so the server does not echo
+  requests back (cross-site tracing).
+- **Directory listings** are already off via `Options -Indexes` in the vhost and `.htaccess`.
+
+Shared hosting usually handles all of these; the preflight tells you if one is still open.
+
+**PHP version.** The preflight and System Health warn when PHP is older than **8.2.19** (or
+**8.3.7**), the first releases with the fix for CVE-2024-3096, where a NUL byte truncated a password
+before bcrypt. SchoolHub already refuses passwords that contain a NUL or other control byte, but
+keep PHP on the latest 8.2 or 8.3 patch anyway. XAMPP 8.2.12 is older than this; use a current XAMPP
+or update PHP.
+
 ## E. After installing: before opening enrollment
 
 1. **Never run `create_demo_users.php`** (it refuses in production). If the database came from a

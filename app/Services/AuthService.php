@@ -130,6 +130,17 @@ final class AuthService
     {
         $min = SystemSetting::security('password_min_length', 8);
 
+        // Reject NUL and other control characters. A NUL byte in particular truncates the
+        // string that reaches bcrypt on PHP before 8.2.19/8.1.28/8.3.7 (CVE-2024-3096), so a
+        // hash made from "secret\0..." would verify against just "secret". Refusing them here
+        // means such a hash is never created, whatever the PHP version. A very long password is
+        // also refused: bcrypt only reads the first 72 bytes, so anything past that is ignored.
+        if (preg_match('/[\x00-\x1F\x7F]/', $password)) {
+            return 'Your password contains a character that is not allowed. Use letters, numbers, and ordinary symbols.';
+        }
+        if (strlen($password) > 72) {
+            return 'Your password is too long. Use at most 72 characters.';
+        }
         if (mb_strlen($password) < $min) {
             return "Your new password must be at least {$min} characters long.";
         }

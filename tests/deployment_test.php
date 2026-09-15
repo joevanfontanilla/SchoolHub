@@ -104,6 +104,22 @@ return [
         $t->assertTrue(DeploymentCheck::hasServerPrivileges("GRANT ALL PRIVILEGES ON `schoolhub`.* TO `app`@`localhost` WITH GRANT OPTION"), 'May grant to others');
     },
 
+    'the live-site check flags exposed Apache endpoints (against the running server)' => function (TestRunner $t): void {
+        $base = getenv('SCHOOLHUB_BASE_URL') ?: 'http://localhost/SchoolHub/public/';
+        $probe = @file_get_contents($base . 'login', false, stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true]]));
+        if ($probe === false) {
+            // tests/run.php can run without Apache; the crawl covers the live server separately.
+            $t->assertTrue(true, 'The web server is not reachable at ' . $base . '; skipped');
+            return;
+        }
+        $checks = checkStatuses(DeploymentCheck::httpChecks($base));
+        // On the development XAMPP these are open, so the checks must FAIL/WARN; on a hardened
+        // server they turn OK. Either way each check must exist and return a known status.
+        foreach (['Apache server-status', 'Apache server-info', 'TRACE method', 'Apache version banner', 'Security headers'] as $label) {
+            $t->assertTrue(isset($checks[$label]) && in_array($checks[$label], ['OK', 'WARN', 'FAIL'], true), "{$label} is checked (got " . ($checks[$label] ?? 'nothing') . ')');
+        }
+    },
+
     'php.ini sizes are read the way PHP reads them' => function (TestRunner $t): void {
         $t->assertEquals(40 * 1024 * 1024, DeploymentCheck::iniBytes('40M'));
         $t->assertEquals(2 * 1024 ** 3, DeploymentCheck::iniBytes('2G'));

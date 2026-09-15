@@ -39,7 +39,13 @@ final class SystemHealth
             $secure ? 'On' : ($env === 'production' ? 'Off in production: enable session.secure once the site uses HTTPS.' : 'Off (fine without HTTPS locally).'));
 
         // PHP
-        $add('Server', 'PHP version', version_compare(PHP_VERSION, '8.2.0', '>=') ? 'OK' : 'FAIL', PHP_VERSION . ' (8.2 or newer required)');
+        // 8.2.0 runs the app, but 8.2.19 is the first 8.2 with the fix for CVE-2024-3096
+        // (a NUL byte truncating a password before bcrypt). Older 8.2/8.3 are flagged so the
+        // host is updated; the password policy blocks NUL bytes regardless.
+        $phpOk = version_compare(PHP_VERSION, '8.2.0', '>=');
+        $phpPatched = version_compare(PHP_VERSION, '8.3.0', '>=') ? version_compare(PHP_VERSION, '8.3.7', '>=') : version_compare(PHP_VERSION, '8.2.19', '>=');
+        $add('Server', 'PHP version', !$phpOk ? 'FAIL' : ($phpPatched ? 'OK' : 'WARN'),
+            PHP_VERSION . (!$phpOk ? ' (8.2 or newer required)' : ($phpPatched ? '' : ': update to the latest 8.2/8.3 patch (this one predates the CVE-2024-3096 fix).')));
         $missing = array_values(array_filter(self::REQUIRED_EXTENSIONS, static fn ($ext) => !extension_loaded($ext)));
         $add('Server', 'PHP extensions', $missing === [] ? 'OK' : 'FAIL', $missing === [] ? implode(', ', self::REQUIRED_EXTENSIONS) : 'Missing: ' . implode(', ', $missing));
 
