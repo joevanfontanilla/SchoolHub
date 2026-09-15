@@ -26,7 +26,8 @@ SchoolHub runs a college's enrollment and records in one place:
 - **Announcements:** written by the registrar or Super Admin for everyone or for roles,
   programs, and year levels; scheduled, urgent banners, one notification per recipient.
 - **Super Admin:** staff accounts with one-time password links, role permissions, system
-  settings, the audit log and sign-in activity, backups, and system health.
+  settings, the audit log and sign-in activity, backups, system health, and administrative
+  reports (account review, sign-in and activity summaries, system usage).
 
 Every protected action is authorized on the server, every form is CSRF-protected, every
 change that matters is written to an append-only audit log, and financial records are
@@ -65,8 +66,8 @@ binary as `tailwindcss.exe` into the project root and run
 | `php database/restore.php <file>` | Restore a backup (command line only) |
 | `php database/dispatch_announcements.php` | Deliver scheduled announcements (Task Scheduler) |
 | `php database/check_deployment.php [--url=https://…]` | Deployment preflight |
-| `php tests/run.php [--filter=name]` | Test suite (235 tests) |
-| `php tests/http/crawl.php` | Every route as every role through Apache (1,651 checks) |
+| `php tests/run.php [--filter=name]` | Test suite (241 tests) |
+| `php tests/http/crawl.php` | Every route as every role through Apache (1,824 checks) |
 
 ## Deploying
 Deployment is on a school Windows computer running XAMPP, served over HTTPS, with the web root

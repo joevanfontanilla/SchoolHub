@@ -209,7 +209,8 @@ an **audit log** entry.
   thresholds are read with `SystemSetting::security()`. Backups go through `BackupService` (PDO dump + zip +
   checksums); **restore is never exposed on the web**. The audit log has no write route and no
   `UPDATE`/`DELETE` of `audit_logs` anywhere in `app/` (a test enforces this).
-- **Reports (docs/15)** are read-only queries (`FinanceReport`, `RegistrarReport`, `ClassSchedule::attendanceSummary()`).
+- **Reports (docs/15, docs/19)** are read-only queries (`FinanceReport`, `RegistrarReport`, `AdminReport`, `ClassSchedule::attendanceSummary()`);
+  date ranges go through `ReportRange::parse()` (at most a year, falling back to the default with a message).
   Each report is a screen page, a print page rendered with `Controller::printView()`, and a CSV export through
   `CsvExport` that writes a `reports.exported` audit entry. Teacher class reports find the class with
   `GradingService::ownedClass()` (another teacher's class is a 404). Printout tables sit in

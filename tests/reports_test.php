@@ -33,7 +33,7 @@ function sectionProgram(int $sectionId): array
 
 return [
     'every report route is a read-only GET gated to its role and report permission' => function (TestRunner $t): void {
-        $routes = array_filter(reportRoutes(), static fn ($r) => !str_starts_with($r['pattern'], '/cashier/'));
+        $routes = array_filter(reportRoutes(), static fn ($r) => !str_starts_with($r['pattern'], '/cashier/') && !str_starts_with($r['pattern'], '/admin/'));
         $t->assertEquals(20, count($routes), 'Registrar and teacher report routes');
         foreach ($routes as $route) {
             $label = "{$route['method']} {$route['pattern']}";

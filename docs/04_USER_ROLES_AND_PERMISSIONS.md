@@ -107,5 +107,9 @@ for narrowing access. `database/seed.php` no longer rewrites grants: it fills a 
 none (a fresh install) and grants only permissions that are new in that run, so choices made in
 the screen survive re-seeding.
 
+## As built: administrative reports
+The Super Admin's reports (account review, sign-in summary, activity summary, system usage) are
+described in docs/19.
+
 ## Sensitive Operations
 Enrollment approval, grade changes, fee changes, payment recording, role changes, and backup restoration must be logged.

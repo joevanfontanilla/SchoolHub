@@ -25,7 +25,7 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**235 tests in 29 files**:
+**241 tests in 30 files**:
 
 | Area | Files (tests) |
 |---|---|
@@ -37,7 +37,7 @@ always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 | Finance | `finance` (12) |
 | Communication | `communication` (8) |
 | Administration | `admin` (11) |
-| Reports | `reports` (7) |
+| Reports | `reports` (7), `admin_reports` (6) |
 | Quality | `security` (7), `deployment` (7) |
 
 Route-table tests (`registrar_access`, `teacher_access`, `rbac`) walk `routes/web.php`
@@ -90,9 +90,9 @@ rooms, and subjects, signs in through the login form, and then:
 7. Checks every page's HTML for basic accessibility (docs/21): `lang` and `<title>`, one
    `<main>`, `alt` on images, a label for every field, a name for every link and button,
    and no duplicate ids.
-8. Opens receipts, statements, every CSV export (cashier, registrar, and teacher reports), and printouts as their owners and as others.
+8. Opens receipts, statements, every CSV export (cashier, registrar, teacher, and administrative reports), and printouts as their owners and as others.
 
-Result with the registrar and teacher reports: **1,651 checks, 0 failures** (840 page requests, 284 CSRF probes).
+Result with every report built: **1,824 checks, 0 failures** (931 page requests, 284 CSRF probes).
 The crawl found and fixed missing `<main>` landmarks on the sign-in and printable
 layouts and an unlabeled logo upload field.
 
@@ -124,7 +124,7 @@ enrollments with 9,375 enlistments, 18,750 grades, and 37,500 attendance records
 1,500 assessments and 2,000 payments; 60 announcements with 30,000 notifications;
 100,000 audit entries and 30,000 sign-in attempts.
 
-`measure.php` signs in as each role and requests 70 pages three times each. With debug
+`measure.php` signs in as each role and requests 75 pages three times each. With debug
 on (never in production), every response carries `X-Debug-Queries` and
 `X-Debug-Time-Ms`. A page over **300 ms** of server time or **60 statements** is flagged.
 
@@ -149,6 +149,13 @@ under 100 ms and 13 statements. The requirements status list first took 165 ms a
 brought it to 100 ms and 266 KB. The printable enrollment and applicant lists, which carry
 every row (1,500 and 2,000), are about 1.3 MB and render in 56–75 ms. The history report
 takes 21 ms.
+
+The administrative reports were measured with 100,000 audit entries, 42,587 of them in the
+default 30-day window, and 30,000 sign-in attempts. The activity summary first took 473 ms,
+because it scanned the window once for each grouping (totals, module, role, action). One
+grouped query, added up in PHP, brought it to 268 ms. A covering index would have saved
+another 55 ms but slows every audited action, so it was not added. The account review lists
+2,067 accounts in 40 ms, the sign-in summary takes 102 ms, and system usage 94 ms.
 
 Backups at this size: 3.5 MB archive in 4.2 s, verification 0.3 s, restore into an empty
 database 11 s with every table's checksum matching the source (except `audit_logs`, which

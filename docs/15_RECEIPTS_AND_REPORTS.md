@@ -115,3 +115,7 @@ the class).
 
 Exports add `/export`. Every printout's tables scroll sideways on a phone and print in
 full on paper.
+
+## Administrative reports
+The Super Admin's account review, sign-in summary, activity summary, and system usage reports
+(`reports.admin`) are described in docs/19.

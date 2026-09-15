@@ -17,6 +17,7 @@ use App\Controllers\Admin\AuditLogController as AdminAudit;
 use App\Controllers\Admin\BackupController as AdminBackups;
 use App\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Controllers\Admin\HealthController as AdminHealth;
+use App\Controllers\Admin\ReportController as AdminReports;
 use App\Controllers\Admin\RoleController as AdminRoles;
 use App\Controllers\Admin\SettingController as AdminSettings;
 use App\Controllers\Admin\UserController as AdminUsers;
@@ -138,6 +139,21 @@ $router->post('/admin/backups/{id}/download', [AdminBackups::class, 'download'],
 $router->post('/admin/backups/{id}/delete',   [AdminBackups::class, 'destroy'],  $admin('backups.manage'));
 
 $router->get('/admin/health', [AdminHealth::class, 'index'], $admin('system.health'), 'admin.health');
+
+// Administrative reports (docs/04): on screen, printable, and an audited CSV export.
+$router->get('/admin/reports',                 [AdminReports::class, 'index'],          $admin('reports.admin'), 'admin.reports');
+$router->get('/admin/reports/accounts',        [AdminReports::class, 'accounts'],       $admin('reports.admin'));
+$router->get('/admin/reports/accounts/print',  [AdminReports::class, 'accountsPrint'],  $admin('reports.admin'));
+$router->get('/admin/reports/accounts/export', [AdminReports::class, 'accountsExport'], $admin('reports.admin'));
+$router->get('/admin/reports/sign-ins',        [AdminReports::class, 'signIns'],        $admin('reports.admin'));
+$router->get('/admin/reports/sign-ins/print',  [AdminReports::class, 'signInsPrint'],   $admin('reports.admin'));
+$router->get('/admin/reports/sign-ins/export', [AdminReports::class, 'signInsExport'],  $admin('reports.admin'));
+$router->get('/admin/reports/activity',        [AdminReports::class, 'activity'],       $admin('reports.admin'));
+$router->get('/admin/reports/activity/print',  [AdminReports::class, 'activityPrint'],  $admin('reports.admin'));
+$router->get('/admin/reports/activity/export', [AdminReports::class, 'activityExport'], $admin('reports.admin'));
+$router->get('/admin/reports/usage',           [AdminReports::class, 'usage'],          $admin('reports.admin'));
+$router->get('/admin/reports/usage/print',     [AdminReports::class, 'usagePrint'],     $admin('reports.admin'));
+$router->get('/admin/reports/usage/export',    [AdminReports::class, 'usageExport'],    $admin('reports.admin'));
 
 // ---------------------------------------------------------------------------
 // Student: profile, enrollment application, requirements, status (Phase 2)

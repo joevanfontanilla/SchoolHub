@@ -16,6 +16,7 @@ use App\Models\SystemSetting;
 use App\Services\AuditService;
 use App\Services\CsvExport;
 use App\Services\FinanceService;
+use App\Services\ReportRange;
 
 /**
  * Cashier reports (docs/15): collections over a date range and outstanding
@@ -24,8 +25,6 @@ use App\Services\FinanceService;
  */
 final class ReportController extends Controller
 {
-    /** Longest range a collections report covers, so a typo can't scan years of payments. */
-    private const MAX_DAYS = 366;
 
     /** Rows shown per page on screen; print and CSV always include every row. */
     private const PER_PAGE = 100;
@@ -164,22 +163,7 @@ final class ReportController extends Controller
      */
     private function range(Request $request): array
     {
-        $defaultFrom = date('Y-m-01');
-        $defaultTo = date('Y-m-d');
-        $from = (string) $request->input('from', $defaultFrom);
-        $to = (string) $request->input('to', $defaultTo);
-
-        $valid = static fn (string $d): bool => ($parsed = \DateTime::createFromFormat('!Y-m-d', $d)) !== false && $parsed->format('Y-m-d') === $d;
-        if (!$valid($from) || !$valid($to)) {
-            return [$defaultFrom, $defaultTo, 'Enter dates as YYYY-MM-DD. Showing this month instead.'];
-        }
-        if ($from > $to) {
-            return [$defaultFrom, $defaultTo, 'The start date is after the end date. Showing this month instead.'];
-        }
-        if ((new \DateTime($from))->diff(new \DateTime($to))->days >= self::MAX_DAYS) {
-            return [$defaultFrom, $defaultTo, 'A report can cover at most one year. Showing this month instead.'];
-        }
-        return [$from, $to, null];
+        return ReportRange::parse($request->input('from'), $request->input('to'), date('Y-m-01'), date('Y-m-d'), 'this month');
     }
 
     /** @return array{0:?int,1:?int} */

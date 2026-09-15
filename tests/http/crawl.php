@@ -321,6 +321,7 @@ try {
     $allowedAlso = [
         '/cashier/reports'                     => [302],
         '/registrar/reports'                   => [302],
+        '/admin/reports'                       => [302],
         '/student/enrollment/apply'            => [302],
         '/registrar/applications/{id}/confirm' => [302],
         '/downloads/{id}'                      => [404],
@@ -421,6 +422,8 @@ try {
     foreach ([['registrar', '/statements/' . $ids['assessment'], 'text/html'], ['cashier', '/cashier/reports/collections/export', 'text/csv'],
               ['cashier', '/cashier/reports/outstanding/export', 'text/csv'], ['admin', '/admin/audit-logs/export?action=login', 'text/csv'],
               ['studentA', '/student/schedule/print', 'text/html'],
+              ['admin', '/admin/reports/accounts/export', 'text/csv'], ['admin', '/admin/reports/sign-ins/export', 'text/csv'],
+              ['admin', '/admin/reports/activity/export', 'text/csv'], ['admin', '/admin/reports/usage/export', 'text/csv'],
               ['registrar', '/registrar/reports/enrollment/export', 'text/csv'], ['registrar', '/registrar/reports/applications/export', 'text/csv'],
               ['registrar', '/registrar/reports/requirements/export', 'text/csv'], ['registrar', '/registrar/reports/history/export', 'text/csv'],
               ['teacher', '/teacher/classes/' . $ids['class'] . '/reports/class-list/export', 'text/csv'],

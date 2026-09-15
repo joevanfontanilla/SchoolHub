@@ -85,6 +85,7 @@ $nav = match ($user?->role_name) {
         ['/admin/login-activity', 'Sign-in Activity', 'key', true],
         ['/admin/backups', 'Backups', 'database', true],
         ['/admin/health', 'System Health', 'status', true],
+        ['/admin/reports', 'Reports', 'presentation', true],
         'Communication',
         ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
         ['/portal/notifications', 'Notifications', 'bell', true],

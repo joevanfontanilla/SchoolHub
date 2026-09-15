@@ -94,7 +94,8 @@ $plan = [
         "/cashier/accounts/{$student['assessment_id']}", "/cashier/reports/collections?from={$month}&to=" . date('Y-m-d'), '/cashier/reports/outstanding',
         '/cashier/reports/outstanding/export']],
     'admin'     => ['perf_admin', ['/admin/dashboard', '/admin/users', '/admin/users?q=student', '/admin/audit-logs', '/admin/audit-logs?action=finance.', "/admin/audit-logs/{$auditId}",
-        '/admin/login-activity', '/admin/roles', '/admin/settings', '/admin/health', '/admin/backups']],
+        '/admin/login-activity', '/admin/roles', '/admin/settings', '/admin/health', '/admin/backups',
+        '/admin/reports/accounts', '/admin/reports/accounts/print', '/admin/reports/sign-ins', '/admin/reports/activity', '/admin/reports/usage']],
 ];
 
 $flagged = 0;

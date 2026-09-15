@@ -14,7 +14,7 @@
 | 8 Quality | Done | this release: security scan, HTTP crawl, responsive pass, performance dataset and fixes, deployment preflight and guide |
 
 After Phase 8: registrar reports and teacher class reports (docs/15), completing the
-reports docs/15 lists.
+reports docs/15 lists, and the Super Admin's administrative reports (docs/19).
 
 **1.0.0** is tagged after the school runs the preflight and the acceptance scenarios
 (docs/22) on its own server (docs/23) and fixes whatever they turn up.
