@@ -89,6 +89,12 @@ function deleteTestUsers(): void
         Database::query('DELETE FROM announcements WHERE id = ?', [$announcement['id']]);
     }
 
+    // Backups made by fixture users, with their archives.
+    foreach (Database::select("SELECT id, path FROM backups WHERE created_by IN ({$in})", $ids) as $backup) {
+        @unlink(STORAGE_PATH . '/' . $backup['path']);
+        Database::query('DELETE FROM backups WHERE id = ?', [$backup['id']]);
+    }
+
     // Notifications addressed to fixture users go with them (FK cascade), but
     // "new application" notices also reach REAL registrars; remove those by the
     // fixture application they point at.

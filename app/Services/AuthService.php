@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Auth;
-use App\Core\Config;
 use App\Core\Database;
 use App\Core\HttpException;
+use App\Models\SystemSetting;
 use App\Models\User;
 
 /**
@@ -128,7 +128,7 @@ final class AuthService
     /** Password policy from config (docs/07: configurable, reasonable minimum). */
     public static function passwordPolicyProblem(string $password): ?string
     {
-        $min = (int) Config::get('security.password_min_length', 8);
+        $min = SystemSetting::security('password_min_length', 8);
 
         if (mb_strlen($password) < $min) {
             return "Your new password must be at least {$min} characters long.";
@@ -143,12 +143,12 @@ final class AuthService
     private static function registerFailure(User $user, string $login, string $ip, string $userAgent): void
     {
         $attempts = $user->failed_login_attempts + 1;
-        $max = (int) Config::get('security.max_login_attempts', 5);
+        $max = SystemSetting::security('max_login_attempts', 5);
 
         $update = ['failed_login_attempts' => $attempts];
 
         if ($attempts >= $max) {
-            $minutes = (int) Config::get('security.lockout_minutes', 15);
+            $minutes = SystemSetting::security('lockout_minutes', 15);
             $update['status'] = User::STATUS_LOCKED;
             $update['locked_until'] = date('Y-m-d H:i:s', time() + ($minutes * 60));
         }

@@ -46,3 +46,20 @@ directly against the database by the system owner, never through the application
 Audit entries must never contain passwords or hashes, session identifiers, reset or
 CSRF tokens, or the contents of uploaded documents. Record the identifier of what
 changed, not the sensitive value itself.
+
+---
+
+## As built (Phase 7)
+- **Audit Logs** (`/admin/audit-logs`, Super Admin with `audit.view`): newest first, 50 per
+  page, filtered by date range, who (name, username, or email), action prefix (e.g.
+  `finance.`), module, result, and record type and id. Each entry opens with its before and
+  after values. **Export CSV** (up to 10,000 rows, formula cells neutralized) is itself audited
+  (`audit.exported`).
+- **Sign-in Activity** (`/admin/login-activity`): every attempt from `login_logs`, filtered by
+  date, login tried, IP address, and result, linked to the account.
+- Append-only is enforced in code and by a test: every audit route is GET-only, and no file in
+  `app/` contains an `UPDATE`, `DELETE`, or `TRUNCATE` of `audit_logs`.
+- When an entry's actor account no longer exists (a stale session), the entry is still written
+  without the user link instead of being lost; values that are not valid UTF-8 are substituted,
+  never dropped. A write that still fails goes to `storage/logs/audit-failures.log`, which System
+  Health reports.

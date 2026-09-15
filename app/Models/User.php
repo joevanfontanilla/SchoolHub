@@ -82,6 +82,53 @@ final class User
         return $row === null ? null : self::fromRow($row);
     }
 
+    /**
+     * Accounts for the Super Admin's list (docs/04). Rows, not objects: no password hashes.
+     *
+     * @param array<string,string> $filters q (name, username, email), role, status
+     * @return array{rows:array<int,array<string,mixed>>,total:int}
+     */
+    public static function adminList(array $filters, int $limit = 25, int $offset = 0): array
+    {
+        $where = ['1 = 1'];
+        $bindings = [];
+        if (($filters['q'] ?? '') !== '') {
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $filters['q']) . '%';
+            $where[] = "(u.username LIKE ? OR u.email LIKE ? OR CONCAT(u.first_name, ' ', u.last_name) LIKE ?)";
+            array_push($bindings, $like, $like, $like);
+        }
+        if (($filters['role'] ?? '') !== '') {
+            $where[] = 'r.name = ?';
+            $bindings[] = $filters['role'];
+        }
+        if (in_array($filters['status'] ?? '', [self::STATUS_ACTIVE, self::STATUS_PENDING, self::STATUS_DISABLED, self::STATUS_LOCKED], true)) {
+            $where[] = 'u.status = ?';
+            $bindings[] = $filters['status'];
+        }
+        $sqlWhere = implode(' AND ', $where);
+        $limit = max(1, $limit);
+        $offset = max(0, $offset);
+
+        return [
+            'rows' => Database::select(
+                "SELECT u.id, u.username, u.email, u.first_name, u.middle_name, u.last_name, u.status, u.failed_login_attempts,
+                        u.locked_until, u.last_login_at, u.created_at, r.name AS role_name
+                   FROM users u JOIN roles r ON r.id = u.role_id
+                  WHERE {$sqlWhere}
+                  ORDER BY (u.status = 'Locked') DESC, u.last_name, u.first_name
+                  LIMIT {$limit} OFFSET {$offset}",
+                $bindings
+            ),
+            'total' => (int) Database::scalar("SELECT COUNT(*) FROM users u JOIN roles r ON r.id = u.role_id WHERE {$sqlWhere}", $bindings),
+        ];
+    }
+
+    /** @return array<string,int> status => number of accounts */
+    public static function statusCounts(): array
+    {
+        return array_map('intval', array_column(Database::select('SELECT status, COUNT(*) AS c FROM users GROUP BY status'), 'c', 'status'));
+    }
+
     public function fullName(): string
     {
         $middle = $this->middle_name !== null && $this->middle_name !== ''

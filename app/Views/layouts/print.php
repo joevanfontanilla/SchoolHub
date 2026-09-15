@@ -18,7 +18,7 @@ $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? 'Document') ?> · <?= e($schoolName) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
-    <link rel="icon" type="image/jpeg" href="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>">
+    <link rel="icon" type="image/jpeg" href="<?= e(school_logo_url()) ?>">
 </head>
 <body class="bg-brand-canvas font-sans text-slate-800 print:bg-white">
     <div class="no-print sticky top-0 z-10 border-b border-brand-100 bg-white/95 px-4 py-3 backdrop-blur">
@@ -30,7 +30,7 @@ $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
 
     <main class="mx-auto my-6 max-w-4xl bg-white p-6 shadow-sm ring-1 ring-brand-100 sm:p-10 print:my-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
         <header class="flex items-center gap-4 border-b-2 border-brand-navy pb-4">
-            <img src="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>" alt="" width="72" height="72" class="school-seal h-16 w-16">
+            <img src="<?= e(school_logo_url()) ?>" alt="" width="72" height="72" class="school-seal h-16 w-16">
             <div class="min-w-0 flex-1">
                 <p class="font-display text-xl font-extrabold uppercase tracking-tight text-brand-navy"><?= e($schoolName) ?></p>
                 <p class="text-sm text-slate-600"><?= e($school['school_address'] ?? '') ?></p>

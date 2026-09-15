@@ -20,7 +20,7 @@ $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
 <header class="sticky top-0 z-40 border-b border-brand-200/70 bg-white/95 backdrop-blur">
     <nav class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8" aria-label="Main">
         <a href="<?= e(url('/')) ?>" class="flex min-w-0 shrink-0 items-center gap-3">
-            <img src="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>" alt="" width="44" height="44"
+            <img src="<?= e(school_logo_url()) ?>" alt="" width="44" height="44"
                  class="school-seal h-11 w-11 shadow-sm">
             <!-- Visually hidden on the smallest screens, but always the link's accessible name. -->
             <span class="sr-only font-display text-sm font-extrabold uppercase leading-tight tracking-tight text-brand-navy sm:not-sr-only xl:text-base">

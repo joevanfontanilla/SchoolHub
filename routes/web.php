@@ -13,7 +13,14 @@
 
 declare(strict_types=1);
 
+use App\Controllers\Admin\AuditLogController as AdminAudit;
+use App\Controllers\Admin\BackupController as AdminBackups;
 use App\Controllers\Admin\DashboardController as AdminDashboard;
+use App\Controllers\Admin\HealthController as AdminHealth;
+use App\Controllers\Admin\RoleController as AdminRoles;
+use App\Controllers\Admin\SettingController as AdminSettings;
+use App\Controllers\Admin\UserController as AdminUsers;
+use App\Controllers\PasswordResetController;
 use App\Controllers\AuthController;
 use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
@@ -68,6 +75,13 @@ $router->post('/logout', [AuthController::class, 'logout'],   ['auth'], 'logout'
 $router->get('/password/change',  [AuthController::class, 'showChangePassword'], ['auth'], 'password.change');
 $router->post('/password/change', [AuthController::class, 'changePassword'],     ['auth']);
 
+// One-time password links issued by the Super Admin (docs/07). Signed-out visitors only.
+$router->get('/password/reset/{token}',  [PasswordResetController::class, 'show'],   ['guest'], 'password.reset');
+$router->post('/password/reset/{token}', [PasswordResetController::class, 'update'], ['guest']);
+
+// The school logo set in System Settings (the built-in seal when none is uploaded).
+$router->get('/branding/logo', [AdminSettings::class, 'logo'], [], 'branding.logo');
+
 // Student self-registration (docs/09 step 1).
 $router->get('/register',  [RegisterController::class, 'show'],  ['guest'], 'register');
 $router->post('/register', [RegisterController::class, 'store'], ['guest']);
@@ -83,6 +97,45 @@ $router->get('/teacher/dashboard',   [TeacherDashboard::class, 'index'],   ['aut
 $router->get('/registrar/dashboard', [RegistrarDashboard::class, 'index'], ['auth', 'role:' . User::ROLE_REGISTRAR],   'registrar.dashboard');
 $router->get('/cashier/dashboard',   [CashierDashboard::class, 'index'],   ['auth', 'role:' . User::ROLE_CASHIER],     'cashier.dashboard');
 $router->get('/admin/dashboard',     [AdminDashboard::class, 'index'],     ['auth', 'role:' . User::ROLE_SUPER_ADMIN], 'admin.dashboard');
+
+// ---------------------------------------------------------------------------
+// Administration (Phase 7)
+//
+// The Super Admin role AND the permission for the area. The audit log has no
+// route that changes or removes an entry (docs/19); restores run only from the
+// command line (database/restore.php).
+// ---------------------------------------------------------------------------
+$admin = static fn (string $permission): array => ['auth', 'role:' . User::ROLE_SUPER_ADMIN, 'can:' . $permission];
+
+$router->get('/admin/users',                  [AdminUsers::class, 'index'],     $admin('users.manage'), 'admin.users');
+$router->get('/admin/users/create',           [AdminUsers::class, 'create'],    $admin('users.manage'));
+$router->post('/admin/users/create',          [AdminUsers::class, 'store'],     $admin('users.manage'));
+$router->get('/admin/users/{id}',             [AdminUsers::class, 'show'],      $admin('users.manage'));
+$router->get('/admin/users/{id}/edit',        [AdminUsers::class, 'edit'],      $admin('users.manage'));
+$router->post('/admin/users/{id}/edit',       [AdminUsers::class, 'update'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/disable',    [AdminUsers::class, 'disable'],   $admin('users.manage'));
+$router->post('/admin/users/{id}/enable',     [AdminUsers::class, 'enable'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/unlock',     [AdminUsers::class, 'unlock'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/reset-link', [AdminUsers::class, 'resetLink'], $admin('users.manage'));
+
+$router->get('/admin/roles',                   [AdminRoles::class, 'index'],  $admin('roles.manage'), 'admin.roles');
+$router->post('/admin/roles/{id}/permissions', [AdminRoles::class, 'update'], $admin('roles.manage'));
+
+$router->get('/admin/settings',          [AdminSettings::class, 'index'],  $admin('settings.manage'), 'admin.settings');
+$router->post('/admin/settings/{group}', [AdminSettings::class, 'update'], $admin('settings.manage'));
+
+$router->get('/admin/audit-logs',        [AdminAudit::class, 'index'],  $admin('audit.view'), 'admin.audit');
+$router->get('/admin/audit-logs/export', [AdminAudit::class, 'export'], $admin('audit.view'));
+$router->get('/admin/audit-logs/{id}',   [AdminAudit::class, 'show'],   $admin('audit.view'));
+$router->get('/admin/login-activity',    [AdminAudit::class, 'logins'], $admin('audit.view'), 'admin.logins');
+
+$router->get('/admin/backups',                [AdminBackups::class, 'index'],    $admin('backups.manage'), 'admin.backups');
+$router->post('/admin/backups/create',        [AdminBackups::class, 'store'],    $admin('backups.manage'));
+$router->post('/admin/backups/{id}/verify',   [AdminBackups::class, 'verify'],   $admin('backups.manage'));
+$router->post('/admin/backups/{id}/download', [AdminBackups::class, 'download'], $admin('backups.manage'));
+$router->post('/admin/backups/{id}/delete',   [AdminBackups::class, 'destroy'],  $admin('backups.manage'));
+
+$router->get('/admin/health', [AdminHealth::class, 'index'], $admin('system.health'), 'admin.health');
 
 // ---------------------------------------------------------------------------
 // Student: profile, enrollment application, requirements, status (Phase 2)

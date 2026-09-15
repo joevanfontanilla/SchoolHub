@@ -57,6 +57,23 @@ if (!function_exists('url')) {
     }
 }
 
+if (!function_exists('absolute_url')) {
+    /**
+     * A full URL (scheme and host) for links given to people outside the page, such as a
+     * password link. Uses app.base_url when configured; otherwise this request's host.
+     */
+    function absolute_url(string $path): string
+    {
+        $configured = (string) App\Core\Config::get('app.base_url', '');
+        if (preg_match('#^https?://#i', $configured)) {
+            return rtrim($configured, '/') . '/' . ltrim($path, '/');
+        }
+        $https = ($_SERVER['HTTPS'] ?? '') !== '' && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+        $host = preg_replace('/[^A-Za-z0-9.:\-\[\]]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        return ($https ? 'https' : 'http') . '://' . $host . url($path);
+    }
+}
+
 if (!function_exists('asset')) {
     /** URL for a file under public/, cache-busted by its modification time. */
     function asset(string $path): string
@@ -229,5 +246,17 @@ if (!function_exists('partial')) {
     function partial(string $name, array $data = []): string
     {
         return View::partial('partials/' . $name, $data);
+    }
+}
+
+if (!function_exists('school_logo_url')) {
+    /** The school logo: the one uploaded in System Settings, or the built-in seal. */
+    function school_logo_url(): string
+    {
+        $stored = (string) App\Models\SystemSetting::get('school_logo', '');
+        if ($stored !== '' && is_file(STORAGE_PATH . '/' . $stored)) {
+            return url('/branding/logo') . '?v=' . substr(sha1($stored), 0, 10);
+        }
+        return asset('assets/images/lyceum-logo.jpg');
     }
 }

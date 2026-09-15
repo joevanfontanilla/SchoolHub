@@ -76,11 +76,14 @@ $nav = match ($user?->role_name) {
     User::ROLE_SUPER_ADMIN => [
         ['/admin/dashboard', 'Dashboard', 'dashboard', true],
         'Administration',
-        ['/admin/users', 'Users', 'users', false],
-        ['/admin/roles', 'Roles & Permissions', 'shield', false],
-        ['/admin/settings', 'System Settings', 'settings', false],
-        ['/admin/audit-logs', 'Audit Logs', 'list-check', false],
-        ['/admin/backups', 'Backups', 'database', false],
+        ['/admin/users', 'Users', 'users', true],
+        ['/admin/roles', 'Roles & Permissions', 'shield', true],
+        ['/admin/settings', 'System Settings', 'settings', true],
+        'Monitoring',
+        ['/admin/audit-logs', 'Audit Logs', 'list-check', true],
+        ['/admin/login-activity', 'Sign-in Activity', 'key', true],
+        ['/admin/backups', 'Backups', 'database', true],
+        ['/admin/health', 'System Health', 'status', true],
         'Communication',
         ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
         ['/portal/notifications', 'Notifications', 'bell', true],
@@ -102,7 +105,7 @@ $itemClass = 'group relative flex items-center gap-3 whitespace-nowrap rounded-x
        aria-label="Sidebar">
     <div class="relative flex h-full flex-col overflow-hidden">
         <a href="<?= e(url('/')) ?>" class="flex flex-col items-center px-6 pb-5 pt-7 text-center">
-            <img src="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>" alt="" width="84" height="84"
+            <img src="<?= e(school_logo_url()) ?>" alt="" width="84" height="84"
                  class="school-seal h-20 w-20 ring-4 ring-white/15">
             <span class="mt-3 font-display text-base font-extrabold uppercase leading-tight tracking-tight"><?= e($schoolName) ?></span>
             <span class="mt-1 text-sm text-white/75"><?= e($portalName) ?></span>

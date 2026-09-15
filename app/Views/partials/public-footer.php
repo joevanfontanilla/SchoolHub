@@ -17,7 +17,7 @@ $linkClass  = 'text-white/80 hover:text-brand-sky hover:underline';
         <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
                 <div class="flex items-center gap-3">
-                    <img src="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>" alt="" width="56" height="56"
+                    <img src="<?= e(school_logo_url()) ?>" alt="" width="56" height="56"
                          class="school-seal h-14 w-14 ring-white/80">
                     <p class="font-display text-sm font-extrabold uppercase leading-tight tracking-tight">
                         <?= e($schoolName) ?>

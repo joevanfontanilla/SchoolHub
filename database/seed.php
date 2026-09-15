@@ -117,6 +117,18 @@ const SETTINGS = [
     ['registration_limit_per_hour', '5', 'int', 'security', 'Student sign-ups allowed from one IP address per hour', 0],
     ['payment_instructions', "GCash: 0917 000 0000 (Lyceum of the East Aurora)\nBank deposit: Landbank, Account No. 0000-0000-00, Lyceum of the East Aurora\nKeep your reference number and a screenshot or photo of the receipt.", 'string', 'finance', 'Where students send online payments. SAMPLE details: replace with the school\'s real accounts.', 0],
     ['enrollment_open_message', 'Enrollment for the coming semester is now open.', 'string', 'enrollment', 'Shown on the public enrollment page', 1],
+    ['school_logo', '', 'string', 'school', 'Stored logo file (set from System Settings); empty uses the built-in seal', 1],
+    // Security (docs/07). These take over from config security.* once seeded.
+    ['max_login_attempts', '5', 'int', 'security', 'Failed sign-ins before an account is locked', 0],
+    ['lockout_minutes', '15', 'int', 'security', 'How long a locked account stays locked', 0],
+    ['ip_max_attempts', '20', 'int', 'security', 'Failed sign-ins from one IP address before it is blocked', 0],
+    ['ip_window_minutes', '15', 'int', 'security', 'Window for counting failed sign-ins', 0],
+    ['password_min_length', '8', 'int', 'security', 'Minimum password length', 0],
+    ['reset_link_minutes', '60', 'int', 'security', 'How long a password reset link works', 0],
+    ['setup_link_hours', '72', 'int', 'security', 'How long a new staff account\'s set-password link works', 0],
+    // Backups (docs/20)
+    ['backup_retention_count', '14', 'int', 'backups', 'Completed backups to keep; older ones are removed after each new backup', 0],
+    ['backup_include_uploads', '1', 'bool', 'backups', 'Include uploaded files (requirements, payment proofs, images) in backups', 0],
 ];
 
 const YEAR_LEVELS = [
@@ -148,8 +160,7 @@ const REQUIREMENT_TYPES = [
 try {
     Database::transaction(static function (): void {
         seedRoles();
-        seedPermissions();
-        seedRolePermissions();
+        seedRolePermissions(seedPermissions());
         seedSettings();
         seedYearLevels();
         seedPrograms();
@@ -181,8 +192,10 @@ function seedRoles(): void
     echo '  roles ................ ' . count(ROLES) . "\n";
 }
 
-function seedPermissions(): void
+/** @return array<int,string> the permission keys this run created */
+function seedPermissions(): array
 {
+    $existing = array_column(Database::select('SELECT `key` FROM permissions'), 'key');
     foreach (PERMISSIONS as $key => [$module, $description]) {
         Database::query(
             'INSERT INTO permissions (`key`, module, description) VALUES (?, ?, ?)
@@ -191,38 +204,19 @@ function seedPermissions(): void
         );
     }
     echo '  permissions .......... ' . count(PERMISSIONS) . "\n";
+    return array_values(array_diff(array_keys(PERMISSIONS), $existing));
 }
 
-function seedRolePermissions(): void
+/**
+ * Default grants, without undoing changes the Super Admin made in the roles screen:
+ * see PermissionService::seedDefaults().
+ *
+ * @param array<int,string> $newKeys
+ */
+function seedRolePermissions(array $newKeys): void
 {
-    $roleIds = array_column(Database::select('SELECT id, name FROM roles'), 'id', 'name');
-    $permIds = array_column(Database::select('SELECT id, `key` FROM permissions'), 'id', 'key');
-
-    $granted = 0;
-
-    foreach (ROLE_PERMISSIONS as $roleName => $keys) {
-        $roleId = $roleIds[$roleName] ?? null;
-        if ($roleId === null) {
-            continue;
-        }
-
-        // Rewrite this role's grants so removing a key from the list removes it
-        // from the database too.
-        Database::query('DELETE FROM role_permissions WHERE role_id = ?', [$roleId]);
-
-        foreach ($keys as $key) {
-            if (!isset($permIds[$key])) {
-                throw new RuntimeException("Unknown permission key in ROLE_PERMISSIONS: {$key}");
-            }
-            Database::query(
-                'INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
-                [$roleId, $permIds[$key]]
-            );
-            $granted++;
-        }
-    }
-
-    echo "  role permissions ..... {$granted}\n";
+    $granted = App\Services\PermissionService::seedDefaults(ROLE_PERMISSIONS, $newKeys);
+    echo "  role permissions ..... {$granted} added\n";
 }
 
 function seedSettings(): void

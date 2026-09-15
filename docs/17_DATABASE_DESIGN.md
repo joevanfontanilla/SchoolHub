@@ -437,6 +437,12 @@ Indexes `(user_id, created_at)`, `(module, created_at)`, `(target_type, target_i
 `status` VARCHAR(20) (`Running`, `Completed`, `Failed`), `checksum` CHAR(64),
 `started_at`, `completed_at`, `created_by` FK nullable, `notes` TEXT.
 
+> **As built (migration 021):** `type` is `MANUAL`, `SCHEDULED`, or `PRE_RESTORE`; `status` is
+> `RUNNING`, `COMPLETED`, `FAILED`, or `DELETED` (the file was removed, the record kept). Also
+> `includes_uploads`, `table_count`, `upload_count`, `verified_at`, `verify_result`, and `error`.
+> `filename` is unique. `password_reset_tokens` gained `purpose` (`SETUP` or `RESET`) and
+> `created_by` (the administrator who issued the link); `token_hash` is a SHA-256 hex digest.
+
 ### `migrations`
 `filename` VARCHAR(255) unique, `batch` INT, `applied_at` DATETIME.
 Used by `database/migrate.php`. No `updated_at`.

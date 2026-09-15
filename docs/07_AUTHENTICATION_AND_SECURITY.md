@@ -64,3 +64,40 @@ The reset flow stores a **hash** of a single-use, expiring token. Delivery in v1
 PHP's native `mail()` where SMTP is configured; where it is not, a Super Admin issues
 the reset link directly to the user. No third-party mail library is used, per the
 zero-dependency rule in `00_MASTER_SPECIFICATION.md`.
+
+---
+
+## As built (Phase 7)
+
+### Staff accounts and one-time password links
+- The Super Admin creates Teacher, Registrar, Cashier, and Super Admin accounts
+  (`/admin/users/create`). This amends the table above: a new staff account is **Pending
+  with no usable password** (a random hash nobody knows), not a temporary password, so
+  there is nothing to "must change". Students still self-register.
+- Creating the account shows a **one-time set-password link** (valid `setup_link_hours`,
+  default 72). A forgotten password gets a **reset link** from the user's page (valid
+  `reset_link_minutes`, default 60). Both are shown once, on the page that issued them.
+- Only a **SHA-256 hash** of the 256-bit token is stored (`password_reset_tokens`, with its
+  `purpose` and `created_by`). A link works once; issuing a new one, setting the password,
+  or disabling the account ends the older links. A disabled account's link never works.
+- Using a link (`/password/reset/{token}`, signed-out visitors only) applies the password
+  policy, activates a Pending account, and unlocks a Locked one. Invalid, used, and expired
+  links all show the same message. Every issue and use is audited (`password.*`).
+- No mail is sent: the administrator gives the link to the person. The sign-in page says
+  to contact the school administrator.
+
+### Account administration (`UserAdminService`)
+- Edit name, username, and email (unique); disable with a required reason; enable; unlock.
+- A disabled account's open sessions end on their next request.
+- Roles change only between staff roles. Students keep the Student role, staff never
+  become students, no one changes their own role, and a teacher who still teaches active
+  classes keeps the Teacher role.
+- The Super Admin cannot disable their own account, and the last active Super Admin can be
+  neither disabled nor moved to another role.
+
+### Security settings
+`max_login_attempts`, `lockout_minutes`, `ip_max_attempts`, `ip_window_minutes`,
+`password_min_length`, `reset_link_minutes`, `setup_link_hours`, and
+`registration_limit_per_hour` are system settings edited in System Settings → Security
+(`SystemSetting::security()`, falling back to `config security.*`). The per-IP limit may not
+be lower than the per-account limit.

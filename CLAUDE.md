@@ -24,7 +24,8 @@ php database/import_curricula.php   # the six curricula from database/seeds/curr
 php database/import_curricula.php --check   # validate the curriculum files; writes nothing
 php database/dispatch_announcements.php     # deliver scheduled announcements now (safe to repeat)
 php database/create_admin.php       # interactively create the first Super Admin
-php database/backup.php             # manual database backup
+php database/backup.php             # backup: database + uploads (--scheduled for Task Scheduler, --verify=ID)
+php database/restore.php <file>     # restore a backup: command line only, typed confirmation, safety backup first
 
 php tests/run.php                   # full test suite (hand-rolled runner, no PHPUnit)
 php tests/run.php --filter=auth     # a single test group
@@ -195,6 +196,14 @@ an **audit log** entry.
   `announcements.manage` / `announcements.publish`, re-checked with `User::hasPermission()`).
   Scheduled announcements are delivered by `AnnouncementService::dispatchDue()` on portal page loads
   and by `php database/dispatch_announcements.php`.
+- **Administration (docs/07, docs/19, docs/20).** Admin routes are `role:Super Admin` **plus** a `can:`
+  permission, walked by `tests/admin_test.php`. Accounts change only through `UserAdminService` (staff are
+  created Pending with a one-time link from `PasswordResetService`; only token hashes are stored). Role
+  permissions change through `PermissionService`; the seeder uses `PermissionService::seedDefaults()`, which
+  never removes a grant. Settings edited on screen are defined in `SettingsService::GROUPS`; security
+  thresholds are read with `SystemSetting::security()`. Backups go through `BackupService` (PDO dump + zip +
+  checksums); **restore is never exposed on the web**. The audit log has no write route and no
+  `UPDATE`/`DELETE` of `audit_logs` anywhere in `app/` (a test enforces this).
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
   calling `session_destroy()`. The latter keeps the old id for the rest of the request while
   deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).

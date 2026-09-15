@@ -17,7 +17,7 @@ $swatches   = ['swatch-primary', 'swatch-navy', 'swatch-teal', 'swatch-sky'];
     <div class="relative z-20 mx-auto max-w-7xl px-4 pb-10 pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pb-44 lg:pt-20">
         <div class="max-w-2xl">
             <div class="flex items-center gap-4 sm:gap-5">
-                <img src="<?= e(asset('assets/images/lyceum-logo.jpg')) ?>"
+                <img src="<?= e(school_logo_url()) ?>"
                      alt=""
                      width="96" height="96"
                      class="school-seal h-16 w-16 sm:h-24 sm:w-24">

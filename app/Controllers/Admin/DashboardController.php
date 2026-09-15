@@ -6,42 +6,40 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
-use App\Core\Database;
 use App\Core\Request;
 use App\Models\Announcement;
+use App\Models\AuditLog;
+use App\Models\User;
+use App\Services\BackupService;
+use App\Services\SystemHealth;
 
 /**
- * Super Admin dashboard (docs/20). User management, audit viewer, and backups
- * arrive in Phase 7 — the counts here are real.
+ * Super Admin dashboard (docs/20): accounts, activity, backups, and health at a glance.
  */
 final class DashboardController extends Controller
 {
     public function index(Request $request): void
     {
         $user = Auth::user();
-
-        $activeUsers = (int) Database::scalar("SELECT COUNT(*) FROM users WHERE status = 'Active'");
-        $lockedUsers = (int) Database::scalar("SELECT COUNT(*) FROM users WHERE status = 'Locked'");
-        $auditToday  = (int) Database::scalar('SELECT COUNT(*) FROM audit_logs WHERE DATE(created_at) = CURDATE()');
-        $failedToday = (int) Database::scalar(
-            "SELECT COUNT(*) FROM login_logs WHERE result = 'FAILED' AND DATE(attempted_at) = CURDATE()"
-        );
+        $counts = User::statusCounts();
+        $today = date('Y-m-d');
+        $checks = SystemHealth::checks();
+        $lastBackup = array_values(array_filter(BackupService::history(20), static fn ($b) => $b['status'] === 'COMPLETED'))[0] ?? null;
+        $failedToday = AuditLog::loginAttemptCount(['from' => $today, 'to' => $today, 'result' => 'FAILED']);
+        $locked = $counts[User::STATUS_LOCKED] ?? 0;
 
         $this->appView('dashboards/admin', [
             'title'         => 'Dashboard',
             'announcements' => Announcement::forUser($user, 5),
             'cards'         => [
-                ['icon' => 'users', 'label' => 'Active users',        'value' => (string) $activeUsers, 'hint' => 'Able to sign in',        'tone' => 'neutral'],
-                ['icon' => 'lock', 'label' => 'Locked accounts',     'value' => (string) $lockedUsers, 'hint' => $lockedUsers > 0 ? 'Needs attention' : 'None locked', 'tone' => $lockedUsers > 0 ? 'warning' : 'neutral'],
-                ['icon' => 'list-check', 'label' => 'Audit entries today', 'value' => (string) $auditToday,  'hint' => 'Recorded activity',      'tone' => 'neutral'],
-                ['icon' => 'shield', 'label' => 'Failed sign-ins today', 'value' => (string) $failedToday, 'hint' => $failedToday > 0 ? 'Review the login log' : 'None', 'tone' => $failedToday > 5 ? 'warning' : 'neutral'],
+                ['icon' => 'users', 'label' => 'Active users', 'value' => (string) ($counts[User::STATUS_ACTIVE] ?? 0), 'hint' => ($counts[User::STATUS_PENDING] ?? 0) . ' pending setup · ' . ($counts[User::STATUS_DISABLED] ?? 0) . ' disabled', 'tone' => 'neutral'],
+                ['icon' => 'lock', 'label' => 'Locked accounts', 'value' => (string) $locked, 'hint' => $locked > 0 ? 'Needs attention' : 'None locked', 'tone' => $locked > 0 ? 'warning' : 'neutral'],
+                ['icon' => 'shield', 'label' => 'Failed sign-ins today', 'value' => (string) $failedToday, 'hint' => $failedToday > 0 ? 'See sign-in activity' : 'None', 'tone' => $failedToday > 5 ? 'warning' : 'neutral'],
+                ['icon' => 'database', 'label' => 'Latest backup', 'value' => $lastBackup ? d($lastBackup['completed_at']) : 'None', 'hint' => $lastBackup ? SystemHealth::bytes((int) $lastBackup['size_bytes']) : 'Make the first backup', 'tone' => $lastBackup ? 'neutral' : 'warning'],
             ],
-            'health' => [
-                'PHP version'         => PHP_VERSION,
-                'Database'            => Database::scalar('SELECT VERSION()'),
-                'Application version' => '1.0.0 (Phase 1)',
-                'Storage writable'    => is_writable(STORAGE_PATH) ? 'Yes' : 'No',
-            ],
+            'checks'   => array_values(array_filter($checks, static fn ($c) => $c['status'] !== 'OK')),
+            'overall'  => SystemHealth::overall($checks),
+            'activity' => AuditLog::search([], 8),
         ]);
     }
 }

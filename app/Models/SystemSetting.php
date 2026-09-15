@@ -23,6 +23,16 @@ final class SystemSetting
         return self::cast($all[$key]['value'], $all[$key]['type']);
     }
 
+    /**
+     * A security threshold (docs/07): the system setting when the Super Admin has one,
+     * else config security.<key>, else the default. Always at least 1.
+     */
+    public static function security(string $key, int $default): int
+    {
+        $fallback = (int) \App\Core\Config::get('security.' . $key, $default);
+        return max(1, (int) self::get($key, $fallback));
+    }
+
     /** Settings marked public — safe to render on the public website. */
     public static function publicSettings(): array
     {

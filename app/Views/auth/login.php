@@ -38,6 +38,6 @@
             New student?
             <a href="<?= e(url('/register')) ?>" class="font-semibold text-brand-600 hover:underline">Create an account</a>
         </p>
-        <p>Forgot your password? Contact the registrar's office to have it reset.</p>
+        <p>Forgot your password? Contact the school administrator for a one-time reset link.</p>
     </div>
 </div>

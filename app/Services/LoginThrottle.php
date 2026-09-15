@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\Config;
 use App\Core\Database;
+use App\Models\SystemSetting;
 
 /**
  * Login rate limiting, counted from login_logs per account and per IP (docs/07).
@@ -27,7 +27,7 @@ final class LoginThrottle
     /** Recent failures for this login name, since the last successful sign-in. */
     public static function recentFailuresForAccount(string $username): int
     {
-        $window = (int) Config::get('security.ip_window_minutes', 15);
+        $window = SystemSetting::security('ip_window_minutes', 15);
         $since = date('Y-m-d H:i:s', time() - ($window * 60));
 
         return (int) Database::scalar(
@@ -41,7 +41,7 @@ final class LoginThrottle
 
     public static function recentFailuresForIp(string $ip): int
     {
-        $window = (int) Config::get('security.ip_window_minutes', 15);
+        $window = SystemSetting::security('ip_window_minutes', 15);
         $since = date('Y-m-d H:i:s', time() - ($window * 60));
 
         return (int) Database::scalar(
@@ -55,7 +55,7 @@ final class LoginThrottle
 
     public static function ipIsBlocked(string $ip): bool
     {
-        return self::recentFailuresForIp($ip) >= (int) Config::get('security.ip_max_attempts', 20);
+        return self::recentFailuresForIp($ip) >= SystemSetting::security('ip_max_attempts', 20);
     }
 
     /** Clear the failure counter after a successful sign-in. */

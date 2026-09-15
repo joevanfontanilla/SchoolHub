@@ -97,5 +97,15 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Record payments or enter grades in place of the Cashier or Teacher. Super Admin
   administers the system; it is not a substitute operator role.
 
+## As built (Phase 7): editing role permissions
+The Super Admin edits the permissions of Student, Teacher, Registrar, and Cashier at
+`/admin/roles` (`PermissionService`). Every change is audited with the permissions added and
+removed. Super Admin itself always holds every permission and cannot be edited, and the
+`administration` permissions stay Super Admin only. Routes also require the matching role, so
+granting a permission to another role does not open that role's screens; the matrix is mainly
+for narrowing access. `database/seed.php` no longer rewrites grants: it fills a role that has
+none (a fresh install) and grants only permissions that are new in that run, so choices made in
+the screen survive re-seeding.
+
 ## Sensitive Operations
 Enrollment approval, grade changes, fee changes, payment recording, role changes, and backup restoration must be logged.

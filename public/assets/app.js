@@ -148,6 +148,32 @@
         sync();
     });
 
+    // Copy a one-time link to the clipboard. The field stays selectable, so copying
+    // by hand still works where the clipboard API is unavailable (plain http).
+    document.querySelectorAll('[data-copy]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var field = document.querySelector(button.getAttribute('data-copy'));
+            if (!field) {
+                return;
+            }
+            field.focus();
+            field.select();
+            var done = function () {
+                button.textContent = 'Copied';
+            };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(field.value).then(done);
+            } else if (document.execCommand && document.execCommand('copy')) {
+                done();
+            }
+        });
+    });
+    document.querySelectorAll('[data-select-on-focus]').forEach(function (field) {
+        field.addEventListener('focus', function () {
+            field.select();
+        });
+    });
+
     // Filter forms apply as soon as a dropdown changes. The search box still
     // waits for Enter or its button, so typing does not reload the page.
     document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {

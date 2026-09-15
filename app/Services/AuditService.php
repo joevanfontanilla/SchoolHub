@@ -36,9 +36,10 @@ final class AuditService
         ?string $actorRole = null
     ): void {
         $request = new Request();
+        $row = [];
 
         try {
-            Database::insert('audit_logs', [
+            Database::insert('audit_logs', $row = [
                 'user_id'     => $userId ?? Auth::id(),
                 'actor_role'  => $actorRole ?? Auth::roleName() ?? 'Guest',
                 'action'      => $action,
@@ -54,6 +55,15 @@ final class AuditService
                 'created_at'  => date('Y-m-d H:i:s'),
             ]);
         } catch (\Throwable $e) {
+            // The actor's account no longer exists (a stale session): keep the entry
+            // without the link to the user rather than lose it.
+            if ($row !== [] && $row['user_id'] !== null && str_contains($e->getMessage(), 'fk_audit_user')) {
+                try {
+                    Database::insert('audit_logs', ['user_id' => null, 'remarks' => trim(($remarks ?? '') . ' (actor account #' . $row['user_id'] . ' no longer exists)')] + $row);
+                    return;
+                } catch (\Throwable $e) {
+                }
+            }
             // An audit write must never take down the action it is recording,
             // but it must not vanish silently either.
             @file_put_contents(
@@ -76,6 +86,6 @@ final class AuditService
             }
         }
 
-        return $values === [] ? null : json_encode($values, JSON_UNESCAPED_UNICODE);
+        return $values === [] ? null : (string) json_encode($values, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
     }
 }
