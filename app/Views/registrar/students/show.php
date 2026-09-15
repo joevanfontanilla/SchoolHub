@@ -42,13 +42,20 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
     <a href="<?= e(url('/registrar/students')) ?>" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">&larr; Students</a>
 
     <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-            <p class="eyebrow"><?= e($student['student_number'] ?? 'No student number yet') ?></p>
-            <h2 class="mt-1 text-2xl"><?= e(trim($student['first_name'] . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . $student['last_name'])) ?></h2>
-            <p class="mt-1 text-sm text-slate-600">
-                <?= e($student['email']) ?> · <?= e($student['status']) ?>
-                <?= $student['program_code'] ? ' · ' . e($student['program_code'] . ', ' . $student['year_level_name']) : '' ?>
-            </p>
+        <div class="flex items-start gap-4">
+            <?php if (trim((string) ($profile['photo_path'] ?? '')) !== ''): ?>
+                <img src="<?= e(url('/registrar/students/' . $student['id'] . '/photo') . '?v=' . urlencode((string) ($profile['updated_at'] ?? ''))) ?>"
+                     alt="Photo of <?= e(trim($student['first_name'] . ' ' . $student['last_name'])) ?>"
+                     class="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-brand-100">
+            <?php endif; ?>
+            <div>
+                <p class="eyebrow"><?= e($student['student_number'] ?? 'No student number yet') ?></p>
+                <h2 class="mt-1 text-2xl"><?= e(trim($student['first_name'] . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . $student['last_name'])) ?></h2>
+                <p class="mt-1 text-sm text-slate-600">
+                    <?= e($student['email']) ?> · <?= e($student['status']) ?>
+                    <?= $student['program_code'] ? ' · ' . e($student['program_code'] . ', ' . $student['year_level_name']) : '' ?>
+                </p>
+            </div>
         </div>
         <span class="badge <?= $missing === [] ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text' ?>">
             <?= $missing === [] ? 'Profile complete' : 'Profile incomplete' ?>

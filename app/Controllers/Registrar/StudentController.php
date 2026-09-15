@@ -114,6 +114,17 @@ final class StudentController extends Controller
     }
 
     /** @return array<string,mixed> */
+    /** Stream a student's photo for the record page (registrar with students.view). */
+    public function photo(Request $request): void
+    {
+        $student = $this->student($request);
+        $photo = StudentProfileService::photo((int) $student['id']);
+        if ($photo === null) {
+            throw HttpException::notFound('That student has no photo.');
+        }
+        \App\Services\FileStreamer::send($photo['path'], 'photo.' . pathinfo($photo['path'], PATHINFO_EXTENSION), $photo['mime'], true);
+    }
+
     private function student(Request $request): array
     {
         $student = RegistrarQueue::student((int) $request->param('id'));

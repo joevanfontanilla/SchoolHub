@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
+use App\Core\UploadedFile;
 use App\Core\ValidationException;
 use App\Core\Validator;
 use App\Models\Student;
@@ -17,6 +18,10 @@ final class StudentProfileService
 {
     public const SEXES           = ['Male', 'Female'];
     public const CIVIL_STATUSES  = ['Single', 'Married', 'Widowed', 'Separated'];
+
+    /** A profile photo: a small JPG or PNG, stored under storage/ and served only through a route. */
+    public const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png'];
+    public const PHOTO_MAX_BYTES  = 2 * 1024 * 1024;
 
     /** Profile fields that must be filled before an application can be submitted. */
     private const REQUIRED = [
@@ -39,12 +44,12 @@ final class StudentProfileService
      * @param array<string,mixed> $input
      * @throws ValidationException
      */
-    public static function update(User $user, array $input): void
+    public static function update(User $user, array $input, ?UploadedFile $photo = null): void
     {
         $student = RegistrationService::ensureStudentRecord($user);
         $studentId = (int) $student['id'];
 
-        self::save($studentId, $user->id, $input, !self::nameLocked($studentId), $user);
+        self::save($studentId, $user->id, $input, !self::nameLocked($studentId), $user, $photo);
     }
 
     /**
@@ -56,7 +61,7 @@ final class StudentProfileService
      *                            the registrar always has it (docs/04 "manage student records")
      * @throws ValidationException
      */
-    public static function save(int $studentId, int $ownerUserId, array $input, bool $allowNameEdit, User $actor): void
+    public static function save(int $studentId, int $ownerUserId, array $input, bool $allowNameEdit, User $actor, ?UploadedFile $photo = null): void
     {
         $nameLocked = !$allowNameEdit;
         $user = $actor;
@@ -93,11 +98,57 @@ final class StudentProfileService
         $guardians = self::normalizeGuardians($input['guardians'] ?? []);
         $errors += self::guardianErrors($guardians);
 
+        // A photo is optional. When one is sent, it must be a genuine small JPG or PNG; the error
+        // is attached to the photo field so the rest of the form is preserved and shown again.
+        $uploaded = $photo !== null && $photo->error() !== UPLOAD_ERR_NO_FILE;
+        if ($uploaded) {
+            try {
+                $extension = DocumentUploadService::assertGenuineFile($photo, self::PHOTO_EXTENSIONS, self::PHOTO_MAX_BYTES, 'a profile photo');
+            } catch (ValidationException $e) {
+                $errors['photo'] = [$e->getMessage()];
+            }
+        }
+
         if ($errors !== []) {
             throw ValidationException::withErrors($errors);
         }
 
-        Database::transaction(static function () use ($user, $ownerUserId, $studentId, $input, $guardians, $nameLocked): void {
+        // Store the new photo before the transaction; remove it again if the write fails, and
+        // remove the replaced one only after it succeeds (docs/10, the announcement image pattern).
+        $before = Student::profile($studentId);
+        $oldPhoto = $before['photo_path'] ?? null;
+        $newPhotoPath = null;
+        if ($uploaded) {
+            $newPhotoPath = 'uploads/profile-photos/' . bin2hex(random_bytes(16)) . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
+            $photo->moveTo(STORAGE_PATH . '/' . $newPhotoPath);
+        }
+        $removePhoto = $oldPhoto !== null && ($newPhotoPath !== null || !empty($input['remove_photo']));
+
+        try {
+            self::write($user, $ownerUserId, $studentId, $input, $guardians, $nameLocked, $before, $newPhotoPath, $removePhoto);
+        } catch (\Throwable $e) {
+            if ($newPhotoPath !== null) {
+                @unlink(STORAGE_PATH . '/' . $newPhotoPath);
+            }
+            throw $e;
+        }
+
+        // The old file is superseded only once the new row is committed.
+        if ($oldPhoto !== null && ($newPhotoPath !== null || $removePhoto)) {
+            @unlink(STORAGE_PATH . '/' . $oldPhoto);
+        }
+    }
+
+    /**
+     * The one transaction that writes the profile, name, guardians, photo, and audit entry.
+     *
+     * @param array<string,mixed>              $input
+     * @param array<int,array<string,mixed>>   $guardians
+     * @param array<string,mixed>|null         $before   the profile before this save, for the change list
+     */
+    private static function write(User $user, int $ownerUserId, int $studentId, array $input, array $guardians, bool $nameLocked, ?array $before, ?string $newPhotoPath, bool $removePhoto): void
+    {
+        Database::transaction(static function () use ($user, $ownerUserId, $studentId, $input, $guardians, $nameLocked, $before, $newPhotoPath, $removePhoto): void {
             $profile = [];
             foreach (self::PROFILE_FIELDS as $field) {
                 $value = trim((string) ($input[$field] ?? ''));
@@ -105,7 +156,12 @@ final class StudentProfileService
             }
             $profile['mobile'] = preg_replace('/[\s-]/', '', (string) $profile['mobile']);
 
-            $before = Student::profile($studentId);
+            if ($newPhotoPath !== null) {
+                $profile['photo_path'] = $newPhotoPath;
+            } elseif ($removePhoto) {
+                $profile['photo_path'] = null;
+            }
+
             Database::update('student_profiles', $profile, ['student_id' => $studentId]);
 
             $nameChanged = false;
@@ -136,6 +192,8 @@ final class StudentProfileService
                 static fn ($value, $field) => (string) ($before[$field] ?? '') !== (string) ($value ?? ''),
                 ARRAY_FILTER_USE_BOTH
             ));
+            // The stored path is random, so record only that the photo changed, by name.
+            $changed = array_map(static fn ($field) => $field === 'photo_path' ? 'photo' : $field, $changed);
             if ($nameChanged) {
                 $changed[] = 'name';
             }
@@ -152,6 +210,22 @@ final class StudentProfileService
                 $user->role_name
             );
         });
+    }
+
+    /**
+     * The student's photo for streaming, or null when there is none or the file is gone. The MIME
+     * type is derived from the stored extension, which this service controls (JPG or PNG only).
+     *
+     * @return array{path:string,mime:string}|null
+     */
+    public static function photo(int $studentId): ?array
+    {
+        $path = (string) (Student::profile($studentId)['photo_path'] ?? '');
+        if ($path === '' || !is_file(STORAGE_PATH . '/' . $path)) {
+            return null;
+        }
+        $mime = strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'png' ? 'image/png' : 'image/jpeg';
+        return ['path' => $path, 'mime' => $mime];
     }
 
     /**

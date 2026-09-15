@@ -6,10 +6,13 @@ namespace App\Controllers\Student;
 
 use App\Controllers\Controller;
 use App\Core\Auth;
+use App\Core\HttpException;
 use App\Core\Request;
+use App\Core\UploadedFile;
 use App\Core\ValidationException;
 use App\Models\EnrollmentApplication;
 use App\Models\Student;
+use App\Services\FileStreamer;
 use App\Services\RegistrationService;
 use App\Services\StudentProfileService;
 
@@ -41,7 +44,7 @@ final class ProfileController extends Controller
         $user = Auth::user();
 
         try {
-            StudentProfileService::update($user, $request->all());
+            StudentProfileService::update($user, $request->all(), UploadedFile::fromRequest($_FILES['photo'] ?? []));
         } catch (ValidationException $e) {
             $this->failWith($e, $request->all(), '/student/profile');
             return;
@@ -63,5 +66,16 @@ final class ProfileController extends Controller
         }
 
         $this->success('Profile saved.', '/student/profile');
+    }
+
+    /** Stream the signed-in student's own photo (inline). Never linked directly; served from storage/. */
+    public function photo(Request $request): void
+    {
+        $student = RegistrationService::ensureStudentRecord(Auth::user());
+        $photo = StudentProfileService::photo((int) $student['id']);
+        if ($photo === null) {
+            throw HttpException::notFound('No photo has been uploaded.');
+        }
+        FileStreamer::send($photo['path'], 'photo.' . pathinfo($photo['path'], PATHINFO_EXTENSION), $photo['mime'], true);
     }
 }

@@ -240,6 +240,15 @@ try {
 
     $link = PasswordResetService::issue($spare, PasswordResetService::RESET, $admin);
 
+    // A profile photo for studentA, so /student/photo and the registrar's photo route return 200
+    // (studentB has none, checked as a 404 below). deleteTestUsers() removes the file.
+    $photoPath = 'uploads/profile-photos/' . bin2hex(random_bytes(16)) . '.png';
+    if (!is_dir(STORAGE_PATH . '/uploads/profile-photos')) {
+        mkdir(STORAGE_PATH . '/uploads/profile-photos', 0750, true);
+    }
+    copy(fixtureFile('png'), STORAGE_PATH . '/' . $photoPath);
+    Database::update('student_profiles', ['photo_path' => $photoPath], ['student_id' => $enrolled['student_id']]);
+
     // Script-injection payloads in names, catalog text, reasons, announcements, and the fixtures'
     // notifications (fixture setup, straight to the tables).
     Database::update('users', ['first_name' => XSS_NAME, 'last_name' => XSS_ATTR], ['id' => $studentA->id]);
@@ -398,6 +407,9 @@ try {
                 }
                 if ($expected === [200] && $route['pattern'] === '/student/schedule/print' && $name === 'studentB') {
                     $expected = [404];
+                }
+                if ($expected === [200] && $route['pattern'] === '/student/photo' && $name === 'studentB') {
+                    $expected = [404]; // studentB has uploaded no photo
                 }
                 if ($expected !== [403] && isset($allowedAlso[$route['pattern']])) {
                     $expected = array_merge($expected, $allowedAlso[$route['pattern']]);

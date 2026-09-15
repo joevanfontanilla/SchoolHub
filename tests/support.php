@@ -174,6 +174,9 @@ function deleteTestUsers(): void
             Database::query("DELETE FROM enrollment_applications WHERE id IN ({$ain})", $applicationIds);
         }
 
+        foreach (Database::select("SELECT photo_path FROM student_profiles WHERE student_id IN ({$sin}) AND photo_path IS NOT NULL", $studentIds) as $row) {
+            @unlink(STORAGE_PATH . '/' . $row['photo_path']);
+        }
         Database::query("DELETE FROM guardians WHERE student_id IN ({$sin})", $studentIds);
         Database::query("DELETE FROM student_profiles WHERE student_id IN ({$sin})", $studentIds);
         Database::query("DELETE FROM students WHERE id IN ({$sin})", $studentIds);

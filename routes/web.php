@@ -171,6 +171,7 @@ $student = ['auth', 'role:' . User::ROLE_STUDENT];
 
 $router->get('/student/profile',  [ProfileController::class, 'show'],   $student, 'student.profile');
 $router->post('/student/profile', [ProfileController::class, 'update'], $student);
+$router->get('/student/photo',    [ProfileController::class, 'photo'],  $student, 'student.photo');
 
 $router->get('/student/enrollment',        [EnrollmentController::class, 'index'],  $student, 'student.enrollment');
 $router->get('/student/enrollment/apply',  [EnrollmentController::class, 'create'], $student, 'student.enrollment.apply');
@@ -324,6 +325,7 @@ $router->post('/registrar/requirements/{requirementId}/review',  [RegistrarAppli
 
 $router->get('/registrar/students',       [RegistrarStudents::class, 'index'],  $registrar('students.view'), 'registrar.students');
 $router->get('/registrar/students/{id}',  [RegistrarStudents::class, 'show'],   $registrar('students.view'), 'registrar.students.show');
+$router->get('/registrar/students/{id}/photo', [RegistrarStudents::class, 'photo'], $registrar('students.view'), 'registrar.students.photo');
 $router->post('/registrar/students/{id}', [RegistrarStudents::class, 'update'], $registrar('students.manage'));
 $router->post('/registrar/students/{id}/enlistments', [RegistrarStudents::class, 'addClass'],  $registrar('academic.assign'));
 $router->post('/registrar/enlistments/{id}/drop',     [RegistrarStudents::class, 'dropClass'], $registrar('academic.assign'));
