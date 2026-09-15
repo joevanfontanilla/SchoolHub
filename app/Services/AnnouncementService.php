@@ -20,8 +20,11 @@ use App\Models\User;
  * anything that was published is archived instead, so the record stays.
  *
  * Writing needs `announcements.manage`; publishing needs `announcements.publish`
- * (the Registrar and Super Admin). When an announcement becomes live, every user
- * in its audience gets one notification, exactly once (dispatch()).
+ * (the Registrar and Super Admin). A teacher with `announcements.class` writes and
+ * publishes CLASSES announcements to their own active classes, and manages only the
+ * ones they wrote; the Registrar may archive those but not rewrite them. When an
+ * announcement becomes live, every user in its audience except its author gets one
+ * notification, exactly once (dispatch()).
  */
 final class AnnouncementService
 {
@@ -43,14 +46,24 @@ final class AnnouncementService
      */
     public static function save(User $actor, ?int $id, array $input, ?UploadedFile $image = null, string $action = 'draft'): int
     {
-        self::assertCan($actor, 'announcements.manage', 'You are not allowed to write announcements.');
-        if ($action === 'publish') {
-            self::assertCan($actor, 'announcements.publish', 'You are not allowed to publish announcements.');
-        }
-
         $existing = $id === null ? null : Announcement::find($id);
         if ($id !== null && $existing === null) {
             throw HttpException::notFound('That announcement was not found.');
+        }
+
+        // A class announcement is written, published, and edited only by its own teacher.
+        $forClasses = ($existing['audience'] ?? (string) ($input['audience'] ?? '')) === Announcement::CLASSES;
+        if ($forClasses) {
+            self::assertCan($actor, 'announcements.class', 'You are not allowed to post class announcements.');
+            if ($existing !== null && !Announcement::isClassAuthor($existing, $actor)) {
+                throw HttpException::notFound('That announcement was not found.');
+            }
+            $input['audience'] = Announcement::CLASSES;
+        } else {
+            self::assertCan($actor, 'announcements.manage', 'You are not allowed to write announcements.');
+            if ($action === 'publish') {
+                self::assertCan($actor, 'announcements.publish', 'You are not allowed to publish announcements.');
+            }
         }
         if ($existing !== null && $existing['status'] === Announcement::ARCHIVED) {
             throw ValidationException::withMessage('This announcement is archived. Restore it to a draft before editing.');
@@ -64,7 +77,7 @@ final class AnnouncementService
             default               => Announcement::DRAFT,
         };
 
-        $clean = self::validate($input, $existing, $status, $image);
+        $clean = self::validate($input, $existing, $status, $image, $actor);
 
         // Validate and store the new image before the transaction; remove it again if the
         // transaction fails, and remove the replaced one only after it succeeds.
@@ -125,7 +138,7 @@ final class AnnouncementService
                     Database::query('DELETE FROM announcement_targets WHERE announcement_id = ?', [$id]);
                 }
 
-                foreach ([Announcement::TARGET_ROLE => 'roles', Announcement::TARGET_PROGRAM => 'programs', Announcement::TARGET_YEAR_LEVEL => 'year_levels'] as $type => $key) {
+                foreach ([Announcement::TARGET_ROLE => 'roles', Announcement::TARGET_PROGRAM => 'programs', Announcement::TARGET_YEAR_LEVEL => 'year_levels', Announcement::TARGET_CLASS => 'classes'] as $type => $key) {
                     foreach ($clean[$key] as $targetId) {
                         Database::insert('announcement_targets', ['announcement_id' => $id, 'target_type' => $type, 'target_id' => $targetId]);
                     }
@@ -139,7 +152,8 @@ final class AnnouncementService
                 };
                 AuditService::log($auditAction, 'communication', 'Announcement', $id,
                     $existing === null ? null : ['title' => $existing['title'], 'status' => $existing['status']],
-                    ['title' => $clean['title'], 'status' => $status, 'audience' => $clean['audience'], 'urgent' => $clean['is_urgent'], 'public' => $clean['is_public']],
+                    ['title' => $clean['title'], 'status' => $status, 'audience' => $clean['audience'], 'urgent' => $clean['is_urgent'], 'public' => $clean['is_public']]
+                        + ($clean['classes'] !== [] ? ['classes' => $clean['classes']] : []),
                     'SUCCESS', null, $actor->id, $actor->role_name);
 
                 self::dispatch($id);
@@ -163,21 +177,24 @@ final class AnnouncementService
     /** PUBLISHED (live, scheduled, or expired) -> ARCHIVED: hidden everywhere, kept on record. */
     public static function archive(User $actor, int $id): void
     {
-        self::assertCan($actor, 'announcements.publish', 'You are not allowed to archive announcements.');
+        // The Registrar may take down a teacher's class announcement; the teacher may take down their own.
+        if (!self::isOwnClassAnnouncement($actor, $id)) {
+            self::assertCan($actor, 'announcements.publish', 'You are not allowed to archive announcements.');
+        }
         self::changeStatus($actor, $id, Announcement::PUBLISHED, Announcement::ARCHIVED, 'announcement.archived', 'Only a published announcement can be archived.');
     }
 
     /** ARCHIVED -> DRAFT, to edit and publish again. Its audience is not notified a second time. */
     public static function restore(User $actor, int $id): void
     {
-        self::assertCan($actor, 'announcements.manage', 'You are not allowed to restore announcements.');
+        self::assertManageable($actor, $id, 'You are not allowed to restore announcements.');
         self::changeStatus($actor, $id, Announcement::ARCHIVED, Announcement::DRAFT, 'announcement.restored', 'Only an archived announcement can be restored.');
     }
 
     /** A draft that was never published may be deleted outright. */
     public static function delete(User $actor, int $id): void
     {
-        self::assertCan($actor, 'announcements.manage', 'You are not allowed to delete announcements.');
+        self::assertManageable($actor, $id, 'You are not allowed to delete announcements.');
         $imagePath = Database::transaction(static function () use ($actor, $id): ?string {
             $announcement = Database::selectOne('SELECT * FROM announcements WHERE id = ? FOR UPDATE', [$id]);
             if ($announcement === null) {
@@ -210,7 +227,8 @@ final class AnnouncementService
     /**
      * Notify the audience of one announcement if it is live and has not been sent yet.
      * One INSERT ... SELECT using the same audience condition as reading, so recipients
-     * and readers never differ. The row lock and notified_at make it happen once.
+     * and readers never differ, except that the author is not notified of their own
+     * announcement. The row lock and notified_at make it happen once.
      *
      * @return int notifications written
      */
@@ -230,7 +248,7 @@ final class AnnouncementService
             $count = Database::query(
                 "INSERT INTO notifications (user_id, `type`, title, body, link_url, state)
                  SELECT u.id, 'announcement.published', ?, ?, ?, 'UNREAD' FROM users u, announcements a
-                  WHERE a.id = ? AND " . Announcement::audienceSql(),
+                  WHERE a.id = ? AND u.id <> COALESCE(a.author_user_id, 0) AND " . Announcement::audienceSql(),
                 [
                     mb_substr(($announcement['is_urgent'] ? 'Urgent: ' : 'Announcement: ') . $announcement['title'], 0, 200),
                     $body,
@@ -280,7 +298,7 @@ final class AnnouncementService
         if ($announcement['image_path'] === null) {
             return false;
         }
-        if ($viewer !== null && $viewer->hasPermission('announcements.manage')) {
+        if ($viewer !== null && ($viewer->hasPermission('announcements.manage') || Announcement::isClassAuthor($announcement, $viewer))) {
             return true;
         }
         $now = date('Y-m-d H:i:s');
@@ -302,13 +320,13 @@ final class AnnouncementService
      * @param array<string,mixed>|null $existing
      * @return array<string,mixed>
      */
-    private static function validate(array $input, ?array $existing, string $status, ?UploadedFile $image): array
+    private static function validate(array $input, ?array $existing, string $status, ?UploadedFile $image, User $actor): array
     {
         $validator = Validator::make($input, [
             'title'     => 'required|min:5|max:200',
             'content'   => 'required|min:10|max:20000',
             'category'  => 'required|in:' . implode(',', Announcement::CATEGORIES),
-            'audience'  => 'required|in:EVERYONE,TARGETED',
+            'audience'  => 'required|in:EVERYONE,TARGETED,CLASSES',
             'image_alt' => 'nullable|max:200',
         ], ['image_alt' => 'Image description', 'content' => 'Text']);
 
@@ -320,6 +338,25 @@ final class AnnouncementService
         $roles = $audience === 'TARGETED' ? $ids('roles') : [];
         $programs = $audience === 'TARGETED' ? $ids('programs') : [];
         $yearLevels = $audience === 'TARGETED' ? $ids('year_levels') : [];
+        $classes = $audience === Announcement::CLASSES ? $ids('classes') : [];
+
+        if ($audience === Announcement::CLASSES) {
+            // Only the actor's own active classes. A class taken over by another teacher since
+            // it was chosen is refused on the next save, so a teacher never writes to it.
+            $owned = [];
+            if ($classes !== []) {
+                $in = implode(',', array_fill(0, count($classes), '?'));
+                $owned = array_map('intval', array_column(Database::select(
+                    "SELECT id FROM class_schedules WHERE id IN ({$in}) AND teacher_user_id = ? AND status = 'ACTIVE'",
+                    [...$classes, $actor->id]
+                ), 'id'));
+            }
+            if ($classes === []) {
+                $validator->addError('classes', 'Choose at least one of your classes.');
+            } elseif (count($owned) !== count($classes)) {
+                $validator->addError('classes', 'Choose only classes you teach.');
+            }
+        }
 
         $known = static function (string $table, array $values): bool {
             if ($values === []) {
@@ -393,6 +430,7 @@ final class AnnouncementService
             'roles'        => $roles,
             'programs'     => $programs,
             'year_levels'  => $yearLevels,
+            'classes'      => $classes,
             'is_public'    => $isPublic,
             'is_urgent'    => !empty($input['is_urgent']) ? 1 : 0,
             'published_at' => $dates['published_at'],
@@ -425,6 +463,28 @@ final class AnnouncementService
             $slug = $base . '-' . $n;
         }
         return $slug;
+    }
+
+    /** Whether the actor is the teacher who wrote this class announcement and may still post to classes. */
+    private static function isOwnClassAnnouncement(User $actor, int $id): bool
+    {
+        $announcement = Announcement::find($id);
+        return $announcement !== null && Announcement::isClassAuthor($announcement, $actor) && $actor->hasPermission('announcements.class');
+    }
+
+    /** Managers handle every announcement except a teacher's class posts; a teacher handles their own class posts. */
+    private static function assertManageable(User $actor, int $id, string $message): void
+    {
+        $announcement = Announcement::find($id);
+        if ($announcement !== null && $announcement['audience'] === Announcement::CLASSES) {
+            if (!self::isOwnClassAnnouncement($actor, $id)) {
+                throw $actor->hasPermission('announcements.manage')
+                    ? HttpException::forbidden('A class announcement is managed by the teacher who wrote it. You may archive it.')
+                    : HttpException::notFound('That announcement was not found.');
+            }
+            return;
+        }
+        self::assertCan($actor, 'announcements.manage', $message);
     }
 
     private static function assertCan(User $actor, string $permission, string $message): void

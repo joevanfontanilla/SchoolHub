@@ -59,7 +59,12 @@ abstract class Controller
      */
     protected function printView(string $template, array $data = []): void
     {
-        $data += ['school' => SystemSetting::publicSettings(), 'user' => Auth::user()];
+        // ?embed=1: shown inside this site's preview window, without the page toolbar.
+        $embedded = (string) (new \App\Core\Request())->input('embed', '') === '1';
+        $data += ['school' => SystemSetting::publicSettings(), 'user' => Auth::user(), 'embedded' => $embedded];
+        if ($embedded) {
+            Response::allowFramingBySelf();
+        }
         Response::html(View::render($template, $data, 'layouts/print'));
     }
 

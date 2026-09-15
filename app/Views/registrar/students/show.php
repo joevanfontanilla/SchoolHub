@@ -133,7 +133,9 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
                                 <?php if (!$dropped): ?>
                                     <details class="relative">
                                         <summary class="cursor-pointer text-sm font-semibold text-danger-text hover:underline">Drop<span class="sr-only"> <?= e($class['code']) ?></span></summary>
-                                        <form method="POST" action="<?= e(url('/registrar/enlistments/' . $class['enlistment_id'] . '/drop')) ?>" class="absolute right-0 z-10 mt-2 w-72 space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+                                        <form method="POST" action="<?= e(url('/registrar/enlistments/' . $class['enlistment_id'] . '/drop')) ?>" class="absolute right-0 z-10 mt-2 w-72 space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg"
+                                              data-confirm="<?= e($class['code']) ?> is dropped from this student's classes. Its grades and attendance stay on record." data-confirm-title="Drop <?= e($class['code']) ?>?" data-confirm-tone="danger"
+                                              data-confirm-requires="#drop-<?= e($class['enlistment_id']) ?>" data-confirm-requires-message="Write the reason for dropping the class first.">
                                             <?= csrf_field() ?>
                                             <label for="drop-<?= e($class['enlistment_id']) ?>" class="field-label">Reason for dropping <?= e($class['code']) ?></label>
                                             <input id="drop-<?= e($class['enlistment_id']) ?>" name="drop_reason" required maxlength="500" class="field-input">
@@ -164,7 +166,14 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
                                 <?php if ($clash): ?>
                                     <p class="mt-2 text-xs text-slate-600">A time conflict cannot be overridden. Change a class's schedule first.</p>
                                 <?php else: ?>
-                                    <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="mt-2 flex flex-wrap items-end gap-2">
+                                    <?php if ($flag['problems'] === []): ?>
+                                        <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="mt-2 flex flex-wrap items-end gap-2"
+                                              data-confirm="The class is added to the student's schedule and load." data-confirm-title="Enlist in <?= e($flag['code']) ?>?" data-confirm-tone="success" data-confirm-label="Enlist">
+                                    <?php else: ?>
+                                        <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="mt-2 flex flex-wrap items-end gap-2"
+                                              data-confirm="The problem listed above is set aside for this student, and your reason is recorded in the audit log." data-confirm-title="Enlist in <?= e($flag['code']) ?> with an override?" data-confirm-tone="warning" data-confirm-label="Enlist with override"
+                                              data-confirm-requires="#override-<?= e($flag['class_id']) ?>" data-confirm-requires-message="Write why the problem can be set aside, for example a subject credited from a previous school.">
+                                    <?php endif; ?>
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="class_id" value="<?= e($flag['class_id']) ?>">
                                         <?php if ($flag['problems'] !== []): ?>
@@ -186,7 +195,8 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
             <?php endif; ?>
 
             <?php if ($addable !== []): ?>
-                <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="space-y-3 border-t border-slate-200 px-5 py-4" novalidate>
+                <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/enlistments')) ?>" class="space-y-3 border-t border-slate-200 px-5 py-4" novalidate
+                      data-confirm="The student is enlisted in the chosen class. An override reason, if given, is recorded in the audit log." data-confirm-title="Add this class?" data-confirm-tone="primary">
                     <?= csrf_field() ?>
                     <h3 class="text-sm">Add a class from another section</h3>
                     <div class="grid gap-3 sm:grid-cols-2">
@@ -207,6 +217,14 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
             <?php endif; ?>
         </section>
     <?php endif; ?>
+
+    <section aria-labelledby="student-documents-heading" class="space-y-3">
+        <div class="flex flex-wrap items-end justify-between gap-2">
+            <h2 id="student-documents-heading" class="text-lg">Documents</h2>
+            <p class="text-sm text-brand-gray">Open any document to preview it. Every view of an uploaded document is recorded in the audit log.</p>
+        </div>
+        <?= partial('student-documents', ['documents' => $documents, 'forStudent' => false]) ?>
+    </section>
 
     <?php if ($history !== []): ?>
         <section class="card" aria-labelledby="history-heading">
@@ -230,7 +248,7 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
             <span class="text-sm font-semibold text-brand-600 group-open:hidden">Show</span>
         </summary>
         <form method="POST" action="<?= e(url("/registrar/students/{$id}")) ?>" class="space-y-6 border-t border-slate-200 px-5 py-5" novalidate
-              data-confirm="Save these corrections to the student's record? The change is recorded in the audit log.">
+              data-confirm="The student's record changes right away, and the change is recorded in the audit log." data-confirm-title="Save these corrections?" data-confirm-tone="warning">
             <?= csrf_field() ?>
             <p class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
                 Corrections are recorded in the audit log. Unlike the student, you can correct the legal name after an application is submitted.

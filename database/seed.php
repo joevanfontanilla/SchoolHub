@@ -40,6 +40,7 @@ const PERMISSIONS = [
     'attendance.record'   => ['academic', 'Record attendance for assigned classes'],
     'grades.record'       => ['academic', 'Record grades for assigned classes'],
     'reports.teacher'     => ['reports', 'Generate class reports'],
+    'announcements.class' => ['communication', 'Post announcements to own classes'],
 
     // Registrar
     'students.view'       => ['students', 'View student records'],
@@ -79,7 +80,7 @@ const ROLE_PERMISSIONS = [
     ],
     User::ROLE_TEACHER => [
         'classes.view', 'attendance.record', 'grades.record', 'schedule.view',
-        'reports.teacher', 'announcements.view', 'notifications.view',
+        'reports.teacher', 'announcements.view', 'announcements.class', 'notifications.view',
     ],
     User::ROLE_REGISTRAR => [
         'students.view', 'students.manage', 'enrollment.view', 'enrollment.review',

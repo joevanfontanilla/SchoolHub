@@ -81,6 +81,8 @@ final class RegistrarQueue
             $where[] = "ea.application_status IN ('SUBMITTED', 'UNDER_REVIEW')";
         } elseif ($status === 'awaiting_confirmation') {
             $where[] = "ea.application_status = 'APPROVED' AND ea.enrollment_state = 'NOT_ENROLLED'";
+        } elseif ($status === 'returned') {
+            $where[] = "ea.application_status IN ('REQUIREMENTS_INCOMPLETE', 'CORRECTION_REQUIRED')";
         } elseif ($status === 'enrolled') {
             $where[] = "ea.enrollment_state = 'ENROLLED'";
         } elseif ($status !== 'all' && in_array($status, [

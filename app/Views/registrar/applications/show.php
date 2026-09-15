@@ -65,6 +65,85 @@ $oldRemarksFor = (int) old('remarks_for', 0);
     <div class="grid gap-6 lg:grid-cols-3">
         <!-- Left: the applicant and their documents -->
         <div class="space-y-6 lg:col-span-2">
+            <?php
+            // The documents are the registrar's work while the application waits for or is under
+            // review, so they come first then; afterwards they follow the applicant details.
+            $documentsFirst = in_array($status, [Application::SUBMITTED, Application::UNDER_REVIEW], true);
+            ob_start();
+            ?>
+            <section class="card" aria-labelledby="documents-heading">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <h2 id="documents-heading" class="text-base">Documents</h2>
+                        <p class="mt-0.5 text-sm text-brand-gray"><?= e(count($verified)) ?> of <?= e(count($required)) ?> required documents verified</p>
+                    </div>
+                    <?php if (!$reviewing && $status === Application::SUBMITTED): ?>
+                        <p class="text-sm text-slate-600">Start the review to verify documents.</p>
+                    <?php endif; ?>
+                </div>
+
+                <ul class="divide-y divide-slate-100">
+                    <?php foreach ($requirements as $requirement): ?>
+                        <?php $rid = (int) $requirement['id']; ?>
+                        <li id="requirement-<?= e($rid) ?>" class="scroll-mt-24 px-5 py-5">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h3 class="text-sm">
+                                        <?= e($requirement['name']) ?>
+                                        <span class="ml-1 font-sans text-xs font-medium <?= (int) $requirement['is_required'] === 1 ? 'text-danger-text' : 'text-brand-gray' ?>">
+                                            <?= (int) $requirement['is_required'] === 1 ? 'Required' : 'Optional' ?>
+                                        </span>
+                                    </h3>
+                                    <?php if (!empty($requirement['file_id'])): ?>
+                                        <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                                            <?= partial('preview-link', [
+                                                'path' => '/documents/' . $requirement['file_id'], 'mime' => $requirement['mime_type'],
+                                                'title' => $requirement['name'] . ' · ' . $requirement['original_filename'], 'label' => 'Preview',
+                                                'srLabel' => $requirement['name'], 'group' => 'application-documents', 'icon' => 'document',
+                                                'class' => 'inline-flex items-center gap-1.5 rounded-lg border border-brand-100 bg-white px-2.5 py-1 font-semibold text-brand-600 hover:bg-brand-50',
+                                            ]) ?>
+                                            <span class="min-w-0 truncate text-slate-700"><?= e($requirement['original_filename']) ?></span>
+                                            <span class="text-brand-gray"><?= e(Download::humanSize((int) $requirement['file_size'])) ?> · <?= e(dt($requirement['uploaded_at'])) ?></span>
+                                            <a href="<?= e(url('/documents/' . $requirement['file_id'])) ?>" class="text-xs font-semibold text-brand-600 hover:underline">Download<span class="sr-only"> <?= e($requirement['name']) ?></span></a>
+                                        </p>
+                                    <?php else: ?>
+                                        <p class="mt-1.5 text-sm text-brand-gray">Nothing uploaded.</p>
+                                    <?php endif; ?>
+                                    <?php if (!empty($requirement['remarks'])): ?>
+                                        <p class="mt-2 rounded-lg border border-warning-line bg-warning-bg px-3 py-2 text-sm text-warning-text">
+                                            <span class="font-semibold">Note to student:</span> <?= e($requirement['remarks']) ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                                <?= component('status-badge', ['status' => $requirement['status']]) ?>
+                            </div>
+
+                            <?php if ($reviewing && !empty($requirement['file_id'])): ?>
+                                <form method="POST" action="<?= e(url("/registrar/requirements/{$rid}/review")) ?>" class="mt-3 space-y-3" data-allow-resubmit>
+                                    <?= csrf_field() ?>
+                                    <label for="remarks-<?= e($rid) ?>" class="sr-only">Note to the student about <?= e($requirement['name']) ?></label>
+                                    <textarea id="remarks-<?= e($rid) ?>" name="remarks" rows="2" maxlength="1000" class="field-input"
+                                              placeholder="Note to the student (required to reject or ask for a correction)"><?= $oldRemarksFor === $rid ? e(old('remarks')) : '' ?></textarea>
+                                    <div class="flex flex-wrap gap-2">
+                                        <?php if ($requirement['status'] !== 'VERIFIED'): ?>
+                                            <button type="submit" name="decision" value="VERIFIED" class="btn border border-success-line bg-success-bg text-success-text hover:brightness-95"
+                                                    data-confirm-click="Mark <?= e($requirement['name']) ?> as verified? The student sees it as accepted." data-confirm-title="Verify this document?" data-confirm-tone="success">Verify</button>
+                                        <?php endif; ?>
+                                        <button type="submit" name="decision" value="CORRECTION_REQUIRED" class="btn border border-warning-line bg-white text-warning-text hover:bg-warning-bg"
+                                                data-confirm-click="Ask the student to correct <?= e($requirement['name']) ?>? They are notified and see your note." data-confirm-title="Ask for a correction?" data-confirm-tone="warning" data-confirm-label="Ask for correction"
+                                                data-confirm-requires="#remarks-<?= e($rid) ?>" data-confirm-requires-message="Tell the student what to correct in the note box. They will see it.">Needs correction</button>
+                                        <button type="submit" name="decision" value="REJECTED" class="btn border border-danger-line bg-white text-danger-text hover:bg-danger-bg"
+                                                data-confirm-click="Reject <?= e($requirement['name']) ?>? The student is notified, sees your note, and must upload it again." data-confirm-title="Reject this document?" data-confirm-tone="danger" data-confirm-label="Reject document"
+                                                data-confirm-requires="#remarks-<?= e($rid) ?>" data-confirm-requires-message="Tell the student why the document is rejected in the note box. They will see it.">Reject</button>
+                                    </div>
+                                </form>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+            <?php $documentsSection = (string) ob_get_clean(); ?>
+            <?php if ($documentsFirst): ?><?= $documentsSection ?><?php endif; ?>
             <?php $subjectUnits = array_sum(array_map(static fn ($s) => (float) $s['units'], $subjects)); ?>
             <section class="card" aria-labelledby="subjects-heading">
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
@@ -120,67 +199,7 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                 </dl>
             </section>
 
-            <section class="card" aria-labelledby="documents-heading">
-                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-                    <div>
-                        <h2 id="documents-heading" class="text-base">Documents</h2>
-                        <p class="mt-0.5 text-sm text-brand-gray"><?= e(count($verified)) ?> of <?= e(count($required)) ?> required documents verified</p>
-                    </div>
-                    <?php if (!$reviewing && $status === Application::SUBMITTED): ?>
-                        <p class="text-sm text-slate-600">Start the review to verify documents.</p>
-                    <?php endif; ?>
-                </div>
-
-                <ul class="divide-y divide-slate-100">
-                    <?php foreach ($requirements as $requirement): ?>
-                        <?php $rid = (int) $requirement['id']; ?>
-                        <li id="requirement-<?= e($rid) ?>" class="scroll-mt-24 px-5 py-5">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <h3 class="text-sm">
-                                        <?= e($requirement['name']) ?>
-                                        <span class="ml-1 font-sans text-xs font-medium <?= (int) $requirement['is_required'] === 1 ? 'text-danger-text' : 'text-brand-gray' ?>">
-                                            <?= (int) $requirement['is_required'] === 1 ? 'Required' : 'Optional' ?>
-                                        </span>
-                                    </h3>
-                                    <?php if (!empty($requirement['file_id'])): ?>
-                                        <p class="mt-1.5 text-sm">
-                                            <a href="<?= e(url('/documents/' . $requirement['file_id'])) ?>" class="font-medium text-brand-600 hover:underline">
-                                                Open <?= e($requirement['original_filename']) ?>
-                                            </a>
-                                            <span class="text-brand-gray">· <?= e(Download::humanSize((int) $requirement['file_size'])) ?> · <?= e(dt($requirement['uploaded_at'])) ?></span>
-                                        </p>
-                                    <?php else: ?>
-                                        <p class="mt-1.5 text-sm text-brand-gray">Nothing uploaded.</p>
-                                    <?php endif; ?>
-                                    <?php if (!empty($requirement['remarks'])): ?>
-                                        <p class="mt-2 rounded-lg border border-warning-line bg-warning-bg px-3 py-2 text-sm text-warning-text">
-                                            <span class="font-semibold">Note to student:</span> <?= e($requirement['remarks']) ?>
-                                        </p>
-                                    <?php endif; ?>
-                                </div>
-                                <?= component('status-badge', ['status' => $requirement['status']]) ?>
-                            </div>
-
-                            <?php if ($reviewing && !empty($requirement['file_id'])): ?>
-                                <form method="POST" action="<?= e(url("/registrar/requirements/{$rid}/review")) ?>" class="mt-3 space-y-3" data-allow-resubmit>
-                                    <?= csrf_field() ?>
-                                    <label for="remarks-<?= e($rid) ?>" class="sr-only">Note to the student about <?= e($requirement['name']) ?></label>
-                                    <textarea id="remarks-<?= e($rid) ?>" name="remarks" rows="2" maxlength="1000" class="field-input"
-                                              placeholder="Note to the student (required to reject or ask for a correction)"><?= $oldRemarksFor === $rid ? e(old('remarks')) : '' ?></textarea>
-                                    <div class="flex flex-wrap gap-2">
-                                        <?php if ($requirement['status'] !== 'VERIFIED'): ?>
-                                            <button type="submit" name="decision" value="VERIFIED" class="btn border border-success-line bg-success-bg text-success-text hover:brightness-95">Verify</button>
-                                        <?php endif; ?>
-                                        <button type="submit" name="decision" value="CORRECTION_REQUIRED" class="btn border border-warning-line bg-white text-warning-text hover:bg-warning-bg">Needs correction</button>
-                                        <button type="submit" name="decision" value="REJECTED" class="btn border border-danger-line bg-white text-danger-text hover:bg-danger-bg">Reject</button>
-                                    </div>
-                                </form>
-                            <?php endif; ?>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            </section>
+            <?php if (!$documentsFirst): ?><?= $documentsSection ?><?php endif; ?>
         </div>
 
         <!-- Right: decisions and history -->
@@ -210,7 +229,8 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                 <?php endif; ?>
 
                 <?php if ($can(Application::UNDER_REVIEW)): ?>
-                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/start-review")) ?>" class="mt-3">
+                    <form method="POST" action="<?= e(url("/registrar/applications/{$id}/start-review")) ?>" class="mt-3"
+                          data-confirm="Start reviewing this application? The student sees that it is under review." data-confirm-tone="primary">
                         <?= csrf_field() ?>
                         <button type="submit" class="btn-primary w-full">Start review</button>
                         <p class="mt-2 text-xs text-brand-gray">Marks the documents as under review so you can verify them.</p>
@@ -228,7 +248,7 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                         <?php endif; ?>
                     </div>
                     <form method="POST" action="<?= e(url("/registrar/applications/{$id}/approve")) ?>" class="mt-3 space-y-3"
-                          data-confirm="Approve this application? The fee assessment is issued to the student.">
+                          data-confirm="The fee assessment is issued to the student right away, and they are notified." data-confirm-title="Approve this application?" data-confirm-tone="success" data-confirm-label="Approve application">
                         <?= csrf_field() ?>
                         <?php $sectionError = error_for('section_id'); ?>
                         <div>
@@ -265,14 +285,15 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                         <?php endif; ?>
                         <div class="grid gap-2">
                             <?php foreach ([
-                                Application::REQUIREMENTS_INCOMPLETE => ['return-incomplete', 'Return: replace documents', 'border-warning-line text-warning-text hover:bg-warning-bg', 'Return the application so the student can replace the turned-back documents?'],
-                                Application::CORRECTION_REQUIRED     => ['request-correction', 'Return: correct details', 'border-warning-line text-warning-text hover:bg-warning-bg', 'Return the application so the student can correct their details?'],
-                                Application::REJECTED                => ['reject', 'Reject application', 'border-danger-line text-danger-text hover:bg-danger-bg', 'Reject this application? This cannot be undone.'],
-                                Application::CANCELLED               => ['cancel', 'Cancel application', 'border-slate-300 text-slate-700 hover:bg-slate-50', 'Cancel this application? This cannot be undone.'],
-                            ] as $target => [$action, $label, $classes, $confirm]): ?>
+                                Application::REQUIREMENTS_INCOMPLETE => ['return-incomplete', 'Return: replace documents', 'border-warning-line text-warning-text hover:bg-warning-bg', 'The student is notified and can replace the turned-back documents, then submit again.', 'Return for new documents?', 'warning', true],
+                                Application::CORRECTION_REQUIRED     => ['request-correction', 'Return: correct details', 'border-warning-line text-warning-text hover:bg-warning-bg', 'The student is notified and can correct their details, then submit again.', 'Return for corrections?', 'warning', true],
+                                Application::REJECTED                => ['reject', 'Reject application', 'border-danger-line text-danger-text hover:bg-danger-bg', 'The student is notified with your reason. This cannot be undone.', 'Reject this application?', 'danger', true],
+                                Application::CANCELLED               => ['cancel', 'Cancel application', 'border-slate-300 text-slate-700 hover:bg-slate-50', 'The application is closed and the student is notified. This cannot be undone.', 'Cancel this application?', 'danger', $status === Application::APPROVED],
+                            ] as $target => [$action, $label, $classes, $confirm, $confirmTitle, $tone, $needsReason]): ?>
                                 <?php if ($can($target)): ?>
                                     <button type="submit" formaction="<?= e(url("/registrar/applications/{$id}/{$action}")) ?>"
-                                            data-confirm-click="<?= e($confirm) ?>"
+                                            data-confirm-click="<?= e($confirm) ?>" data-confirm-title="<?= e($confirmTitle) ?>" data-confirm-tone="<?= e($tone) ?>"
+                                            <?= $needsReason ? 'data-confirm-requires="#decision-remarks" data-confirm-requires-message="Write the reason in the Reason box. The student will see it."' : '' ?>
                                             class="btn w-full border bg-white <?= $classes ?>"><?= e($label) ?></button>
                                 <?php endif; ?>
                             <?php endforeach; ?>

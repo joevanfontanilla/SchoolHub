@@ -69,7 +69,8 @@ $weightError = error_for('weights');
             <?php if ($graded): ?>
                 <p class="px-5 py-4 text-sm text-slate-600">Grades have been recorded for this term, so its weights are fixed. The final grade is the weighted average of the periods (docs/27).</p>
             <?php else: ?>
-                <form method="POST" action="<?= e(url('/registrar/grading/terms/' . $term['id'] . '/weights')) ?>" class="space-y-4 p-5" novalidate>
+                <form method="POST" action="<?= e(url('/registrar/grading/terms/' . $term['id'] . '/weights')) ?>" class="space-y-4 p-5" novalidate
+                      data-confirm="These weights decide every final grade of the term. They can still change until the first grade is recorded." data-confirm-title="Save the grading weights?" data-confirm-tone="warning">
                     <?= csrf_field() ?>
                     <p class="text-sm text-slate-600">Percentages must add up to 100. They can change only until the first grade is recorded.</p>
                     <?php if ($weightError): ?><p class="field-error" role="alert"><span><?= e($weightError) ?></span></p><?php endif; ?>

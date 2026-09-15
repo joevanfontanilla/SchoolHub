@@ -35,10 +35,10 @@ final class DashboardController extends Controller
             ], array_keys($totals), $totals),
             'weekTotal'     => array_sum($totals),
             'cards'         => [
-                ['icon' => 'inbox', 'label' => 'Payments to verify', 'value' => (string) $stats['pending'], 'hint' => $stats['pending'] === 0 ? 'Queue is clear' : 'Submitted online by students', 'tone' => $stats['pending'] > 0 ? 'warning' : 'neutral'],
-                ['icon' => 'banknotes', 'label' => "Today's collections", 'value' => money($stats['collected_today']), 'hint' => $stats['payments_today'] . ' payment' . ($stats['payments_today'] === 1 ? '' : 's') . ' today', 'tone' => 'success'],
-                ['icon' => 'credit-card', 'label' => 'Outstanding balances', 'value' => money($stats['outstanding']), 'hint' => 'Across active assessments', 'tone' => 'neutral'],
-                ['icon' => 'document', 'label' => 'Active assessments', 'value' => (string) $stats['assessments'], 'hint' => 'Issued at approval', 'tone' => 'neutral'],
+                ['icon' => 'inbox', 'label' => 'Payments to verify', 'value' => (string) $stats['pending'], 'hint' => $stats['pending'] === 0 ? 'Queue is clear' : 'Submitted online by students', 'tone' => $stats['pending'] > 0 ? 'warning' : 'neutral', 'href' => '/cashier/payments'],
+                ['icon' => 'banknotes', 'label' => "Today's collections", 'value' => money($stats['collected_today']), 'hint' => $stats['payments_today'] . ' payment' . ($stats['payments_today'] === 1 ? '' : 's') . ' today', 'tone' => 'success', 'href' => '/cashier/reports/collections?from=' . date('Y-m-d') . '&to=' . date('Y-m-d')],
+                ['icon' => 'credit-card', 'label' => 'Outstanding balances', 'value' => money($stats['outstanding']), 'hint' => 'Across active assessments', 'tone' => 'neutral', 'href' => '/cashier/reports/outstanding'],
+                ['icon' => 'document', 'label' => 'Active assessments', 'value' => (string) $stats['assessments'], 'hint' => 'Issued at approval', 'tone' => 'neutral', 'href' => '/cashier/accounts'],
             ],
         ]);
     }

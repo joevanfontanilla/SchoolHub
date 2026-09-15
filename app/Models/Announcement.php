@@ -25,6 +25,12 @@ final class Announcement
     public const TARGET_ROLE       = 'ROLE';
     public const TARGET_PROGRAM    = 'PROGRAM';
     public const TARGET_YEAR_LEVEL = 'YEAR_LEVEL';
+    public const TARGET_CLASS      = 'CLASS';
+
+    public const EVERYONE = 'EVERYONE';
+    public const TARGETED = 'TARGETED';
+    /** A teacher's announcement to the students of their own classes. */
+    public const CLASSES  = 'CLASSES';
 
     /**
      * SQL condition: announcement $a is live, i.e. published, due, and not expired.
@@ -46,6 +52,8 @@ final class Announcement
      *             YEAR_LEVEL targets (if any) must include their year level. Program and
      *             year level come from the student's latest application that was not
      *             rejected or cancelled.
+     *   CLASSES   an active user enlisted (not dropped) in one of the CLASS targets, or
+     *             the teacher currently assigned to one of them.
      */
     public static function audienceSql(string $a = 'a', string $u = 'u'): string
     {
@@ -63,8 +71,14 @@ final class Announcement
                     OR ({$a}.audience = 'TARGETED'
                         AND EXISTS (SELECT 1 FROM announcement_targets tr WHERE tr.announcement_id = {$a}.id AND tr.target_type = 'ROLE' AND tr.target_id = {$u}.role_id)
                         AND ({$u}.role_id <> (SELECT id FROM roles WHERE name = 'Student')
-                             OR (" . $narrow(self::TARGET_PROGRAM, 'program_id') . ' AND ' . $narrow(self::TARGET_YEAR_LEVEL, 'year_level_id') . ')))
-                ))';
+                             OR (" . $narrow(self::TARGET_PROGRAM, 'program_id') . ' AND ' . $narrow(self::TARGET_YEAR_LEVEL, 'year_level_id') . ")))
+                    OR ({$a}.audience = 'CLASSES' AND EXISTS (
+                        SELECT 1 FROM announcement_targets tc JOIN class_schedules cs ON cs.id = tc.target_id
+                         WHERE tc.announcement_id = {$a}.id AND tc.target_type = 'CLASS' AND cs.status = 'ACTIVE'
+                           AND (cs.teacher_user_id = {$u}.id
+                                OR EXISTS (SELECT 1 FROM class_enlistments ce JOIN enrollments e ON e.id = ce.enrollment_id JOIN students s ON s.id = e.student_id
+                                            WHERE ce.class_schedule_id = cs.id AND ce.status = 'ENLISTED' AND s.user_id = {$u}.id))))
+                ))";
     }
 
     private static function now(): string
@@ -228,6 +242,40 @@ final class Announcement
         );
     }
 
+    /**
+     * A teacher's own class announcements, newest first, with a derived display state.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function classListFor(int $teacherId): array
+    {
+        $rows = Database::select(
+            "SELECT a.id, a.title, a.category, a.audience, a.is_public, a.is_urgent, a.status, a.published_at, a.expires_at,
+                    a.recipient_count, a.notified_at, a.updated_at
+               FROM announcements a
+              WHERE a.author_user_id = ? AND a.audience = 'CLASSES'
+              ORDER BY (a.status = 'DRAFT') DESC, COALESCE(a.published_at, a.updated_at) DESC, a.id DESC
+              LIMIT 300",
+            [$teacherId]
+        );
+        return array_map(static fn (array $row) => $row + ['state' => self::state($row)], $rows);
+    }
+
+    /** Whether this user wrote this class announcement (and so may manage it as its teacher). */
+    public static function isClassAuthor(array $announcement, User $user): bool
+    {
+        return $announcement['audience'] === self::CLASSES && (int) $announcement['author_user_id'] === $user->id;
+    }
+
+    /** @return array<int,int> the class ids a class announcement is addressed to */
+    public static function classTargets(int $id): array
+    {
+        return array_map('intval', array_column(Database::select(
+            "SELECT target_id FROM announcement_targets WHERE announcement_id = ? AND target_type = 'CLASS' ORDER BY target_id",
+            [$id]
+        ), 'target_id'));
+    }
+
     /** The display state of one announcement row: DRAFT, SCHEDULED, PUBLISHED, EXPIRED, or ARCHIVED. */
     public static function state(array $announcement): string
     {
@@ -285,11 +333,34 @@ final class Announcement
     {
         $labels = [];
         $targetedIds = [];
+        $classIds = [];
         foreach ($announcements as $announcement) {
-            if ($announcement['audience'] === 'EVERYONE') {
+            if ($announcement['audience'] === self::EVERYONE) {
                 $labels[(int) $announcement['id']] = 'Everyone';
+            } elseif ($announcement['audience'] === self::CLASSES) {
+                $classIds[] = (int) $announcement['id'];
             } else {
                 $targetedIds[] = (int) $announcement['id'];
+            }
+        }
+        if ($classIds !== []) {
+            // "Students of IT 201 · BSIT-2A, IT 202 · BSIT-2B"
+            $in = implode(',', array_fill(0, count($classIds), '?'));
+            $classes = [];
+            foreach (Database::select(
+                "SELECT tc.announcement_id, sub.code, sec.code AS section_code
+                   FROM announcement_targets tc
+                   JOIN class_schedules cs ON cs.id = tc.target_id
+                   JOIN subjects sub ON sub.id = cs.subject_id
+                   JOIN sections sec ON sec.id = cs.section_id
+                  WHERE tc.target_type = 'CLASS' AND tc.announcement_id IN ({$in})
+                  ORDER BY sub.code, sec.code",
+                $classIds
+            ) as $row) {
+                $classes[(int) $row['announcement_id']][] = $row['code'] . ' · ' . $row['section_code'];
+            }
+            foreach ($classIds as $id) {
+                $labels[$id] = 'Students of ' . (isset($classes[$id]) ? implode(', ', $classes[$id]) : 'no class');
             }
         }
         if ($targetedIds === []) {

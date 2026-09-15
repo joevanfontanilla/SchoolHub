@@ -14,7 +14,11 @@ use App\Core\HttpException;
  */
 final class FileStreamer
 {
-    /** @param bool $inline show in the browser (images) instead of downloading */
+    /**
+     * @param bool $inline show in the browser instead of downloading. Only for the file types
+     *                     uploads are limited to (PDF, JPG, PNG, checked by magic bytes), and
+     *                     framable only by this site, for the preview window.
+     */
     public static function send(string $relativePath, string $downloadName, ?string $mimeType = null, bool $inline = false): void
     {
         $base = realpath(STORAGE_PATH);
@@ -33,6 +37,9 @@ final class FileStreamer
         header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . '; filename="' . $safeName . '"');
         header('X-Content-Type-Options: nosniff');
         header('Cache-Control: private, no-store');
+        if ($inline) {
+            \App\Core\Response::allowFramingBySelf(true);
+        }
 
         // Clear any buffered output so the file is not corrupted by stray bytes.
         while (ob_get_level() > 0) {

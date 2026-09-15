@@ -33,7 +33,8 @@ $enumLabels = [
             <?php endforeach; ?>
         </nav>
 
-        <form method="POST" action="<?= e(url('/admin/settings/' . $group)) ?>" <?= $group === 'school' ? 'enctype="multipart/form-data"' : '' ?> class="card space-y-5 p-5 sm:p-6 lg:col-span-3" novalidate>
+        <form method="POST" action="<?= e(url('/admin/settings/' . $group)) ?>" <?= $group === 'school' ? 'enctype="multipart/form-data"' : '' ?> class="card space-y-5 p-5 sm:p-6 lg:col-span-3" novalidate
+              data-confirm="The new settings apply across the portal right away, and the change is recorded in the audit log." data-confirm-title="Save <?= e(strtolower($groupTitle)) ?>?" data-confirm-tone="warning">
             <div>
                 <h3 class="text-lg"><?= e($groupTitle) ?></h3>
                 <p class="text-sm text-slate-600"><?= e($groupDescription) ?></p>

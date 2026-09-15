@@ -199,6 +199,8 @@ an **audit log** entry.
   notifications in `AnnouncementService::dispatch()` — never filter announcements in a view or
   with a second rule. Writing and publishing go through `AnnouncementService` (permission
   `announcements.manage` / `announcements.publish`, re-checked with `User::hasPermission()`).
+  Teachers post `CLASSES` announcements to their own active classes (`announcements.class`); only the
+  author manages one, and managers may only archive it. The author is never notified of their own post.
   Scheduled announcements are delivered by `AnnouncementService::dispatchDue()` on portal page loads
   and by `php database/dispatch_announcements.php`.
 - **Administration (docs/07, docs/19, docs/20).** Admin routes are `role:Super Admin` **plus** a `can:`
@@ -215,6 +217,18 @@ an **audit log** entry.
   `CsvExport` that writes a `reports.exported` audit entry. Teacher class reports find the class with
   `GradingService::ownedClass()` (another teacher's class is a 404). Printout tables sit in
   `overflow-x-auto print:overflow-visible` so a phone scrolls the table, not the page.
+- **Documents open in the preview window.** Link an uploaded file, proof, receipt, statement, or
+  schedule with `partial('preview-link', [...])`, never a bare download link; it adds Preview with
+  Previous/Next (same `group`). Files use `?inline=1`, printable pages `?embed=1`; only those two
+  responses may be framed, by this site only (docs/07, docs/10). A student's documents in one place:
+  `StudentDocuments::forStudent()`.
+- **Deciding buttons confirm in the shared window** (`partials/confirm-dialog.php`, docs/21): `data-confirm`
+  on the form or `data-confirm-click` on the button, plus `data-confirm-title` / `-tone` / `-label`, and
+  `data-confirm-requires="#field"` when a reason is required. Never `window.confirm()` or an inline script.
+  Flash messages and the urgent banner use the same card design. `tests/confirmation_test.php` enforces it.
+- **Portal navigation** (sidebar and quick search) is defined once in `app/Helpers/navigation.php`.
+  Add a page there with its search words; do not add placeholder "Soon" links. Dashboard stat cards
+  take an `href` to the list behind their number.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
   calling `session_destroy()`. The latter keeps the old id for the rest of the request while
   deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).

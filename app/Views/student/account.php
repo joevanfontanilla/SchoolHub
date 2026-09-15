@@ -79,8 +79,8 @@ $failed = errors() !== [];
                 <section class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-success-line bg-success-bg px-5 py-4 text-success-text" aria-label="Enrollment">
                     <p class="flex items-center gap-3 text-sm"><?= icon('attendance', 'h-6 w-6') ?> <span><strong>You are officially enrolled</strong> for <?= e($assessment['term_name'] . ', A.Y. ' . $assessment['academic_year_code']) ?>. Your subjects and schedule are ready.</span></p>
                     <div class="flex flex-wrap gap-2">
-                        <a href="<?= e(url('/student/schedule?term_id=' . $assessment['term_id'])) ?>" class="btn-secondary"><?= icon('calendar', 'h-5 w-5') ?> View schedule</a>
-                        <a href="<?= e(url('/student/schedule/print?term_id=' . $assessment['term_id'])) ?>" class="btn-primary"><?= icon('download', 'h-5 w-5') ?> Print schedule</a>
+                        <a href="<?= e(url('/student/schedule?term_id=' . $assessment['term_id'])) ?>" class="btn-secondary"><?= icon('calendar', 'h-5 w-5') ?> Weekly schedule</a>
+                        <?= partial('preview-link', ['path' => '/student/schedule/print?term_id=' . $assessment['term_id'], 'kind' => 'page', 'title' => 'Class schedule', 'label' => 'Print schedule', 'icon' => 'document', 'class' => 'btn-primary']) ?>
                     </div>
                 </section>
             <?php endif; ?>
@@ -88,7 +88,7 @@ $failed = errors() !== [];
             <section class="card p-5 sm:p-6" aria-labelledby="statement-heading">
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h2 id="statement-heading" class="<?= $cardTitle ?>"><span class="text-brand-600"><?= icon('receipt', 'h-7 w-7') ?></span> Statement of Account</h2>
-                    <a href="<?= e(url('/statements/' . $assessment['id'])) ?>" class="btn-secondary"><?= icon('download', 'h-5 w-5') ?> Print statement</a>
+                    <?= partial('preview-link', ['path' => '/statements/' . $assessment['id'], 'kind' => 'page', 'title' => 'Statement of account · ' . $assessment['assessment_number'], 'label' => 'View statement', 'icon' => 'document', 'class' => 'btn-secondary']) ?>
                 </div>
                 <div class="table-scroll">
                     <table class="min-w-full border-separate border-spacing-0 overflow-hidden rounded-xl border border-brand-100 text-left text-sm">
@@ -152,7 +152,7 @@ $failed = errors() !== [];
                             <?php endif; ?>
                             <li class="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
                                 <span><span class="font-semibold text-brand-navy"><?= e(money($payment['amount'])) ?></span> · <?= e($payment['payment_method']) ?> at the cashier · <?= e(d($payment['paid_at'])) ?></span>
-                                <span class="flex items-center gap-2"><?= component('status-badge', $payment['reversal_id'] !== null ? ['status' => 'CANCELLED', 'label' => 'Reversed'] : ['status' => 'PAID', 'label' => 'Received']) ?> <a href="<?= e(url('/receipts/' . $payment['id'])) ?>" class="font-semibold text-brand-600 hover:underline">Receipt <?= e($payment['receipt_number']) ?></a></span>
+                                <span class="flex items-center gap-2"><?= component('status-badge', $payment['reversal_id'] !== null ? ['status' => 'CANCELLED', 'label' => 'Reversed'] : ['status' => 'PAID', 'label' => 'Received']) ?> <?= partial('preview-link', ['path' => '/receipts/' . $payment['id'], 'kind' => 'page', 'title' => 'Official receipt ' . $payment['receipt_number'], 'label' => 'Receipt ' . $payment['receipt_number'], 'group' => 'account-receipts']) ?></span>
                             </li>
                         <?php endforeach; ?>
                         <?php foreach ($submissions as $submission): ?>
@@ -166,14 +166,17 @@ $failed = errors() !== [];
                                             default    => ['status' => 'UNDER_REVIEW', 'label' => 'Being verified'],
                                         }) ?>
                                         <?php if ($submission['payment_id']): ?>
-                                            <a href="<?= e(url('/receipts/' . $submission['payment_id'])) ?>" class="font-semibold text-brand-600 hover:underline">Receipt <?= e($submission['receipt_number']) ?></a>
+                                            <?= partial('preview-link', ['path' => '/receipts/' . $submission['payment_id'], 'kind' => 'page', 'title' => 'Official receipt ' . $submission['receipt_number'], 'label' => 'Receipt ' . $submission['receipt_number'], 'group' => 'account-receipts']) ?>
                                         <?php endif; ?>
                                     </span>
                                 </div>
                                 <?php if ($submission['status'] === 'REJECTED' && $submission['review_remarks']): ?>
                                     <p class="mt-1 text-xs text-danger-text">Cashier's note: <?= e($submission['review_remarks']) ?></p>
                                 <?php endif; ?>
-                                <a href="<?= e(url('/payment-proofs/' . $submission['id'])) ?>" class="mt-1 inline-block text-xs text-brand-600 hover:underline">Download the proof you sent</a>
+                                <p class="mt-1 flex flex-wrap gap-3 text-xs">
+                                    <?= partial('preview-link', ['path' => '/payment-proofs/' . $submission['id'], 'mime' => $submission['mime_type'], 'title' => 'Your proof of payment · Ref. ' . $submission['reference_number'], 'label' => 'View the proof you sent', 'class' => 'font-semibold text-brand-600 hover:underline']) ?>
+                                    <a href="<?= e(url('/payment-proofs/' . $submission['id'])) ?>" class="text-brand-600 hover:underline">Download</a>
+                                </p>
                             </li>
                         <?php endforeach; ?>
                     </ul>

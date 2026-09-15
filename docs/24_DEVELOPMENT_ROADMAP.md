@@ -14,7 +14,9 @@
 | 8 Quality | Done | this release: security scan, HTTP crawl, responsive pass, performance dataset and fixes, deployment preflight and guide |
 
 After Phase 8: registrar reports and teacher class reports (docs/15), completing the
-reports docs/15 lists, and the Super Admin's administrative reports (docs/19).
+reports docs/15 lists, the Super Admin's administrative reports (docs/19), teacher
+announcements to their own classes (docs/16), and UI polish: document preview, My Documents,
+quick search, and linked dashboard cards (docs/10, docs/21).
 
 **1.0.0** is tagged after the school runs the preflight and the acceptance scenarios
 (docs/22) on its own server (docs/23) and fixes whatever they turn up.
@@ -24,7 +26,7 @@ Recorded in the module documents; none blocks enrollment:
 - Email or SMS delivery: the Super Admin hands each password link to its owner (docs/07, docs/16).
 - `INC` completion deadlines and transfer-credit evaluation (docs/27, docs/13).
 - Virus scanning of uploads (docs/10); off-site backup copies are a scheduled `robocopy`, not a feature (docs/20, docs/23).
-- Teacher announcements to their own classes; theme and notification settings.
+- Theme and notification settings.
 
 ## Phase 1 — Foundation
 - Project structure

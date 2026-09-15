@@ -204,7 +204,8 @@ $groupError = static fn (string $field) => ($message = error_for($field)) === nu
                     <button type="submit" class="btn-secondary">Archive</button>
                 </form>
             <?php elseif ($archived): ?>
-                <form method="POST" action="<?= e(url('/manage/announcements/' . $announcement['id'] . '/restore')) ?>">
+                <form method="POST" action="<?= e(url('/manage/announcements/' . $announcement['id'] . '/restore')) ?>"
+                      data-confirm="It becomes a draft you can edit and publish again. Nobody is notified a second time." data-confirm-title="Restore as a draft?" data-confirm-tone="primary">
                     <?= csrf_field() ?>
                     <button type="submit" class="btn-primary">Restore as draft</button>
                 </form>

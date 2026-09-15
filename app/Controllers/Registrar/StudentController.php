@@ -49,6 +49,7 @@ final class StudentController extends Controller
             'addable'      => $enrollmentId === null ? [] : ClassSchedule::addableFor($enrollmentId),
             'unitLimit'    => $enrollment === null ? null : EnlistmentService::unitLimit($enrollment),
             'history'      => AcademicRecordService::history($id),
+            'documents'    => \App\Models\StudentDocuments::forStudent($id, false),
             'title'        => trim($student['first_name'] . ' ' . $student['last_name']),
             'student'      => $student,
             'profile'      => Student::profile($id),

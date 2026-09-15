@@ -13,7 +13,8 @@ $basisError = error_for('basis');
     <a href="<?= e(url('/cashier/fees')) ?>" class="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline">&larr; Fee schedule</a>
     <h2 class="text-2xl"><?= $editing ? 'Edit ' . e($fee['name']) : 'New fee' ?></h2>
 
-    <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate>
+    <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate
+          data-confirm="Assessments issued from now on use these amounts. Assessments already issued keep theirs." data-confirm-title="<?= $editing ? 'Save this fee?' : 'Add this fee?' ?>" data-confirm-tone="primary">
         <?= csrf_field() ?>
         <div class="grid gap-5 sm:grid-cols-3">
             <?= component('field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'value' => $val('code'), 'help' => 'Example: TUITION']) ?>

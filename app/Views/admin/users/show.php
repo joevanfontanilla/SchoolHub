@@ -96,7 +96,8 @@ $auditRows = static function (array $entries): string {
                 <section class="card p-5">
                     <h3 class="text-base"><?= $account->status === User::STATUS_PENDING ? 'Set-up link' : 'Password reset link' ?></h3>
                     <p class="mt-1 text-sm text-slate-600">Issue a one-time link the person uses to choose a password. Earlier links stop working.</p>
-                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/reset-link')) ?>" class="mt-3" data-confirm="Issue a new one-time password link for this account?">
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/reset-link')) ?>" class="mt-3"
+                          data-confirm="A new one-time link is created for you to give to the person. Any earlier link stops working." data-confirm-title="Issue a password link?" data-confirm-tone="primary" data-confirm-label="Issue link">
                         <?= csrf_field() ?>
                         <button type="submit" class="btn-primary w-full"><?= icon('key', 'h-5 w-5') ?> Issue link</button>
                     </form>
@@ -107,7 +108,8 @@ $auditRows = static function (array $entries): string {
                 <section class="card p-5">
                     <h3 class="text-base">Unlock</h3>
                     <p class="mt-1 text-sm text-slate-600">Clears the failed attempts so the person can sign in now.</p>
-                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/unlock')) ?>" class="mt-3">
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/unlock')) ?>" class="mt-3"
+                          data-confirm="The failed sign-in attempts are cleared and the person can sign in again now." data-confirm-title="Unlock this account?" data-confirm-tone="warning">
                         <?= csrf_field() ?>
                         <button type="submit" class="btn-secondary w-full"><?= icon('lock', 'h-5 w-5') ?> Unlock account</button>
                     </form>
@@ -118,7 +120,8 @@ $auditRows = static function (array $entries): string {
                 <section class="card p-5">
                     <h3 class="text-base">Enable</h3>
                     <p class="mt-1 text-sm text-slate-600">Lets the account sign in again.</p>
-                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/enable')) ?>" class="mt-3">
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/enable')) ?>" class="mt-3"
+                          data-confirm="The account can sign in again with its current password." data-confirm-title="Enable this account?" data-confirm-tone="success">
                         <?= csrf_field() ?>
                         <button type="submit" class="btn-primary w-full">Enable account</button>
                     </form>
@@ -131,7 +134,9 @@ $auditRows = static function (array $entries): string {
                 <section class="card p-5">
                     <h3 class="text-base">Disable</h3>
                     <p class="mt-1 text-sm text-slate-600">The account can no longer sign in, and any open session ends. Its records stay.</p>
-                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/disable')) ?>" class="mt-3 space-y-3" novalidate data-confirm="Disable this account? The person will be signed out.">
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/disable')) ?>" class="mt-3 space-y-3" novalidate
+                          data-confirm="The person is signed out and can no longer sign in. Their records stay." data-confirm-title="Disable this account?" data-confirm-tone="danger" data-confirm-label="Disable account"
+                          data-confirm-requires="#disable-reason" data-confirm-requires-message="Write the reason for disabling the account first. It is recorded in the audit log.">
                         <?= csrf_field() ?>
                         <div>
                             <label for="disable-reason" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>

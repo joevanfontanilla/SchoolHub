@@ -101,7 +101,7 @@ final class FinanceDocumentController extends Controller
         $this->authorize(isset($submission['owner_user_id']) ? (int) $submission['owner_user_id'] : null, $submission !== null, 'payment proof', [User::ROLE_CASHIER]);
 
         AuditService::log('finance.proof_viewed', 'finance', 'PaymentSubmission', (int) $submission['id']);
-        FileStreamer::send($submission['storage_path'], $submission['original_filename'], $submission['mime_type']);
+        FileStreamer::send($submission['storage_path'], $submission['original_filename'], $submission['mime_type'], (string) $request->input('inline', '') === '1');
     }
 
     /** @param array<int,string> $staffRoles roles that may open any record of this kind */

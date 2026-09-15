@@ -32,5 +32,15 @@ Display:
 - Attendance
 - Fees
 - Payments
+- My Documents
 - Announcements
 - Notifications
+- Password & Security
+
+## My Documents (as built, `/student/documents`)
+Everything the student uploaded or was issued, in one place, each opening in the preview
+window (docs/10): the files uploaded for each application (drafts included) with their review
+status; official receipts; statements of account; the class schedule of each enrolled term;
+and the proofs of payment they sent with their verification status. The page takes no record
+id, so only the signed-in student's documents can appear (`StudentDocuments::forStudent()`).
+Receipts, statements, and schedules open as printable pages inside the window, with Print.

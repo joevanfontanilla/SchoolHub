@@ -43,7 +43,14 @@ final class AnnouncementController extends Controller
 
     public function edit(Request $request): void
     {
-        $this->form($this->announcement($request));
+        $announcement = $this->announcement($request);
+        if ($announcement['audience'] === Announcement::CLASSES) {
+            // A teacher's class announcement is edited by its teacher; managers may view or archive it.
+            \App\Core\Session::flash('warning', 'This is a teacher\'s class announcement. Only its teacher can edit it; you can archive it from the list.');
+            $this->redirect('/portal/announcements/' . $announcement['id']);
+            return;
+        }
+        $this->form($announcement);
     }
 
     public function store(Request $request): void

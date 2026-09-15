@@ -47,9 +47,11 @@ use App\Controllers\Registrar\RoomController;
 use App\Controllers\Registrar\StudentController as RegistrarStudents;
 use App\Controllers\Student\AcademicController as StudentAcademic;
 use App\Controllers\Student\DashboardController as StudentDashboard;
+use App\Controllers\Student\DocumentsController as StudentDocuments;
 use App\Controllers\Student\EnrollmentController;
 use App\Controllers\Student\ProfileController;
 use App\Controllers\Student\RequirementController;
+use App\Controllers\Teacher\AnnouncementController as TeacherAnnouncements;
 use App\Controllers\Teacher\ClassController as TeacherClasses;
 use App\Controllers\Teacher\DashboardController as TeacherDashboard;
 use App\Controllers\Teacher\ReportController as TeacherReports;
@@ -187,6 +189,9 @@ $router->get('/student/attendance', [StudentAcademic::class, 'attendance'], [...
 $router->get('/student/history',    [StudentAcademic::class, 'history'],    [...$student, 'can:grades.view'],     'student.history');
 $router->get('/student/schedule/print', [FinanceDocumentController::class, 'schedule'], [...$student, 'can:schedule.view'], 'student.schedule.print');
 
+// My Documents: uploads, receipts, statements, schedules, and proofs, each previewable.
+$router->get('/student/documents', [StudentDocuments::class, 'index'], $student, 'student.documents');
+
 // Payments & Accounts (Phase 5): the student's own assessments, online payments, receipts.
 $router->get('/student/account',                [StudentAccount::class, 'index'],         [...$student, 'can:finance.view_account'], 'student.account');
 $router->post('/student/account/{id}/payments', [StudentAccount::class, 'submitPayment'], [...$student, 'can:finance.view_account']);
@@ -274,6 +279,16 @@ $router->get('/teacher/classes/{id}/attendance',   [TeacherClasses::class, 'atte
 $router->post('/teacher/classes/{id}/attendance',  [TeacherClasses::class, 'saveAttendance'],  $teacher('attendance.record'));
 $router->get('/teacher/classes/{id}/grades',       [TeacherClasses::class, 'grades'],          $teacher('grades.record'));
 $router->post('/teacher/classes/{id}/grades',      [TeacherClasses::class, 'saveGrades'],      $teacher('grades.record'));
+
+// Announcements to the students of the teacher's own classes (docs/16).
+$router->get('/teacher/announcements',               [TeacherAnnouncements::class, 'index'],   $teacher('announcements.class'), 'teacher.announcements');
+$router->get('/teacher/announcements/create',        [TeacherAnnouncements::class, 'create'],  $teacher('announcements.class'));
+$router->post('/teacher/announcements/create',       [TeacherAnnouncements::class, 'store'],   $teacher('announcements.class'));
+$router->get('/teacher/announcements/{id}/edit',     [TeacherAnnouncements::class, 'edit'],    $teacher('announcements.class'));
+$router->post('/teacher/announcements/{id}/edit',    [TeacherAnnouncements::class, 'update'],  $teacher('announcements.class'));
+$router->post('/teacher/announcements/{id}/archive', [TeacherAnnouncements::class, 'archive'], $teacher('announcements.class'));
+$router->post('/teacher/announcements/{id}/restore', [TeacherAnnouncements::class, 'restore'], $teacher('announcements.class'));
+$router->post('/teacher/announcements/{id}/delete',  [TeacherAnnouncements::class, 'destroy'], $teacher('announcements.class'));
 
 // Class reports (docs/15): printable, and an audited CSV export. Own classes only.
 $router->get('/teacher/reports',                              [TeacherReports::class, 'index'],            $teacher('reports.teacher'), 'teacher.reports');

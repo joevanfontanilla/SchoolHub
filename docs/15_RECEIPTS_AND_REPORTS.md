@@ -48,6 +48,12 @@ PDF library). Each has the school letterhead.
 | Class schedule | `/student/schedule/print` | The signed-in student, for their own enrolled terms |
 | Payment proof | `/payment-proofs/{id}` | The student who sent it; cashier |
 
+Receipts, statements, and class schedules open in the **preview window** (docs/10) from every
+page that lists them, with Print and Open in new tab. For that, `?embed=1` renders the printable
+page without its toolbar and allows this site, and only this site, to frame it
+(`Controller::printView()`, `Response::allowFramingBySelf()`); the page is authorized exactly as
+when opened directly.
+
 Another student's receipt, statement, or proof is a **404**; a role not listed is a **403**
 (`FinanceAccessPolicy`). The receipt shows the receipt and transaction numbers, date,
 student and student number, program, method, reference number, amount, total assessment,

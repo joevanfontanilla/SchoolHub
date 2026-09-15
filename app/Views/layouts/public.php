@@ -24,12 +24,13 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
     <?= partial('public-nav', ['school' => $school, 'currentPath' => $currentPath ?? '/']) ?>
 
     <main id="main" tabindex="-1">
-        <?= partial('flash') ?>
+        <?= partial('flash', ['container' => true]) ?>
         <?= $content ?>
     </main>
 
     <?= partial('public-footer', ['school' => $school]) ?>
 
+    <?= partial('confirm-dialog') ?>
     <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
 </body>
 </html>

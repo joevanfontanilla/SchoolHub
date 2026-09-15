@@ -3,7 +3,8 @@
  * Role-driven sidebar (docs/21).
  *
  * This mirrors the backend authorization in routes/web.php. Hiding a link here
- * is NOT authorization — the route middleware is (docs/00).
+ * is NOT authorization — the route middleware is (docs/00). The entries are defined
+ * once, in app/Helpers/navigation.php, and shared with the top-bar quick search.
  *
  * Links whose modules arrive in later phases are rendered disabled with a "Soon"
  * label rather than hidden, so the shape of the system is visible without
@@ -19,79 +20,7 @@
 
 use App\Models\User;
 
-$nav = match ($user?->role_name) {
-    User::ROLE_STUDENT => [
-        ['/student/dashboard', 'Dashboard', 'dashboard', true],
-        ['/student/profile', 'My Profile', 'user', true],
-        ['/student/enrollment', 'Enrollment', 'enrollment', true, ['/student/status']],
-        ['/student/requirements', 'Requirements', 'requirements', true],
-        ['/student/grades', 'Academic Records', 'book-open', true, ['/student/schedule', '/student/attendance', '/student/history']],
-        ['/student/account', 'Payments & Accounts', 'credit-card', true],
-        ['/student/documents', 'Document Requests', 'document', false],
-        ['/portal/announcements', 'Announcements', 'megaphone', true],
-        ['/portal/notifications', 'Notifications', 'bell', true],
-        ['/student/settings', 'Settings', 'settings', false],
-    ],
-    User::ROLE_TEACHER => [
-        ['/teacher/dashboard', 'Dashboard', 'dashboard', true],
-        'Teaching',
-        ['/teacher/classes', 'My Classes', 'academic', true],
-        ['/teacher/attendance', 'Attendance', 'attendance', true],
-        ['/teacher/grades', 'Grades', 'chart-bar', true],
-        ['/teacher/schedule', 'Schedule', 'calendar', true],
-        'Communication',
-        ['/portal/announcements', 'Announcements', 'megaphone', true],
-        ['/portal/notifications', 'Notifications', 'bell', true],
-        'Reports',
-        ['/teacher/reports', 'Class Reports', 'presentation', true],
-    ],
-    User::ROLE_REGISTRAR => [
-        ['/registrar/dashboard', 'Dashboard', 'dashboard', true],
-        'Enrollment',
-        ['/registrar/applications', 'Applications', 'inbox', true],
-        ['/registrar/students', 'Students', 'users', true],
-        'Academic catalog',
-        ['/registrar/programs', 'Programs', 'library', true],
-        ['/registrar/curricula', 'Curricula', 'layers', true],
-        ['/registrar/subjects', 'Subjects', 'book', true],
-        ['/registrar/sections', 'Sections', 'table', true, ['/registrar/classes']],
-        ['/registrar/rooms', 'Rooms', 'door', true],
-        ['/registrar/grading', 'Grading Periods', 'calendar-check', true],
-        'Communication',
-        ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
-        ['/portal/notifications', 'Notifications', 'bell', true],
-        'Reports',
-        ['/registrar/reports', 'Reports', 'presentation', true],
-    ],
-    User::ROLE_CASHIER => [
-        ['/cashier/dashboard', 'Dashboard', 'dashboard', true],
-        'Finance',
-        ['/cashier/payments', 'Online Payments', 'inbox', true],
-        ['/cashier/accounts', 'Student Accounts', 'users', true],
-        ['/cashier/fees', 'Fee Schedule', 'banknotes', true],
-        ['/cashier/reports', 'Reports', 'presentation', true],
-        'Communication',
-        ['/portal/announcements', 'Announcements', 'megaphone', true],
-        ['/portal/notifications', 'Notifications', 'bell', true],
-    ],
-    User::ROLE_SUPER_ADMIN => [
-        ['/admin/dashboard', 'Dashboard', 'dashboard', true],
-        'Administration',
-        ['/admin/users', 'Users', 'users', true],
-        ['/admin/roles', 'Roles & Permissions', 'shield', true],
-        ['/admin/settings', 'System Settings', 'settings', true],
-        'Monitoring',
-        ['/admin/audit-logs', 'Audit Logs', 'list-check', true],
-        ['/admin/login-activity', 'Sign-in Activity', 'key', true],
-        ['/admin/backups', 'Backups', 'database', true],
-        ['/admin/health', 'System Health', 'status', true],
-        ['/admin/reports', 'Reports', 'presentation', true],
-        'Communication',
-        ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
-        ['/portal/notifications', 'Notifications', 'bell', true],
-    ],
-    default => [],
-};
+$nav = portal_nav($user?->role_name);
 
 $portalName = match ($user?->role_name) {
     User::ROLE_SUPER_ADMIN => 'Admin Portal',

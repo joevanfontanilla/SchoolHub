@@ -61,7 +61,7 @@
                                 <?php if ($payment['reversed_payment_id'] !== null): ?>
                                     <a href="<?= e(url('/cashier/accounts/' . $payment['fee_assessment_id'])) ?>" class="font-semibold text-danger-text hover:underline">Reversal</a>
                                 <?php else: ?>
-                                    <a href="<?= e(url('/receipts/' . $payment['id'])) ?>" class="font-semibold text-brand-600 hover:underline"><?= e($payment['receipt_number']) ?></a>
+                                    <?= partial('preview-link', ['path' => '/receipts/' . $payment['id'], 'kind' => 'page', 'title' => 'Official receipt ' . $payment['receipt_number'], 'label' => (string) $payment['receipt_number'], 'group' => 'recent-receipts']) ?>
                                 <?php endif; ?>
                             </li>
                         <?php endforeach; ?>

@@ -36,13 +36,18 @@ $remarksError = error_for('review_remarks');
         <section class="card p-5 xl:col-span-2" aria-labelledby="proof-heading">
             <div class="mb-3 flex items-center justify-between gap-3">
                 <h3 id="proof-heading" class="text-base">Proof of payment</h3>
-                <a href="<?= e(url('/payment-proofs/' . $submission['id'])) ?>" class="text-sm font-semibold text-brand-600 hover:underline">Download original</a>
+                <span class="flex flex-wrap items-center gap-3 text-sm">
+                    <?= partial('preview-link', ['path' => '/payment-proofs/' . $submission['id'], 'mime' => $submission['mime_type'], 'title' => 'Proof of payment · Ref. ' . $submission['reference_number'], 'label' => 'Enlarge', 'icon' => 'search', 'class' => 'inline-flex items-center gap-1.5 font-semibold text-brand-600 hover:underline']) ?>
+                    <a href="<?= e(url('/payment-proofs/' . $submission['id'])) ?>" class="inline-flex items-center gap-1.5 font-semibold text-brand-600 hover:underline"><?= icon('download', 'h-4 w-4') ?> Download original</a>
+                </span>
             </div>
             <?php if ($isImage): ?>
-                <img src="<?= e(url('/payment-proofs/' . $submission['id'])) ?>" alt="Proof of payment uploaded by the student, reference <?= e($submission['reference_number']) ?>"
+                <img src="<?= e(url('/payment-proofs/' . $submission['id'] . '?inline=1')) ?>" alt="Proof of payment uploaded by the student, reference <?= e($submission['reference_number']) ?>"
                      class="mx-auto max-h-[70vh] rounded-xl border border-brand-100 object-contain">
             <?php else: ?>
-                <p class="rounded-xl bg-brand-50 px-4 py-6 text-center text-sm text-slate-700"><?= icon('document', 'mx-auto mb-2 h-8 w-8 text-brand-600') ?> The proof is a PDF (<?= e($submission['original_filename']) ?>). Download it to view.</p>
+                <iframe src="<?= e(url('/payment-proofs/' . $submission['id'] . '?inline=1')) ?>" title="Proof of payment, <?= e($submission['original_filename']) ?>"
+                        class="h-[70vh] w-full rounded-xl border border-brand-100 bg-white"></iframe>
+                <p class="mt-2 text-xs text-brand-gray">If the PDF does not appear, use Enlarge or Download original.</p>
             <?php endif; ?>
         </section>
 
@@ -71,12 +76,13 @@ $remarksError = error_for('review_remarks');
                         <textarea id="review-remarks" name="review_remarks" rows="3" maxlength="500" class="field-input <?= $remarksError ? 'field-input-error' : '' ?>"><?= e(old('review_remarks')) ?></textarea>
                         <?php if ($remarksError): ?><p class="field-error"><span><?= e($remarksError) ?></span></p><?php endif; ?>
                         <button type="submit" class="btn w-full bg-success-text text-white hover:brightness-110"
-                                data-confirm-click="Verify <?= e(money($submission['amount'])) ?> and issue an official receipt? Payments cannot be edited or deleted afterwards.">
+                                data-confirm-click="An official receipt for <?= e(money($submission['amount'])) ?> is issued and the student is notified. Payments cannot be edited or deleted afterwards." data-confirm-title="Verify this payment?" data-confirm-tone="success" data-confirm-label="Verify and issue receipt">
                             <?= icon('attendance', 'h-5 w-5') ?> Verify and issue receipt
                         </button>
                         <button type="submit" formaction="<?= e(url('/cashier/payments/' . $submission['id'] . '/reject')) ?>"
                                 class="btn w-full border border-danger-line bg-white text-danger-text hover:bg-danger-bg"
-                                data-confirm-click="Reject this payment? The student will see your note.">
+                                data-confirm-click="Nothing is recorded, and the student sees your note and can send the payment again." data-confirm-title="Reject this payment?" data-confirm-tone="danger" data-confirm-label="Reject payment"
+                                data-confirm-requires="#review-remarks" data-confirm-requires-message="Write a note telling the student why the payment is not accepted.">
                             Reject
                         </button>
                     </form>

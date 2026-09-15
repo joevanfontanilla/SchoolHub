@@ -8,7 +8,9 @@
  * @var string $title
  * @var array  $school
  * @var ?string $back where the Back link goes
+ * @var bool    $embedded shown inside the preview window: no toolbar, no page margins
  */
+$embedded ??= false;
 $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
 ?>
 <!DOCTYPE html>
@@ -20,15 +22,17 @@ $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
     <link rel="icon" type="image/jpeg" href="<?= e(school_logo_url()) ?>">
 </head>
-<body class="bg-brand-canvas font-sans text-slate-800 print:bg-white">
+<body class="<?= $embedded ? 'bg-white' : 'bg-brand-canvas' ?> font-sans text-slate-800 print:bg-white">
+    <?php if (!$embedded): ?>
     <div class="no-print sticky top-0 z-10 border-b border-brand-100 bg-white/95 px-4 py-3 backdrop-blur">
         <div class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">
             <a href="<?= e(url($back ?? '/')) ?>" class="inline-flex items-center gap-2 text-sm font-semibold text-brand-600 hover:underline"><?= icon('arrow-left', 'h-4 w-4') ?> Back</a>
             <button type="button" class="btn-primary" data-print><?= icon('download', 'h-5 w-5') ?> Print or save as PDF</button>
         </div>
     </div>
+    <?php endif; ?>
 
-    <main class="mx-auto my-6 max-w-4xl bg-white p-6 shadow-sm ring-1 ring-brand-100 sm:p-10 print:my-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
+    <main class="<?= $embedded ? 'mx-auto max-w-4xl bg-white p-4 sm:p-8' : 'mx-auto my-6 max-w-4xl bg-white p-6 shadow-sm ring-1 ring-brand-100 sm:p-10' ?> print:my-0 print:max-w-none print:p-0 print:shadow-none print:ring-0">
         <header class="flex items-center gap-4 border-b-2 border-brand-navy pb-4">
             <img src="<?= e(school_logo_url()) ?>" alt="" width="72" height="72" class="school-seal h-16 w-16">
             <div class="min-w-0 flex-1">

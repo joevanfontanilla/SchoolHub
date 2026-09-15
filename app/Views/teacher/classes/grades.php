@@ -59,7 +59,8 @@ $valueOf = static function (?array $entry): string {
             <?php if ($sheet === []): ?>
                 <?= component('empty-state', ['title' => 'No students enlisted yet']) ?>
             <?php else: ?>
-                <form method="POST" action="<?= e(url('/teacher/classes/' . $class['id'] . '/grades')) ?>" novalidate>
+                <form method="POST" action="<?= e(url('/teacher/classes/' . $class['id'] . '/grades')) ?>" novalidate
+                      data-confirm="Every change is recorded in the audit log. You can still change them while <?= e($period['name']) ?> is open." data-confirm-title="Save <?= e($period['name']) ?> grades?" data-confirm-tone="success">
                     <?= csrf_field() ?>
                     <input type="hidden" name="period_id" value="<?= e($period['id']) ?>">
                     <div class="table-scroll">

@@ -60,6 +60,25 @@ final class Response
         self::redirect($fallback);
     }
 
+    /** The Content-Security-Policy of every page, without its frame-ancestors part. */
+    private const PAGE_POLICY = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'";
+
+    /**
+     * Let this site, and only this site, show the current response inside a frame: the
+     * document preview window (docs/10, docs/15). Replaces the "never framed" headers sent
+     * by securityHeaders(). Another site still cannot frame it.
+     *
+     * @param bool $file true for an uploaded file shown inline (a PDF or an image): it gets a
+     *                   policy that allows nothing to run, instead of the page policy
+     */
+    public static function allowFramingBySelf(bool $file = false): void
+    {
+        header('X-Frame-Options: SAMEORIGIN');
+        header('Content-Security-Policy: ' . ($file
+            ? "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; frame-ancestors 'self'"
+            : self::PAGE_POLICY . "; frame-ancestors 'self'"));
+    }
+
     /** Security headers applied to every response (docs/07). */
     public static function securityHeaders(): void
     {
@@ -70,7 +89,7 @@ final class Response
         // Only this site's own scripts, styles, fonts, and images; no framing, no plugins,
         // forms post only back here. Inline style attributes are allowed for the few
         // computed widths (progress bars); inline scripts are not.
-        header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
+        header('Content-Security-Policy: ' . self::PAGE_POLICY . "; frame-ancestors 'none'");
         header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
         if (Config::get('session.secure', false)) {
             header('Strict-Transport-Security: max-age=31536000');

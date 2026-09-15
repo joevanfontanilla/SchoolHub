@@ -192,6 +192,45 @@ if (!function_exists('icon')) {
     }
 }
 
+if (!function_exists('portal_nav')) {
+    /**
+     * The sidebar entries of a role (app/Helpers/navigation.php).
+     *
+     * @return array<int,string|array<int,mixed>>
+     */
+    function portal_nav(?string $role): array
+    {
+        static $navigation = null;
+        $navigation ??= require __DIR__ . '/navigation.php';
+        return $navigation['nav'][$role] ?? [];
+    }
+
+    /**
+     * Every page the quick search can open for a role, once each: the sidebar pages and
+     * the extra ones, with the words that find them.
+     *
+     * @return array<int,array{path:string,label:string,icon:string,terms:string}>
+     */
+    function portal_destinations(?string $role): array
+    {
+        static $navigation = null;
+        $navigation ??= require __DIR__ . '/navigation.php';
+        $pages = [];
+        foreach ([...portal_nav($role), ...($navigation['extra'][$role] ?? [])] as $entry) {
+            if (!is_array($entry) || ($entry[3] ?? true) === false || isset($pages[$entry[0]])) {
+                continue;
+            }
+            $pages[$entry[0]] = [
+                'path'  => $entry[0],
+                'label' => $entry[1],
+                'icon'  => $entry[2],
+                'terms' => strtolower($entry[1] . ' ' . ($navigation['keywords'][$entry[0]] ?? '')),
+            ];
+        }
+        return array_values($pages);
+    }
+}
+
 if (!function_exists('auth_user')) {
     function auth_user(): ?App\Models\User
     {

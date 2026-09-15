@@ -19,7 +19,7 @@ SchoolHub runs a college's enrollment and records in one place:
   confirmation once payment policy is met, student records, programs, curricula, subjects,
   sections, rooms, classes with conflict checks, enlistment adjustments, grading periods, and
   reports (enrollment list, applicants by status, requirements, enrollment history; print and CSV).
-- **Teachers:** their own classes, rosters, attendance, Prelim/Midterm/Finals grades, and class reports (class list, attendance summary, grade sheet; print and CSV).
+- **Teachers:** their own classes, rosters, attendance, Prelim/Midterm/Finals grades, announcements to their classes, and class reports (class list, attendance summary, grade sheet; print and CSV).
 - **Cashier:** fee schedule, assessments, payment verification and window payments,
   official receipts, adjustments and reversals, collections and outstanding-balance reports
   (print and CSV).
@@ -28,6 +28,10 @@ SchoolHub runs a college's enrollment and records in one place:
 - **Super Admin:** staff accounts with one-time password links, role permissions, system
   settings, the audit log and sign-in activity, backups, system health, and administrative
   reports (account review, sign-in and activity summaries, system usage).
+
+Across the portal: a document preview window for uploaded requirements, payment proofs,
+receipts, statements, and schedules (with Previous/Next); a My Documents page for students; a
+quick search in the top bar (press `/`); and dashboard cards that open the list behind each number.
 
 Every protected action is authorized on the server, every form is CSRF-protected, every
 change that matters is written to an append-only audit log, and financial records are
@@ -66,8 +70,8 @@ binary as `tailwindcss.exe` into the project root and run
 | `php database/restore.php <file>` | Restore a backup (command line only) |
 | `php database/dispatch_announcements.php` | Deliver scheduled announcements (Task Scheduler) |
 | `php database/check_deployment.php [--url=https://…]` | Deployment preflight |
-| `php tests/run.php [--filter=name]` | Test suite (241 tests) |
-| `php tests/http/crawl.php` | Every route as every role through Apache (1,824 checks) |
+| `php tests/run.php [--filter=name]` | Test suite (250 tests) |
+| `php tests/http/crawl.php` | Every route as every role through Apache (1,898 checks) |
 
 ## Deploying
 Deployment is on a school Windows computer running XAMPP, served over HTTPS, with the web root

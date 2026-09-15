@@ -25,20 +25,20 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**241 tests in 30 files**:
+**250 tests in 33 files**:
 
 | Area | Files (tests) |
 |---|---|
 | Authentication and sessions | `auth` (13), `csrf` (6), `rbac` (7), `registration` (7), `validation` (13) |
 | Enrollment | `enrollment_application` (12), `enrollment_status` (10), `enrollment_flow` (9), `enrollment_confirmation` (8) |
-| Documents | `upload` (11), `document_access` (5), `requirement_review` (8) |
+| Documents | `upload` (11), `document_access` (5), `requirement_review` (8), `documents` (4) |
 | Registrar | `registrar_access` (5), `registrar_decisions` (6), `academic_catalog` (8), `curriculum` (11) |
 | Academic | `class_schedule` (9), `enlistment` (7), `grade_calculator` (11), `grading` (7), `attendance` (3), `academic_record` (2), `teacher_access` (5) |
 | Finance | `finance` (12) |
-| Communication | `communication` (8) |
+| Communication | `communication` (8), `class_announcement` (4) |
 | Administration | `admin` (11) |
 | Reports | `reports` (7), `admin_reports` (6) |
-| Quality | `security` (7), `deployment` (7) |
+| Quality | `security` (7), `deployment` (7), `confirmation` (1: every deciding button asks first, docs/21) |
 
 Route-table tests (`registrar_access`, `teacher_access`, `rbac`) walk `routes/web.php`
 itself, so a new route without the right role and permission gates fails the suite.
@@ -92,7 +92,12 @@ rooms, and subjects, signs in through the login form, and then:
    and no duplicate ids.
 8. Opens receipts, statements, every CSV export (cashier, registrar, teacher, and administrative reports), and printouts as their owners and as others.
 
-Result with every report built: **1,824 checks, 0 failures** (931 page requests, 284 CSRF probes).
+Result with document preview: **1,898 checks, 0 failures** (959 page requests, 304 CSRF probes). The crawl also checks the preview headers: an inline file or embedded page may be framed by this site only, a download stays a download, every other page is never framed, and another student's file is still a 404.
+
+**Run the suite and the crawl on an idle copy.** Both read the real database. Someone signing in
+or out of the same installation during a run changes `users` and writes audit entries, which fails
+the crawl's "a POST without a token wrote nothing" check and the backup test's table checksums.
+The failure is the concurrent activity, not the code; run again when the site is idle.
 The crawl found and fixed missing `<main>` landmarks on the sign-in and printable
 layouts and an unlabeled logo upload field.
 

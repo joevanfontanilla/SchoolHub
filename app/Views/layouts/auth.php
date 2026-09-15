@@ -4,8 +4,10 @@
  *
  * @var string $content
  * @var string $title
+ * @var bool   $wide  a page that brings its own two-panel design (sign-in)
  */
 $schoolName = $school['school_name'] ?? 'SchoolHub';
+$wide ??= false;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,7 +20,8 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
 </head>
 <body class="hero-backdrop min-h-screen font-sans">
     <div class="flex min-h-screen flex-col items-center justify-center px-4 py-12">
-        <div class="w-full max-w-md">
+        <div class="w-full <?= $wide ? 'max-w-5xl' : 'max-w-md' ?>">
+            <?php if (!$wide): ?>
             <div class="mb-8 text-center">
                 <a href="<?= e(url('/')) ?>" class="inline-flex flex-col items-center gap-3">
                     <img src="<?= e(school_logo_url()) ?>" alt="" width="88" height="88"
@@ -28,6 +31,7 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
                 <p class="tagline mt-1"><?= e($school['school_tagline'] ?? '') ?></p>
                 <span class="brand-rule mx-auto mt-4" aria-hidden="true"></span>
             </div>
+            <?php endif; ?>
 
             <main id="main">
                 <?= partial('flash') ?>
@@ -39,5 +43,6 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
             </p>
         </div>
     </div>
+    <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
 </body>
 </html>

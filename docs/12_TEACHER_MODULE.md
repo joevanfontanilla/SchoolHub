@@ -73,6 +73,10 @@ Teacher cannot access cashier functions, registrar approval functions, or system
 Defined in **`docs/27_GRADING_POLICY.md`**: the 1.00–5.00 scale, Prelim/Midterm/Finals
 weights, the final-grade rule, period locking, and the reopen procedure for corrections.
 
+### Class announcements
+A teacher posts announcements to the students of their own classes at `/teacher/announcements`
+(`announcements.class`); see docs/16.
+
 ### Class reports
 The class list, attendance summary, and grade sheet of each own class, printable and as
 CSV, are at `/teacher/reports` (`reports.teacher`); see docs/15.

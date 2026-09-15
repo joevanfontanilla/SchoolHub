@@ -79,6 +79,12 @@ Every registrar route requires the Registrar role **and** a specific permission
 (`enrollment.review`, `enrollment.approve`, `enrollment.confirm`, `requirements.verify`,
 `students.view`, `students.manage`, `academic.manage`, `reports.registrar`). Super Admin is not admitted.
 
+### Documents
+The application review lists the documents **first** while the application is submitted or
+under review, each with Preview (Previous/Next through all of them) and Download. The student
+record has a **Documents** section: the current files of every submitted application, official
+receipts, and statements of account, each previewable. Payment proofs stay with the cashier.
+
 ### Reports
 Enrollment list (students by program, year level, and section), applicants by status,
 requirements status, and enrollment history, each on screen, printable, and as an audited

@@ -22,7 +22,9 @@ $action = $editing ? '/admin/users/' . $account->id . '/edit' : '/admin/users/cr
         <?php endif; ?>
     </div>
 
-    <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate>
+    <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate
+          data-confirm="<?= $editing ? 'The account changes right away and the change is recorded in the audit log.' : 'The account is created as Pending, with a one-time link for the person to choose a password.' ?>"
+          data-confirm-title="<?= $editing ? 'Save this account?' : 'Create this staff account?' ?>" data-confirm-tone="primary">
         <div class="grid gap-5 sm:grid-cols-3">
             <?= component('field', ['name' => 'first_name', 'label' => 'First name', 'required' => true, 'value' => $val('first_name'), 'autocomplete' => 'off']) ?>
             <?= component('field', ['name' => 'middle_name', 'label' => 'Middle name', 'value' => $val('middle_name'), 'autocomplete' => 'off']) ?>

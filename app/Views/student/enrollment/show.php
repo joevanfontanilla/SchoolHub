@@ -197,7 +197,7 @@ $nextStep = match ($application['application_status']) {
                     </div>
                     <a href="<?= e(url('/student/account?assessment=' . $assessment['id'])) ?>" class="btn-primary mt-4 w-full"><?= icon('credit-card', 'h-5 w-5') ?> <?= $application['enrollment_state'] === 'ENROLLED' ? 'View account and receipts' : 'Review and pay' ?></a>
                     <?php if ($application['enrollment_state'] === 'ENROLLED'): ?>
-                        <a href="<?= e(url('/student/schedule/print?term_id=' . $application['term_id'])) ?>" class="btn-secondary mt-2 w-full"><?= icon('calendar', 'h-5 w-5') ?> Print class schedule</a>
+                        <?= partial('preview-link', ['path' => '/student/schedule/print?term_id=' . $application['term_id'], 'kind' => 'page', 'title' => 'Class schedule', 'label' => 'View class schedule', 'icon' => 'calendar', 'class' => 'btn-secondary mt-2 w-full']) ?>
                     <?php endif; ?>
                 </section>
             <?php endif; ?>

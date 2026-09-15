@@ -54,10 +54,10 @@ final class DashboardController extends Controller
             'todayClasses'  => $todayClasses,
             'open'          => $open,
             'cards'         => [
-                ['icon' => 'academic', 'label' => 'Assigned classes', 'value' => (string) count($classes), 'hint' => count($current) . ' this term', 'tone' => 'neutral'],
-                ['icon' => 'clock', 'label' => "Today's classes", 'value' => (string) count($todayBlocks), 'hint' => date('l'), 'tone' => 'neutral'],
-                ['icon' => 'calendar-check', 'label' => 'Open grading periods', 'value' => (string) count($open), 'hint' => $open === [] ? 'Opened by the registrar' : implode(', ', array_unique(array_column($open, 'name'))), 'tone' => $open === [] ? 'neutral' : 'success'],
-                ['icon' => 'chart-bar', 'label' => 'Grade sheets to finish', 'value' => (string) $missing, 'hint' => $missing === 0 ? 'Nothing pending' : 'Students without a grade', 'tone' => $missing === 0 ? 'neutral' : 'warning'],
+                ['icon' => 'academic', 'label' => 'Assigned classes', 'value' => (string) count($classes), 'hint' => count($current) . ' this term', 'tone' => 'neutral', 'href' => '/teacher/classes'],
+                ['icon' => 'clock', 'label' => "Today's classes", 'value' => (string) count($todayBlocks), 'hint' => date('l'), 'tone' => 'neutral', 'href' => '/teacher/schedule'],
+                ['icon' => 'calendar-check', 'label' => 'Open grading periods', 'value' => (string) count($open), 'hint' => $open === [] ? 'Opened by the registrar' : implode(', ', array_unique(array_column($open, 'name'))), 'tone' => $open === [] ? 'neutral' : 'success', 'href' => '/teacher/grades'],
+                ['icon' => 'chart-bar', 'label' => 'Grade sheets to finish', 'value' => (string) $missing, 'hint' => $missing === 0 ? 'Nothing pending' : 'Students without a grade', 'tone' => $missing === 0 ? 'neutral' : 'warning', 'href' => '/teacher/grades'],
             ],
         ]);
     }

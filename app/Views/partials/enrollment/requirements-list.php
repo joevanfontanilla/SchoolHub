@@ -78,12 +78,15 @@ $requiredDone  = count(array_filter($requirements, static fn ($r) => (int) $r['i
                         <svg class="h-4 w-4 text-brand-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
                         </svg>
-                        <a href="<?= e(url('/documents/' . $requirement['file_id'])) ?>" class="font-medium text-brand-600 hover:underline">
-                            <?= e($requirement['original_filename']) ?>
-                        </a>
+                        <?= partial('preview-link', [
+                            'path' => '/documents/' . $requirement['file_id'], 'mime' => $requirement['mime_type'],
+                            'title' => $requirement['name'] . ' · ' . $requirement['original_filename'], 'label' => $requirement['original_filename'],
+                            'group' => 'requirements-' . $application['id'], 'class' => 'font-medium text-brand-600 hover:underline',
+                        ]) ?>
                         <span class="text-brand-gray">
                             <?= e(App\Models\Download::humanSize((int) $requirement['file_size'])) ?> · uploaded <?= e(dt($requirement['uploaded_at'])) ?>
                         </span>
+                        <a href="<?= e(url('/documents/' . $requirement['file_id'])) ?>" class="text-xs font-semibold text-brand-600 hover:underline">Download<span class="sr-only"> <?= e($requirement['name']) ?></span></a>
                     </p>
                 <?php endif; ?>
 
@@ -91,7 +94,8 @@ $requiredDone  = count(array_filter($requirements, static fn ($r) => (int) $r['i
                     <form method="POST"
                           action="<?= e(url('/student/enrollment/' . $application['id'] . '/requirements/' . $requirement['id'] . '/upload')) ?>"
                           enctype="multipart/form-data"
-                          class="mt-3 flex flex-wrap items-center gap-3">
+                          class="mt-3 flex flex-wrap items-center gap-3"
+                          <?php if (!empty($requirement['file_id'])): ?>data-confirm="The new file takes the place of <?= e($requirement['original_filename']) ?>, and the registrar reviews it again." data-confirm-title="Replace this document?" data-confirm-tone="warning" data-confirm-label="Replace file"<?php endif; ?>>
                         <?= csrf_field() ?>
                         <input type="hidden" name="return_to" value="<?= e($returnTo) ?>">
                         <label for="<?= e($inputId) ?>" class="sr-only">

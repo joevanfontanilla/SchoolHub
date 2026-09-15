@@ -33,7 +33,7 @@ $php = match (true) {
     <div class="grid gap-6 xl:grid-cols-3">
         <section class="card min-w-0 p-5" aria-labelledby="create-heading">
             <h3 id="create-heading" class="flex items-center gap-2 text-base"><span class="text-brand-600"><?= icon('database', 'h-5 w-5') ?></span> Back up now</h3>
-            <form method="POST" action="<?= e(url('/admin/backups/create')) ?>" class="mt-3 space-y-3" data-confirm="Create a backup now? This can take a moment.">
+            <form method="POST" action="<?= e(url('/admin/backups/create')) ?>" class="mt-3 space-y-3" data-confirm="The database and uploaded files are copied into a new backup. This can take a moment." data-confirm-title="Back up now?" data-confirm-tone="primary">
                 <div>
                     <label for="backup-notes" class="field-label">Note (optional)</label>
                     <input id="backup-notes" name="notes" maxlength="255" class="field-input" placeholder="e.g. Before the start of enrollment">
@@ -93,7 +93,7 @@ $php = match (true) {
                                             <button type="submit" class="btn-primary">Download</button>
                                             <?= csrf_field() ?>
                                         </form>
-                                        <form method="POST" action="<?= e(url('/admin/backups/' . $backup['id'] . '/delete')) ?>" class="flex flex-wrap items-end gap-2" data-confirm="Delete this backup file? This cannot be undone.">
+                                        <form method="POST" action="<?= e(url('/admin/backups/' . $backup['id'] . '/delete')) ?>" class="flex flex-wrap items-end gap-2" data-confirm="The backup file is removed from the server. This cannot be undone." data-confirm-title="Delete this backup?" data-confirm-tone="danger" data-confirm-label="Delete backup">
                                             <div class="min-w-0 flex-1">
                                                 <label for="delete-password-<?= (int) $backup['id'] ?>" class="sr-only">Your password</label>
                                                 <input id="delete-password-<?= (int) $backup['id'] ?>" type="password" name="password" autocomplete="current-password" required class="field-input" placeholder="Your password">

@@ -14,6 +14,7 @@ $statusOptions = [
     'action'                  => 'Needs action (' . ($counts['submitted'] + $counts['under_review']) . ')',
     'SUBMITTED'               => 'Submitted, not yet opened (' . $counts['submitted'] . ')',
     'UNDER_REVIEW'            => 'Under review (' . $counts['under_review'] . ')',
+    'returned'                => 'Returned to students (' . $counts['returned'] . ')',
     'REQUIREMENTS_INCOMPLETE' => 'Returned: documents',
     'CORRECTION_REQUIRED'     => 'Returned: correction',
     'awaiting_confirmation'   => 'Approved, awaiting confirmation (' . $counts['awaiting_confirmation'] . ')',

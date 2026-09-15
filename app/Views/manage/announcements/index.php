@@ -61,6 +61,7 @@ $states = ['' => 'All', 'DRAFT' => 'Drafts', 'SCHEDULED' => 'Scheduled', 'PUBLIS
                                     <span class="font-semibold text-brand-navy"><?= e($row['title']) ?></span>
                                     <span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-brand-gray">
                                         <?= e($row['category'] ?? 'General') ?>
+                                        <?php if ($row['audience'] === Announcement::CLASSES): ?><span class="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">Class post by <?= e($row['author_name'] ?? 'a former teacher') ?></span><?php endif; ?>
                                         <?php if ((int) $row['is_urgent'] === 1): ?><?= component('status-badge', ['status' => 'URGENT', 'label' => 'Urgent']) ?><?php endif; ?>
                                         <?php if ((int) $row['is_public'] === 1): ?><span class="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">Public website</span><?php endif; ?>
                                     </span>
@@ -71,7 +72,14 @@ $states = ['' => 'All', 'DRAFT' => 'Drafts', 'SCHEDULED' => 'Scheduled', 'PUBLIS
                                 <td class="whitespace-nowrap px-4 py-3 text-right tabular-nums"><?= $row['recipient_count'] === null ? '<span class="text-brand-gray">Not yet</span>' : e(number_format((int) $row['recipient_count'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">
                                     <a href="<?= e(url('/portal/announcements/' . $row['id'])) ?>" class="mr-3 font-semibold text-brand-600 hover:underline">View<span class="sr-only"> <?= e($row['title']) ?></span></a>
-                                    <a href="<?= e(url('/manage/announcements/' . $row['id'] . '/edit')) ?>" class="font-semibold text-brand-600 hover:underline">Edit<span class="sr-only"> <?= e($row['title']) ?></span></a>
+                                    <?php if ($row['audience'] !== Announcement::CLASSES): ?>
+                                        <a href="<?= e(url('/manage/announcements/' . $row['id'] . '/edit')) ?>" class="font-semibold text-brand-600 hover:underline">Edit<span class="sr-only"> <?= e($row['title']) ?></span></a>
+                                    <?php elseif ($canPublish && $row['status'] === Announcement::PUBLISHED): ?>
+                                        <form method="POST" action="<?= e(url('/manage/announcements/' . $row['id'] . '/archive')) ?>" class="inline" data-confirm="Archive this class announcement? Its students no longer see it.">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="font-semibold text-brand-600 hover:underline">Archive<span class="sr-only"> <?= e($row['title']) ?></span></button>
+                                        </form>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

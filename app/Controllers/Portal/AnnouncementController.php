@@ -46,7 +46,8 @@ final class AnnouncementController extends Controller
         $id = (int) $request->param('id');
         $announcement = Announcement::find($id);
         $visible = $announcement !== null && Announcement::isVisibleTo($id, $user);
-        $preview = !$visible && $announcement !== null && Auth::can('announcements.manage');
+        // Managers preview anything; a teacher previews their own class announcements.
+        $preview = !$visible && $announcement !== null && (Auth::can('announcements.manage') || Announcement::isClassAuthor($announcement, $user));
         if (!$visible && !$preview) {
             throw HttpException::notFound('That announcement is not available.');
         }
@@ -55,7 +56,9 @@ final class AnnouncementController extends Controller
             'title'        => $announcement['title'],
             'announcement' => $announcement,
             'preview'      => $preview ? Announcement::state($announcement) : null,
-            'audience'     => Auth::can('announcements.manage') ? Announcement::audienceLabel($announcement) : null,
+            // Who it is for: to managers always, and to everyone for a class announcement,
+            // whose readers already know their own classes.
+            'audience'     => Auth::can('announcements.manage') || $announcement['audience'] === Announcement::CLASSES ? Announcement::audienceLabel($announcement) : null,
         ]);
     }
 

@@ -28,10 +28,10 @@ foreach ($steps as $i => [, $done]) {
 $enrolled = $enrollment !== null;
 if ($enrolled) {
     $cards = [
-        ['label' => 'Enrolled term', 'value' => $enrollment['term_name'], 'hint' => 'A.Y. ' . $enrollment['academic_year_code'] . ' · ' . $enrollment['section_code'], 'icon' => 'calendar-check', 'tone' => 'success'],
-        ['label' => 'Units this term', 'value' => $number($termSummary['units']), 'hint' => $termSummary['taken'] . ' class' . ($termSummary['taken'] === 1 ? '' : 'es'), 'icon' => 'layers'],
-        ['label' => 'Term GWA', 'value' => $termSummary['gwa'] ?? '—', 'hint' => $termSummary['gwa'] === null ? 'Shown once finals are complete' : 'NSTP and PE not included', 'icon' => 'trophy'],
-        ['label' => 'Curriculum progress', 'value' => $progress === null ? '—' : $progress['percent'] . '%', 'hint' => $progress === null ? 'Not assigned yet' : $number($progress['earned']) . ' of ' . $number($progress['total']) . ' units', 'icon' => 'target'],
+        ['label' => 'Enrolled term', 'value' => $enrollment['term_name'], 'hint' => 'A.Y. ' . $enrollment['academic_year_code'] . ' · ' . $enrollment['section_code'], 'icon' => 'calendar-check', 'tone' => 'success', 'href' => '/student/schedule'],
+        ['label' => 'Units this term', 'value' => $number($termSummary['units']), 'hint' => $termSummary['taken'] . ' class' . ($termSummary['taken'] === 1 ? '' : 'es'), 'icon' => 'layers', 'href' => '/student/schedule'],
+        ['label' => 'Term GWA', 'value' => $termSummary['gwa'] ?? '—', 'hint' => $termSummary['gwa'] === null ? 'Shown once finals are complete' : 'NSTP and PE not included', 'icon' => 'trophy', 'href' => '/student/grades'],
+        ['label' => 'Curriculum progress', 'value' => $progress === null ? '—' : $progress['percent'] . '%', 'hint' => $progress === null ? 'Not assigned yet' : $number($progress['earned']) . ' of ' . $number($progress['total']) . ' units', 'icon' => 'target', 'href' => '/student/history'],
     ];
 }
 $cardTitle = 'flex items-center gap-3 font-display text-lg font-bold text-brand-navy';

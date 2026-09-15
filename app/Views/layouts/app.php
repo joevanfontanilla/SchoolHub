@@ -60,6 +60,8 @@ $portalName = match ($user?->role_name) {
         </div>
     </div>
 
+    <?= partial('preview-dialog') ?>
+    <?= partial('confirm-dialog') ?>
     <script src="<?= e(asset('assets/app.js')) ?>" defer></script>
 </body>
 </html>

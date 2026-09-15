@@ -67,6 +67,13 @@ zero-dependency rule in `00_MASTER_SPECIFICATION.md`.
 
 ---
 
+## Framing
+Every response is sent with `X-Frame-Options: DENY` and `frame-ancestors 'none'`. The only
+exception is the document preview window (docs/10): an uploaded file with `?inline=1` and a
+printable page with `?embed=1` may be framed by this site itself (`SAMEORIGIN`,
+`frame-ancestors 'self'`), never by another site. An inline file also gets a policy that runs
+nothing (`default-src 'none'`). The HTTP crawl checks these headers.
+
 ## As built (Phase 7)
 
 ### Staff accounts and one-time password links

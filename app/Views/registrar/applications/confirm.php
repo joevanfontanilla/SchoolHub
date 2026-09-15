@@ -44,7 +44,8 @@ $selected = (int) old('section_id', 0);
     </section>
 
     <form method="POST" action="<?= e(url("/registrar/applications/{$id}/confirm")) ?>" class="card"
-          data-confirm="Confirm this enrollment? <?= $student['student_number'] === null ? 'A student number will be issued.' : '' ?>">
+          data-confirm="The student is officially enrolled in the chosen section and enlisted in its classes.<?= $student['student_number'] === null ? ' A student number will be issued.' : '' ?>"
+          data-confirm-title="Confirm this enrollment?" data-confirm-tone="success" data-confirm-label="Confirm enrollment">
         <?= csrf_field() ?>
         <fieldset>
             <legend class="w-full border-b border-slate-200 px-5 py-4 font-display text-base font-bold text-brand-navy">Section</legend>

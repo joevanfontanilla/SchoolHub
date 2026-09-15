@@ -135,7 +135,7 @@ return [
         }
     },
 
-    'the people notified are exactly the people who can read it: everyone, roles, and students by program and year level' => function (TestRunner $t): void {
+    'the people notified are exactly the people who can read it, except the author: everyone, roles, and students by program and year level' => function (TestRunner $t): void {
         try {
             [$programA, $programB] = array_map('intval', array_column(Database::select('SELECT id FROM programs WHERE is_active = 1 ORDER BY id LIMIT 2'), 'id'));
             [$first, $second] = array_map('intval', array_column(Database::select('SELECT id FROM year_levels ORDER BY sequence LIMIT 2'), 'id'));
@@ -162,7 +162,8 @@ return [
 
             foreach ($cases as $label => [$input, $expected]) {
                 $id = AnnouncementService::save($registrar, null, $input, null, 'publish');
-                $t->assertEquals($expected, notifiedAmong($id, $all), "{$label}: notified");
+                // The author reads their own announcement but is not notified of it.
+                $t->assertEquals(array_values(array_diff($expected, [$registrar->id])), notifiedAmong($id, $all), "{$label}: notified");
                 $readers = array_values(array_map(static fn (User $u) => $u->id, array_filter($all, static fn (User $u) => Announcement::isVisibleTo($id, $u))));
                 sort($readers);
                 $t->assertEquals($expected, $readers, "{$label}: can read");

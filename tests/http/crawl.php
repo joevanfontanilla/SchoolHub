@@ -223,6 +223,10 @@ try {
         'audience' => 'EVERYONE', 'is_public' => '1', 'is_urgent' => '1', 'image_alt' => 'Poster ' . XSS_ATTR,
     ], UploadedFile::forTesting(fixtureFile('png'), 'poster.png'), 'publish');
     $announcement = App\Models\Announcement::find($announcementId);
+    $classAnnouncementId = AnnouncementService::save($teacher, null, [
+        'title' => 'Class notice ' . XSS_NAME, 'content' => "Room change for the crawl class.\n\n" . XSS_ATTR, 'category' => 'Academic',
+        'audience' => 'CLASSES', 'classes' => [$classId], 'is_urgent' => '1',
+    ], null, 'publish');
 
     $link = PasswordResetService::issue($spare, PasswordResetService::RESET, $admin);
 
@@ -240,6 +244,7 @@ try {
         'payment'      => $payment['payment_id'],
         'submission'   => $submissionId,
         'announcement' => $announcementId,
+        'class_announcement' => $classAnnouncementId,
         'class'        => $classId,
         'section'      => $enrolled['section_id'],
         'room'         => $roomId,
@@ -270,6 +275,7 @@ try {
             str_starts_with($pattern, '/statements/')             => $ids['assessment'],
             str_starts_with($pattern, '/payment-proofs/')         => $ids['submission'],
             str_starts_with($pattern, '/portal/notifications/')   => $ids['notification'],
+            str_starts_with($pattern, '/teacher/announcements/')  => $ids['class_announcement'],
             str_contains($pattern, 'announcement')                => $ids['announcement'],
             str_starts_with($pattern, '/teacher/classes/')        => $ids['class'],
             str_starts_with($pattern, '/registrar/applications/') => $ids['application'],
@@ -433,6 +439,33 @@ try {
         $checks++;
         if ($response['status'] !== 200 || !str_contains((string) ($response['headers']['content-type'][0] ?? ''), $type)) {
             fail("{$name} GET {$path}: expected 200 {$type}, got {$response['status']} " . ($response['headers']['content-type'][0] ?? ''));
+        }
+    }
+
+    // Document preview (docs/10, docs/15): a file shown inline and a page embedded in the
+    // preview window may be framed by this site only; everything else is never framed, a
+    // download stays a download, and another student's file is still a 404.
+    $previews = [
+        ['studentA', '/documents/' . $ids['file'] . '?inline=1', 200, 'inline', 'SAMEORIGIN', "default-src 'none'"],
+        ['studentA', '/documents/' . $ids['file'], 200, 'attachment', 'DENY', null],
+        ['registrar', '/documents/' . $ids['file'] . '?inline=1', 200, 'inline', 'SAMEORIGIN', "default-src 'none'"],
+        ['studentB', '/documents/' . $ids['file'] . '?inline=1', 404, null, null, null],
+        ['cashier', '/payment-proofs/' . $ids['submission'] . '?inline=1', 200, 'inline', 'SAMEORIGIN', "default-src 'none'"],
+        ['studentA', '/receipts/' . $ids['payment'] . '?embed=1', 200, null, 'SAMEORIGIN', "frame-ancestors 'self'"],
+        ['studentA', '/receipts/' . $ids['payment'], 200, null, 'DENY', "frame-ancestors 'none'"],
+        ['studentA', '/student/documents?embed=1', 200, null, 'DENY', "frame-ancestors 'none'"],
+    ];
+    foreach ($previews as [$name, $path, $status, $disposition, $frame, $policy]) {
+        $response = http('GET', $base . $path, $jars[$name]);
+        $checks++;
+        $got = [
+            $response['status'],
+            $disposition === null ? null : strtok((string) ($response['headers']['content-disposition'][0] ?? ''), ';'),
+            $frame === null ? null : (string) ($response['headers']['x-frame-options'][0] ?? ''),
+        ];
+        $csp = (string) ($response['headers']['content-security-policy'][0] ?? '');
+        if ($got !== [$status, $disposition, $frame] || ($policy !== null && !str_contains($csp, $policy))) {
+            fail("{$name} GET {$path}: expected {$status} " . ($disposition ?? '-') . ' ' . ($frame ?? '-') . ' ' . ($policy ?? '') . ', got ' . implode(' ', array_map('strval', $got)) . " {$csp}");
         }
     }
 

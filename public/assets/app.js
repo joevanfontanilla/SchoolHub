@@ -109,21 +109,193 @@
         });
     }
 
-    // Confirmation before a destructive action (docs/21).
-    document.querySelectorAll('[data-confirm]').forEach(function (element) {
-        element.addEventListener('submit', function (event) {
-            if (!window.confirm(element.getAttribute('data-confirm'))) {
-                event.preventDefault();
-            }
-        });
-    });
+    // Confirmation before an action (docs/21), in the portal's own window
+    // (partials/confirm-dialog.php) rather than the browser's confirm(). A form asks with
+    // data-confirm; a submit button asks for itself with data-confirm-click, for forms whose
+    // buttons do different things. After "Confirm" the same button submits again, with its
+    // name, value, and formaction. Where a reason is required (data-confirm-requires), an
+    // empty reason is pointed out before anything is sent.
+    (function () {
+        var dialog = document.querySelector('[data-confirm-dialog]');
+        var modal = dialog && typeof dialog.showModal === 'function';
+        var heading = modal ? dialog.querySelector('[data-confirm-heading]') : null;
+        var text = modal ? dialog.querySelector('[data-confirm-text]') : null;
+        var accept = modal ? dialog.querySelector('[data-confirm-accept]') : null;
+        var cancel = modal ? dialog.querySelector('[data-confirm-cancel]') : null;
+        var tiles = modal ? dialog.querySelectorAll('[data-confirm-tile]') : [];
+        var buttonClass = {
+            danger: 'btn-danger',
+            warning: 'btn-warning',
+            success: 'btn-success',
+            primary: 'btn-primary'
+        };
+        var onAccept = null;
+        var returnFocus = null;
 
-    // A confirmation on one specific submit button, for forms whose buttons do
-    // different things (return, reject, cancel share one reason box).
-    document.querySelectorAll('button[data-confirm-click]').forEach(function (button) {
-        button.addEventListener('click', function (event) {
-            if (!window.confirm(button.getAttribute('data-confirm-click'))) {
-                event.preventDefault();
+        function words(element) {
+            return element ? element.textContent.replace(/\s+/g, ' ').trim() : '';
+        }
+
+        function guessTone(source, button, message) {
+            var explicit = source.getAttribute('data-confirm-tone');
+            if (explicit && buttonClass[explicit]) {
+                return explicit;
+            }
+            var classes = button ? button.className : '';
+            if (/danger/.test(classes)) {
+                return 'danger';
+            }
+            var said = (words(button) + ' ' + message).toLowerCase();
+            if (/\b(delete|reject|reverse|disable|drop|remove|cancel)\b/.test(said)) {
+                return 'danger';
+            }
+            if (/\b(return|correction|replace|close|archive|reopen|unlock|weights)\b/.test(said) || /warning/.test(classes)) {
+                return 'warning';
+            }
+            if (/\b(approve|verify|confirm|enroll|publish|post|enable|record|issue|send|submit)\b/.test(said) || /success/.test(classes)) {
+                return 'success';
+            }
+            return 'primary';
+        }
+
+        function open(options) {
+            heading.textContent = options.title;
+            text.textContent = options.message;
+            text.hidden = options.message === '';
+            Array.prototype.forEach.call(tiles, function (tile) {
+                tile.hidden = tile.getAttribute('data-confirm-tile') !== options.tone;
+            });
+            accept.className = buttonClass[options.tone] || 'btn-primary';
+            accept.textContent = options.label;
+            cancel.hidden = options.blocked === true;
+            onAccept = options.onAccept;
+            returnFocus = options.returnFocus || null;
+            dialog.showModal();
+            // A risky action starts on "Go back"; anything else starts on the confirming button.
+            (options.tone === 'danger' && !options.blocked ? cancel : accept).focus();
+        }
+
+        function close() {
+            if (dialog.open) {
+                dialog.close();
+            }
+        }
+
+        if (modal) {
+            accept.addEventListener('click', function () {
+                var run = onAccept;
+                onAccept = null;
+                close();
+                if (typeof run === 'function') {
+                    run();
+                }
+            });
+            cancel.addEventListener('click', close);
+            dialog.addEventListener('click', function (event) {
+                if (event.target === dialog) {
+                    close();
+                }
+            });
+            dialog.addEventListener('close', function () {
+                if (returnFocus && document.contains(returnFocus)) {
+                    returnFocus.focus();
+                }
+                returnFocus = null;
+            });
+        }
+
+        function resubmit(form, button) {
+            form.__confirmed = true;
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit(button || undefined);
+            } else {
+                if (button && button.name) {
+                    var carry = document.createElement('input');
+                    carry.type = 'hidden';
+                    carry.name = button.name;
+                    carry.value = button.value;
+                    form.appendChild(carry);
+                }
+                if (button && button.hasAttribute('formaction')) {
+                    form.action = button.getAttribute('formaction');
+                }
+                form.submit();
+            }
+            // requestSubmit fires the submit event at once; if validation stopped it, ask again next time.
+            window.setTimeout(function () {
+                form.__confirmed = false;
+            }, 0);
+        }
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!(form instanceof HTMLFormElement)) {
+                return;
+            }
+            var button = event.submitter || null;
+            var source = button && button.hasAttribute('data-confirm-click') ? button : (form.hasAttribute('data-confirm') ? form : null);
+            if (!source) {
+                return;
+            }
+            if (form.__confirmed) {
+                form.__confirmed = false;
+                return;
+            }
+            event.preventDefault();
+
+            var message = source.getAttribute(source === button ? 'data-confirm-click' : 'data-confirm') || 'Continue?';
+            if (!modal) {
+                if (window.confirm(message)) {
+                    resubmit(form, button);
+                }
+                return;
+            }
+
+            // A required reason, checked before asking.
+            var requires = source.getAttribute('data-confirm-requires') || form.getAttribute('data-confirm-requires');
+            var field = requires ? (form.querySelector(requires) || document.querySelector(requires)) : null;
+            if (field && field.value.trim() === '') {
+                open({
+                    title: 'Add a reason first',
+                    message: source.getAttribute('data-confirm-requires-message') || form.getAttribute('data-confirm-requires-message') || 'Write the reason in the box before continuing.',
+                    tone: 'warning',
+                    label: 'Write the reason',
+                    blocked: true,
+                    returnFocus: field,
+                    onAccept: null
+                });
+                return;
+            }
+
+            var tone = guessTone(source, button, message);
+            var buttonWords = words(button);
+            var title = source.getAttribute('data-confirm-title');
+            // "Reject this payment? The student will see your note.": the question is the title.
+            var split = !title && message.match(/^([^?]{3,160}\?)\s*([\s\S]*)$/);
+            if (split) {
+                title = split[1];
+                message = split[2];
+            }
+            open({
+                title: title || (buttonWords !== '' ? buttonWords.replace(/[.?!]+$/, '') + '?' : 'Are you sure?'),
+                message: message,
+                tone: tone,
+                label: source.getAttribute('data-confirm-label') || buttonWords || 'Confirm',
+                returnFocus: button,
+                onAccept: function () {
+                    resubmit(form, button);
+                }
+            });
+        }, true);
+    })();
+
+    // Flash messages: a Dismiss button removes one.
+    document.querySelectorAll('[data-alert-dismiss]').forEach(function (button) {
+        button.hidden = false;
+        button.addEventListener('click', function () {
+            var alert = button.closest('[data-alert]');
+            if (alert) {
+                alert.remove();
             }
         });
     });
@@ -284,12 +456,351 @@
         });
     });
 
+    // Password fields (components/field.php): a button shows or hides what was typed, and a
+    // notice appears while Caps Lock is on. The field is hidden again before the form is
+    // sent, so the browser never stores it as plain text.
+    document.querySelectorAll('input[data-password]').forEach(function (input) {
+        var wrap = input.parentElement;
+        var toggle = wrap.querySelector('[data-password-toggle]');
+        var caps = document.getElementById(input.id + '-caps');
+
+        if (toggle) {
+            var show = toggle.querySelector('[data-password-show]');
+            var hide = toggle.querySelector('[data-password-hide]');
+            var label = toggle.querySelector('[data-password-label]');
+            var set = function (visible) {
+                input.type = visible ? 'text' : 'password';
+                toggle.setAttribute('aria-pressed', String(visible));
+                show.hidden = visible;
+                hide.hidden = !visible;
+                label.textContent = visible ? 'Hide password' : 'Show password';
+                toggle.title = label.textContent;
+            };
+            toggle.hidden = false;
+            toggle.title = 'Show password';
+            toggle.addEventListener('click', function () {
+                var start = input.selectionStart;
+                var end = input.selectionEnd;
+                set(input.type === 'password');
+                input.focus();
+                try {
+                    input.setSelectionRange(start, end);
+                } catch (error) {
+                    // Some browsers do not allow a selection on every input type.
+                }
+            });
+            if (input.form) {
+                input.form.addEventListener('submit', function () {
+                    set(false);
+                });
+            }
+        }
+
+        if (caps) {
+            var check = function (event) {
+                if (typeof event.getModifierState === 'function') {
+                    caps.hidden = !event.getModifierState('CapsLock');
+                }
+            };
+            input.addEventListener('keydown', check);
+            input.addEventListener('keyup', check);
+            input.addEventListener('blur', function () {
+                caps.hidden = true;
+            });
+        }
+    });
+
+    // Top-bar quick search (partials/app-topbar.php): a combobox listing the pages of this
+    // portal that match what is typed, plus "Search students for …" where the role has a
+    // search. Arrow keys move, Enter opens, Escape closes, "/" focuses the box.
+    document.querySelectorAll('form[data-quick-search]').forEach(function (form) {
+        var input = form.querySelector('input[role="combobox"]');
+        var list = form.querySelector('[role="listbox"]');
+        if (!input || !list) {
+            return;
+        }
+        var pages = Array.prototype.slice.call(list.querySelectorAll('[role="option"][data-href]'));
+        var submitOption = list.querySelector('[data-search-submit]');
+        var echo = list.querySelector('[data-search-echo]');
+        var empty = list.querySelector('[data-search-empty]');
+        var hasTarget = form.hasAttribute('data-search-target');
+        var active = null;
+
+        function shown() {
+            return Array.prototype.filter.call(list.querySelectorAll('[role="option"]'), function (option) {
+                return !option.hidden;
+            });
+        }
+
+        function setActive(option) {
+            if (active) {
+                active.setAttribute('aria-selected', 'false');
+            }
+            active = option;
+            if (option) {
+                option.setAttribute('aria-selected', 'true');
+                input.setAttribute('aria-activedescendant', option.id);
+                option.scrollIntoView({ block: 'nearest' });
+            } else {
+                input.removeAttribute('aria-activedescendant');
+            }
+        }
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            setActive(null);
+        }
+
+        function update() {
+            var query = input.value.trim().toLowerCase();
+            if (query === '') {
+                close();
+                return;
+            }
+            var words = query.split(/\s+/);
+            var count = 0;
+            pages.forEach(function (option) {
+                var terms = option.getAttribute('data-terms');
+                var match = count < 8 && words.every(function (word) { return terms.indexOf(word) !== -1; });
+                option.hidden = !match;
+                if (match) {
+                    count++;
+                }
+            });
+            if (submitOption) {
+                submitOption.hidden = false;
+                echo.textContent = input.value.trim();
+            }
+            if (empty) {
+                empty.hidden = count > 0 || hasTarget;
+            }
+            list.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            setActive(null);
+        }
+
+        function choose(option) {
+            if (!option) {
+                return;
+            }
+            if (option.hasAttribute('data-search-submit')) {
+                form.submit();
+            } else {
+                window.location.href = option.getAttribute('data-href');
+            }
+        }
+
+        input.addEventListener('input', update);
+        input.addEventListener('focus', function () {
+            if (input.value.trim() !== '') {
+                update();
+            }
+        });
+        input.addEventListener('keydown', function (event) {
+            var options = shown();
+            var index = options.indexOf(active);
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                if (list.hidden) {
+                    update();
+                    options = shown();
+                }
+                if (options.length > 0) {
+                    var step = event.key === 'ArrowDown' ? 1 : -1;
+                    setActive(options[(index + step + options.length) % options.length]);
+                }
+            } else if (event.key === 'Enter') {
+                if (input.value.trim() === '') {
+                    event.preventDefault();
+                    return;
+                }
+                event.preventDefault();
+                if (active) {
+                    choose(active);
+                } else if (hasTarget) {
+                    form.submit();
+                } else {
+                    // No search behind this box: open the best matching page, if any.
+                    choose(pages.filter(function (option) { return !option.hidden; })[0]);
+                }
+            } else if (event.key === 'Escape') {
+                if (!list.hidden) {
+                    event.preventDefault();
+                    close();
+                }
+            }
+        });
+        list.addEventListener('mousedown', function (event) {
+            // Keep focus in the box so the list does not close before the click lands.
+            event.preventDefault();
+        });
+        list.addEventListener('click', function (event) {
+            choose(event.target.closest('[role="option"]'));
+        });
+        input.addEventListener('blur', close);
+
+        document.addEventListener('keydown', function (event) {
+            var target = event.target;
+            var typing = target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName));
+            if (event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey && input.offsetParent !== null) {
+                event.preventDefault();
+                input.focus();
+            }
+        });
+    });
+
+    // Document preview window (partials/preview-dialog.php). A link made with
+    // partials/preview-link opens its document here instead of leaving the page:
+    // an image directly, a PDF or a printable page in a frame this site is allowed to
+    // fill. Links sharing data-preview-group get Previous and Next. Ctrl/Cmd/Shift-click
+    // and browsers without <dialog> just follow the link.
+    (function () {
+        var dialog = document.querySelector('[data-preview-dialog]');
+        if (!dialog || typeof dialog.showModal !== 'function') {
+            return;
+        }
+        var heading = dialog.querySelector('[data-preview-heading]');
+        var position = dialog.querySelector('[data-preview-position]');
+        var body = dialog.querySelector('[data-preview-body]');
+        var prev = dialog.querySelector('[data-preview-prev]');
+        var next = dialog.querySelector('[data-preview-next]');
+        var printButton = dialog.querySelector('[data-preview-print]');
+        var download = dialog.querySelector('[data-preview-download]');
+        var openLink = dialog.querySelector('[data-preview-open]');
+        var hint = dialog.querySelector('[data-preview-hint]');
+        var items = [];
+        var index = 0;
+        var trigger = null;
+
+        function groupOf(link) {
+            var group = link.getAttribute('data-preview-group');
+            if (!group) {
+                return [link];
+            }
+            // One entry per document, even when two links on the page open the same one.
+            var seen = {};
+            return Array.prototype.filter.call(document.querySelectorAll('a[data-preview-group]'), function (other) {
+                var key = other.getAttribute('data-preview');
+                if (other.getAttribute('data-preview-group') !== group || seen[key]) {
+                    return false;
+                }
+                seen[key] = true;
+                return true;
+            });
+        }
+
+        function show() {
+            var link = items[index];
+            var kind = link.getAttribute('data-preview-kind');
+            var source = link.getAttribute('data-preview');
+            var title = link.getAttribute('data-preview-title') || link.textContent.trim();
+
+            heading.textContent = title;
+            position.hidden = items.length < 2;
+            position.textContent = (index + 1) + ' of ' + items.length;
+            prev.hidden = next.hidden = items.length < 2;
+            prev.disabled = index === 0;
+            next.disabled = index === items.length - 1;
+
+            while (body.firstChild) {
+                body.removeChild(body.firstChild);
+            }
+            if (kind === 'image') {
+                var wrap = document.createElement('div');
+                wrap.className = 'flex min-h-full items-center justify-center p-4';
+                var image = document.createElement('img');
+                image.src = source;
+                image.alt = title;
+                image.className = 'max-h-full max-w-full rounded-lg bg-white shadow';
+                wrap.appendChild(image);
+                body.appendChild(wrap);
+            } else {
+                var frame = document.createElement('iframe');
+                frame.src = source;
+                frame.title = title;
+                frame.className = 'preview-frame';
+                body.appendChild(frame);
+            }
+
+            printButton.hidden = kind !== 'page';
+            if (hint) {
+                hint.hidden = kind !== 'pdf';
+            }
+            var file = link.getAttribute('data-preview-download');
+            download.hidden = !file;
+            if (file) {
+                download.href = file;
+            }
+            openLink.href = link.href;
+        }
+
+        function move(step) {
+            var target = index + step;
+            if (target >= 0 && target < items.length) {
+                index = target;
+                show();
+            }
+        }
+
+        document.addEventListener('click', function (event) {
+            var link = event.target.closest ? event.target.closest('a[data-preview]') : null;
+            if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+                return;
+            }
+            event.preventDefault();
+            trigger = link;
+            items = groupOf(link);
+            index = Math.max(0, items.indexOf(link));
+            show();
+            dialog.showModal();
+        });
+
+        prev.addEventListener('click', function () { move(-1); });
+        next.addEventListener('click', function () { move(1); });
+        dialog.querySelector('[data-preview-close]').addEventListener('click', function () { dialog.close(); });
+        printButton.addEventListener('click', function () {
+            var frame = body.querySelector('iframe');
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+            }
+        });
+        // A click on the dimmed backdrop (the dialog element itself) closes it.
+        dialog.addEventListener('click', function (event) {
+            if (event.target === dialog) {
+                dialog.close();
+            }
+        });
+        dialog.addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowLeft' && items.length > 1) {
+                move(-1);
+            } else if (event.key === 'ArrowRight' && items.length > 1) {
+                move(1);
+            }
+        });
+        dialog.addEventListener('close', function () {
+            // The close event arrives a moment later; if another document was opened in the
+            // meantime, leave it alone.
+            if (dialog.open) {
+                return;
+            }
+            // Stop loading the document and give focus back to the link that opened it.
+            while (body.firstChild) {
+                body.removeChild(body.firstChild);
+            }
+            if (trigger) {
+                trigger.focus();
+            }
+        });
+    })();
+
     // Prevent a double submit from creating two records. Checked after the
     // other submit handlers have run, so a cancelled confirmation or a refused
     // file does not leave the button disabled.
     document.querySelectorAll('form[method="POST"]').forEach(function (form) {
         form.addEventListener('submit', function (event) {
-            var button = form.querySelector('button[type="submit"]');
+            var button = event.submitter || form.querySelector('button[type="submit"]');
             if (!button || form.hasAttribute('data-allow-resubmit')) {
                 return;
             }
@@ -298,7 +809,7 @@
                     return;
                 }
                 button.disabled = true;
-                button.textContent = 'Working...';
+                button.textContent = button.getAttribute('data-busy-label') || 'Working...';
             }, 0);
         });
     });

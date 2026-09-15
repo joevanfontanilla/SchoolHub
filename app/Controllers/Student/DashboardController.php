@@ -85,6 +85,7 @@ final class DashboardController extends Controller
                 [
                     'label' => 'Application status',
                     'icon'  => 'enrollment',
+                    'href'  => '/student/enrollment',
                     'value' => $current !== null ? Application::label($status) : 'No application',
                     'hint'  => $current['application_number'] ?? ($openTerms !== [] ? 'Enrollment is open' : 'Enrollment is closed'),
                     'tone'  => match ($status) {
@@ -104,12 +105,14 @@ final class DashboardController extends Controller
                 [
                     'label' => 'Required documents',
                     'icon'  => 'requirements',
+                    'href'  => '/student/requirements',
                     'value' => $current !== null ? "{$requiredDone} of {$requiredTotal}" : '—',
                     'hint'  => $current !== null ? ($requiredDone === $requiredTotal ? 'All uploaded' : 'Still to upload') : 'Listed when you apply',
                     'tone'  => $current !== null && $requiredDone < $requiredTotal ? 'warning' : 'neutral',
                 ],
                 [
                     'label' => 'Profile',
+                    'href'  => '/student/profile',
                     'icon'  => 'user',
                     'value' => $missingProfile === [] ? 'Complete' : 'Incomplete',
                     'hint'  => $missingProfile === [] ? 'Ready for review' : count($missingProfile) . ' item' . (count($missingProfile) === 1 ? '' : 's') . ' missing',

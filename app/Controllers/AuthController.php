@@ -17,7 +17,7 @@ final class AuthController extends Controller
 {
     public function showLogin(Request $request): void
     {
-        $this->authView('auth/login', ['title' => 'Sign in']);
+        $this->authView('auth/login', ['title' => 'Sign in', 'wide' => true]);
     }
 
     public function login(Request $request): void

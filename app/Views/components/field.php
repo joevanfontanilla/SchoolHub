@@ -13,8 +13,16 @@
  * @var bool    $required
  * @var ?string $help
  * @var ?string $autocomplete
+ * @var ?string $icon       icon name shown inside the field, on the left
+ * @var bool    $autofocus
+ *
+ * A password field gets a button to show and hide what was typed, and a notice when
+ * Caps Lock is on (both added by app.js; without JavaScript the field is a normal one).
  */
 $type = $type ?? 'text';
+$icon = $icon ?? null;
+$autofocus = $autofocus ?? false;
+$isPassword = $type === 'password';
 $id = 'field-' . $name;
 $error = $error ?? error_for($name);
 $required = $required ?? false;
@@ -37,15 +45,36 @@ if ($error !== null) {
         <?php endif; ?>
     </label>
 
-    <input type="<?= e($type) ?>"
-           id="<?= e($id) ?>"
-           name="<?= e($name) ?>"
-           value="<?= e($value ?? old($name)) ?>"
-           class="field-input <?= $error !== null ? 'field-input-error' : '' ?>"
-           <?= $required ? 'required' : '' ?>
-           <?= isset($autocomplete) ? 'autocomplete="' . e($autocomplete) . '"' : '' ?>
-           <?= $describedBy !== [] ? 'aria-describedby="' . e(implode(' ', $describedBy)) . '"' : '' ?>
-           <?= $error !== null ? 'aria-invalid="true"' : '' ?>>
+    <div class="relative">
+        <?php if ($icon !== null): ?>
+            <span class="pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-brand-gray"><?= icon($icon, 'h-5 w-5') ?></span>
+        <?php endif; ?>
+        <input type="<?= e($type) ?>"
+               id="<?= e($id) ?>"
+               name="<?= e($name) ?>"
+               value="<?= e($value ?? old($name)) ?>"
+               class="field-input <?= $icon !== null ? 'pl-11' : '' ?> <?= $isPassword ? 'pr-12' : '' ?> <?= $error !== null ? 'field-input-error' : '' ?>"
+               <?= $required ? 'required' : '' ?>
+               <?= $autofocus ? 'autofocus' : '' ?>
+               <?= $isPassword ? 'data-password' : '' ?>
+               <?= isset($autocomplete) ? 'autocomplete="' . e($autocomplete) . '"' : '' ?>
+               <?= $describedBy !== [] ? 'aria-describedby="' . e(implode(' ', $describedBy)) . '"' : '' ?>
+               <?= $error !== null ? 'aria-invalid="true"' : '' ?>>
+        <?php if ($isPassword): ?>
+            <button type="button" hidden data-password-toggle aria-controls="<?= e($id) ?>" aria-pressed="false"
+                    class="absolute inset-y-0 right-1.5 my-auto flex h-9 w-9 items-center justify-center rounded-lg text-brand-gray hover:bg-brand-50 hover:text-brand-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
+                <span data-password-show><?= icon('eye', 'h-5 w-5') ?></span>
+                <span data-password-hide hidden><?= icon('eye-off', 'h-5 w-5') ?></span>
+                <span class="sr-only" data-password-label>Show password</span>
+            </button>
+        <?php endif; ?>
+    </div>
+
+    <?php if ($isPassword): ?>
+        <p id="<?= e($id) ?>-caps" class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-warning-text" role="status" hidden data-caps-warning>
+            <?= icon('alert', 'h-4 w-4') ?> Caps Lock is on.
+        </p>
+    <?php endif; ?>
 
     <?php if ($help !== null): ?>
         <p id="<?= e($id) ?>-help" class="mt-1.5 text-xs text-brand-gray"><?= e($help) ?></p>

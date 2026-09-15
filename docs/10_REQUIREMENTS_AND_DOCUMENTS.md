@@ -62,4 +62,28 @@ student type and term is copied onto the application as a snapshot.
   Cashiers are always refused. Every view is audited; the audit entry never contains the
   file name or contents.
 - Not implemented: virus scanning (no zero-dependency scanner exists). Mitigated by the
-  content checks above, deny-all on `storage/`, and download-as-attachment with `nosniff`.
+  content checks above, deny-all on `storage/`, a download by default with `nosniff`, and a
+  preview that runs nothing (below).
+
+## Document preview (as built)
+
+Every uploaded document can be looked at without downloading it, in a **preview window** on
+the page (`partials/preview-dialog.php`, opened by links made with `partials/preview-link.php`).
+
+- **Where:** the student's requirement list and My Documents page; the registrar's application
+  review (with **Previous / Next** through all of the application's documents) and student
+  record; the cashier's payment verification, which shows the proof, PDF or image, on the page.
+- **How it is served:** `/documents/{id}?inline=1` and `/payment-proofs/{id}?inline=1` go through
+  the same authorization and audit as a download (`DocumentAccessPolicy`, `FinanceAccessPolicy`;
+  another student's file is still a 404), but answer `Content-Disposition: inline` with a policy
+  that lets **only this site** frame the file and lets **nothing run in it**:
+  `X-Frame-Options: SAMEORIGIN` and
+  `Content-Security-Policy: default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; frame-ancestors 'self'`.
+  Without `?inline=1` the file downloads, and every other response is still never framed.
+  Only PDF, JPG, and PNG files exist (checked by magic bytes at upload), so nothing else can be
+  shown inline.
+- **The window:** a native `<dialog>` (Escape closes it, focus stays inside and returns to the
+  link), with the document's name, Previous/Next when there are several, Download,
+  Open in new tab, and Close. Images are shown directly; PDFs use the browser's own viewer.
+  Some phone browsers cannot show a PDF inside a page, which the window says, pointing to
+  Open in new tab and Download. Without JavaScript the link opens the file in a new tab.

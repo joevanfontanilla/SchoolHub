@@ -102,7 +102,8 @@ $teacherError = error_for('teacher_user_id');
         <?php if ($subjects === []): ?>
             <?= component('empty-state', ['title' => 'Every available subject already has a class in this section']) ?>
         <?php else: ?>
-            <form method="POST" action="<?= e(url('/registrar/sections/' . $section['id'] . '/classes')) ?>" class="space-y-5 p-5" novalidate>
+            <form method="POST" action="<?= e(url('/registrar/sections/' . $section['id'] . '/classes')) ?>" class="space-y-5 p-5" novalidate
+                  data-confirm="The class is created with its meetings, and the section's enrolled students who chose the subject are enlisted in it." data-confirm-title="Add this class?" data-confirm-tone="primary">
                 <?= csrf_field() ?>
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div>

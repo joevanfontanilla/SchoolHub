@@ -99,7 +99,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                                     <?php if ($reversal): ?>
                                         <?= component('status-badge', ['status' => 'REJECTED', 'label' => 'Reversal']) ?><span class="block text-xs text-brand-gray">of <?= e($row['reversed_receipt_number']) ?></span>
                                     <?php else: ?>
-                                        <a href="<?= e(url('/receipts/' . $row['id'])) ?>" class="font-semibold text-brand-600 hover:underline"><?= e($row['receipt_number']) ?></a><span class="block text-xs text-brand-gray"><?= e($row['transaction_number']) ?></span>
+                                        <?= partial('preview-link', ['path' => '/receipts/' . $row['id'], 'kind' => 'page', 'title' => 'Official receipt ' . $row['receipt_number'], 'label' => (string) $row['receipt_number'], 'group' => 'collection-receipts']) ?><span class="block text-xs text-brand-gray"><?= e($row['transaction_number']) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3"><a href="<?= e(url('/cashier/accounts/' . $row['fee_assessment_id'])) ?>" class="font-semibold text-brand-navy hover:underline"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></a><span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? $row['assessment_number']) ?></span></td>

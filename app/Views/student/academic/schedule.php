@@ -28,7 +28,7 @@ foreach ($active as $class) {
 <?php else: ?>
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-slate-600">Every class of <?= e($enrollment['term_name']) ?>, with its room and teacher.</p>
-        <a href="<?= e(url('/student/schedule/print?term_id=' . $enrollment['term_id'])) ?>" class="btn-primary"><?= icon('download', 'h-5 w-5') ?> Print schedule</a>
+        <?= partial('preview-link', ['path' => '/student/schedule/print?term_id=' . $enrollment['term_id'], 'kind' => 'page', 'title' => 'Class schedule', 'label' => 'View and print schedule', 'icon' => 'calendar', 'class' => 'btn-primary']) ?>
     </div>
 
     <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

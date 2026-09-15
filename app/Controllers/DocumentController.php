@@ -40,6 +40,7 @@ final class DocumentController extends Controller
             'application_id' => (int) $file['application_id'],
         ]);
 
-        FileStreamer::send($file['storage_path'], $file['original_filename'], $file['mime_type']);
+        // ?inline=1 shows it in the browser (the preview window); otherwise it downloads.
+        FileStreamer::send($file['storage_path'], $file['original_filename'], $file['mime_type'], (string) $request->input('inline', '') === '1');
     }
 }

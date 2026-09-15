@@ -54,7 +54,7 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
             <section class="card p-5" aria-labelledby="items-heading">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h3 id="items-heading" class="text-base">Fees</h3>
-                    <a href="<?= e(url('/statements/' . $assessment['id'])) ?>" class="text-sm font-semibold text-brand-600 hover:underline">Print statement</a>
+                    <?= partial('preview-link', ['path' => '/statements/' . $assessment['id'], 'kind' => 'page', 'title' => 'Statement of account · ' . $assessment['assessment_number'], 'label' => 'View statement', 'icon' => 'document', 'class' => 'inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline']) ?>
                 </div>
                 <ul class="divide-y divide-brand-50 text-sm">
                     <?php foreach ($items as $item): ?>
@@ -116,14 +116,15 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                                             <?php if ($payment['reversal_id'] !== null): ?>
                                                 <?= component('status-badge', ['status' => 'CANCELLED', 'label' => 'Reversed']) ?>
                                             <?php endif; ?>
-                                            <a href="<?= e(url('/receipts/' . $payment['id'])) ?>" class="font-semibold text-brand-600 hover:underline">Receipt <?= e($payment['receipt_number']) ?></a>
+                                            <?= partial('preview-link', ['path' => '/receipts/' . $payment['id'], 'kind' => 'page', 'title' => 'Official receipt ' . $payment['receipt_number'], 'label' => 'Receipt ' . $payment['receipt_number'], 'group' => 'account-receipts']) ?>
                                         </span>
                                     </div>
                                     <?php if ($payment['reversal_id'] === null): ?>
                                         <details class="mt-2">
                                             <summary class="cursor-pointer text-xs font-semibold text-danger-text hover:underline">Reverse this payment</summary>
                                             <form method="POST" action="<?= e(url('/cashier/accounts/' . $assessment['id'] . '/payments/' . $payment['id'] . '/reverse')) ?>" class="mt-2 flex flex-wrap items-end gap-2" novalidate
-                                                  data-confirm="Reverse receipt <?= e($payment['receipt_number']) ?> for <?= e(money($payment['amount'])) ?>? This adds a negative entry and cannot be undone.">
+                                                  data-confirm="A negative entry for <?= e(money($payment['amount'])) ?> is added and the balance goes back up. This cannot be undone." data-confirm-title="Reverse receipt <?= e($payment['receipt_number']) ?>?" data-confirm-tone="danger" data-confirm-label="Reverse payment"
+                                                  data-confirm-requires="#reverse-reason-<?= (int) $payment['id'] ?>" data-confirm-requires-message="Write why the payment is reversed first. It is recorded with the reversal.">
                                                 <?= csrf_field() ?>
                                                 <div class="min-w-0 flex-1">
                                                     <label for="reverse-reason-<?= (int) $payment['id'] ?>" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>
@@ -189,7 +190,8 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
             <h3 id="adjust-heading" class="flex items-center gap-2 text-base"><span class="text-brand-600"><?= icon('settings', 'h-5 w-5') ?></span> Apply an adjustment</h3>
             <p class="mt-1 text-sm text-slate-600">Takes effect immediately and is recorded in the audit log. The amount due can't go below what is already paid.</p>
             <form method="POST" action="<?= e(url('/cashier/accounts/' . $assessment['id'] . '/adjustments')) ?>" class="mt-3 space-y-4" novalidate
-                  data-confirm="Apply this adjustment to the student's account? Adjustments cannot be edited or deleted.">
+                  data-confirm="The amount due changes right away. Adjustments cannot be edited or deleted." data-confirm-title="Apply this adjustment?" data-confirm-tone="warning"
+                  data-confirm-requires="#field-adjustment_reason" data-confirm-requires-message="Write the reason for the adjustment first, for example the scholarship or order number.">
                 <?= csrf_field() ?>
                 <div>
                     <label for="field-adjustment_type" class="field-label">Type <span class="text-danger-text" aria-hidden="true">*</span></label>

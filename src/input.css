@@ -49,6 +49,18 @@
  */
 
 @layer base {
+    /* An element with the hidden attribute stays hidden even when a utility class sets its
+       display (a toolbar button that is .inline-flex). Scripts toggle visibility with it. */
+    [hidden] {
+        display: none !important;
+    }
+
+    /* A grid cell may shrink below its content, so a wide table scrolls inside its own
+       container instead of stretching the whole page on a phone. */
+    .grid > * {
+        min-width: 0;
+    }
+
     html {
         -webkit-text-size-adjust: 100%;
     }
@@ -209,6 +221,42 @@
             #2E9AD6 68% 84%,
             #0F4C5C 84% 100%
         );
+    }
+
+    /* Document preview window (partials/preview-dialog.php). Nearly full screen, so a
+       scanned certificate is readable; the body scrolls, the toolbar stays put. */
+    .preview-dialog {
+        @apply m-auto h-[92vh] w-[96vw] max-w-6xl overflow-hidden rounded-2xl border border-brand-100 bg-white p-0 shadow-2xl;
+    }
+    .preview-dialog::backdrop {
+        background: rgb(15 76 92 / 0.65);
+    }
+    /* Confirmation window (partials/confirm-dialog.php): the same rounded card and dimmed
+       backdrop as the preview window, sized for a question. */
+    .confirm-dialog {
+        @apply m-auto w-[calc(100vw-2rem)] max-w-md overflow-hidden rounded-2xl border border-brand-100 bg-white p-0 shadow-2xl;
+    }
+    .confirm-dialog::backdrop {
+        background: rgb(15 76 92 / 0.65);
+    }
+    .confirm-dialog[open] {
+        animation: dialog-in 140ms ease-out;
+    }
+    @keyframes dialog-in {
+        from { opacity: 0; transform: translateY(8px) scale(0.98); }
+        to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .confirm-dialog[open] { animation: none; }
+    }
+    .btn-success {
+        @apply btn bg-success-text text-white hover:brightness-110 focus-visible:ring-success-text;
+    }
+    .btn-warning {
+        @apply btn bg-warning-text text-white hover:brightness-110 focus-visible:ring-warning-text;
+    }
+    .preview-frame {
+        @apply block h-full w-full border-0 bg-white;
     }
 
     /* Program cards take the template's color swatches as their header block. */

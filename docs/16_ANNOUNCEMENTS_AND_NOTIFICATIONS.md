@@ -88,7 +88,7 @@ archive, restore, delete, and delivery is audited (`announcement.*`).
 When an announcement goes live, **every user in its audience gets one notification**
 (`announcement.published`, linking to the announcement), written with a single
 `INSERT … SELECT` over the same audience condition used for reading, so recipients and readers
-never differ. `notified_at` and a row lock make it happen **exactly once**; editing later, or
+never differ, **except that the author is not notified of their own announcement**. `notified_at` and a row lock make it happen **exactly once**; editing later, or
 archiving and republishing, notifies nobody again. The number of recipients is shown to managers.
 
 Scheduled announcements are delivered the first time any portal page loads after their publish
@@ -115,10 +115,33 @@ announcement. Urgent announcements are listed first and their notification title
 - Every action is on the signed-in user's own notifications; another user's is a **404**. All
   changes are POST with CSRF.
 
+## As built: class announcements from teachers (`/teacher/announcements`)
+
+A teacher posts news to **the students of their own classes**: a room change, a reminder, a
+cancelled meeting.
+
+- **Permission:** `announcements.class`, granted to Teachers by default (added to existing
+  installations by `php database/seed.php`). The Super Admin can remove it in Roles & Permissions.
+- **Audience `CLASSES`** (targets of type `CLASS`, one per class), part of the single audience
+  definition: an active user **enlisted** (not dropped) in one of the chosen classes, or the
+  teacher **currently assigned** to one of them. A student who drops the class stops seeing it; a
+  teacher who takes the class over starts seeing it. A closed class reaches nobody.
+- **Writing:** the teacher chooses one or more of their **own active classes** (anything else is
+  refused), and writes the title, text, category, optional image, urgent flag, publish date, and
+  end date. Class announcements are never public and cannot be widened to other audiences. The
+  same lifecycle applies (draft, scheduled, published, expired, archived), and posting notifies the
+  enlisted students once. An urgent class announcement shows the banner to those students only.
+- **Who manages it:** only the teacher who wrote it edits, publishes, archives, restores, or
+  deletes it; for another teacher it does not exist (404). The Registrar and Super Admin see class
+  posts in `/manage/announcements`, marked "Class post by …", and may **archive** one (for
+  example, if it is inappropriate) but not rewrite or restore it (403).
+- **Readers** see "Students of IT 201 · BSIT-2A" on the announcement, so a student knows which
+  class it is for.
+- Every action is audited like any announcement (`announcement.*`, with the class ids).
+
 ### Not built
 Email or SMS delivery (needs an outside mail service and the school's authorization),
 system-generated action alerts on dashboards (for example "your requirement was rejected" as a
 dashboard prompt, beyond the notification itself), security-event notifications (password changed,
-account locked), teacher announcements to their own classes, and rich-text formatting. A
-notification about an announcement that was later archived stays in the inbox; opening it shows
-"not available".
+account locked), and rich-text formatting. A notification about an announcement that was later
+archived stays in the inbox; opening it shows "not available".

@@ -34,6 +34,7 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Submit/update grades within allowed periods
 - View teaching schedule
 - Read relevant announcements
+- Post announcements to the students of their own classes (`announcements.class`; docs/16)
 
 ### Cannot
 - Process enrollment
