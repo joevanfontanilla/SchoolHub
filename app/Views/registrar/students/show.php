@@ -43,11 +43,12 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
 
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="flex items-start gap-4">
-            <?php if (trim((string) ($profile['photo_path'] ?? '')) !== ''): ?>
-                <img src="<?= e(url('/registrar/students/' . $student['id'] . '/photo') . '?v=' . urlencode((string) ($profile['updated_at'] ?? ''))) ?>"
-                     alt="Photo of <?= e(trim($student['first_name'] . ' ' . $student['last_name'])) ?>"
-                     class="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-brand-100">
-            <?php endif; ?>
+            <?= component('avatar', [
+                'src' => trim((string) ($profile['photo_path'] ?? '')) !== ''
+                    ? url('/registrar/students/' . $student['id'] . '/photo') . '?v=' . urlencode((string) ($profile['updated_at'] ?? ''))
+                    : null,
+                'alt' => 'Photo of ' . trim($student['first_name'] . ' ' . $student['last_name']),
+            ]) ?>
             <div>
                 <p class="eyebrow"><?= e($student['student_number'] ?? 'No student number yet') ?></p>
                 <h2 class="mt-1 text-2xl"><?= e(trim($student['first_name'] . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . $student['last_name'])) ?></h2>
@@ -254,12 +255,19 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
             Correct this record
             <span class="text-sm font-semibold text-brand-600 group-open:hidden">Show</span>
         </summary>
-        <form method="POST" action="<?= e(url("/registrar/students/{$id}")) ?>" class="space-y-6 border-t border-slate-200 px-5 py-5" novalidate
+        <form method="POST" action="<?= e(url("/registrar/students/{$id}")) ?>" enctype="multipart/form-data" class="space-y-6 border-t border-slate-200 px-5 py-5" novalidate
               data-confirm="The student's record changes right away, and the change is recorded in the audit log." data-confirm-title="Save these corrections?" data-confirm-tone="warning">
             <?= csrf_field() ?>
             <p class="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
                 Corrections are recorded in the audit log. Unlike the student, you can correct the legal name after an application is submitted.
             </p>
+
+            <?= partial('student/photo-field', [
+                'photoUrl' => trim((string) ($profile['photo_path'] ?? '')) !== ''
+                    ? url('/registrar/students/' . $id . '/photo') . '?v=' . urlencode((string) ($profile['updated_at'] ?? ''))
+                    : null,
+                'maxBytes' => App\Services\StudentProfileService::PHOTO_MAX_BYTES,
+            ]) ?>
 
             <div class="grid gap-5 sm:grid-cols-3">
                 <?= component('field', ['name' => 'first_name', 'label' => 'First name', 'required' => true, 'value' => old('first_name', $student['first_name'])]) ?>

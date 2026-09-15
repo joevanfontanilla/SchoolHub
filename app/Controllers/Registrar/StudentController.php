@@ -67,7 +67,7 @@ final class StudentController extends Controller
         $id = (int) $student['id'];
 
         try {
-            StudentRecordService::update(Auth::user(), $id, $request->all());
+            StudentRecordService::update(Auth::user(), $id, $request->all(), \App\Core\UploadedFile::fromRequest($_FILES['photo'] ?? []));
         } catch (ValidationException $e) {
             $this->failWith($e, $request->all(), "/registrar/students/{$id}#edit");
             return;
@@ -117,12 +117,7 @@ final class StudentController extends Controller
     /** Stream a student's photo for the record page (registrar with students.view). */
     public function photo(Request $request): void
     {
-        $student = $this->student($request);
-        $photo = StudentProfileService::photo((int) $student['id']);
-        if ($photo === null) {
-            throw HttpException::notFound('That student has no photo.');
-        }
-        \App\Services\FileStreamer::send($photo['path'], 'photo.' . pathinfo($photo['path'], PATHINFO_EXTENSION), $photo['mime'], true);
+        StudentProfileService::streamPhoto((int) $this->student($request)['id']);
     }
 
     private function student(Request $request): array

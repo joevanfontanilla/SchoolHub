@@ -25,13 +25,13 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**267 tests in 36 files**:
+**268 tests in 36 files**:
 
 | Area | Files (tests) |
 |---|---|
 | Authentication and sessions | `auth` (13), `csrf` (6), `rbac` (7), `registration` (7), `validation` (13) |
 | Enrollment | `enrollment_application` (12), `enrollment_status` (10), `enrollment_flow` (9), `enrollment_confirmation` (8) |
-| Documents | `upload` (11), `document_access` (5), `requirement_review` (8), `documents` (4), `profile_photo` (4) |
+| Documents | `upload` (11), `document_access` (5), `requirement_review` (8), `documents` (4), `profile_photo` (5) |
 | Registrar | `registrar_access` (5), `registrar_decisions` (6), `academic_catalog` (8), `curriculum` (11) |
 | Academic | `class_schedule` (9), `enlistment` (7), `grade_calculator` (11), `grading` (7), `attendance` (3), `academic_record` (2), `teacher_access` (5) |
 | Finance | `finance` (12) |

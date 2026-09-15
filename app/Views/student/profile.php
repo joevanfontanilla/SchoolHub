@@ -56,33 +56,12 @@ $select = static function (string $name, string $label, array $options, bool $re
     <form method="POST" action="<?= e(url('/student/profile')) ?>" enctype="multipart/form-data" class="space-y-6" novalidate>
         <?= csrf_field() ?>
 
-        <?php $hasPhoto = trim((string) ($profile['photo_path'] ?? '')) !== ''; $photoError = error_for('photo'); ?>
-        <fieldset class="card p-5 sm:p-6">
-            <legend class="float-left mb-4 w-full font-display text-base font-bold text-brand-navy">Photo</legend>
-            <div class="clear-both flex flex-col gap-4 sm:flex-row sm:items-start">
-                <span class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-50 ring-1 ring-brand-100">
-                    <?php if ($hasPhoto): ?>
-                        <img src="<?= e(url('/student/photo') . '?v=' . urlencode((string) ($profile['updated_at'] ?? ''))) ?>" alt="Your current profile photo" class="h-full w-full object-cover">
-                    <?php else: ?>
-                        <?= icon('user', 'h-10 w-10 text-brand-300') ?>
-                    <?php endif; ?>
-                </span>
-                <div class="min-w-0 flex-1">
-                    <label for="field-photo" class="field-label">Upload a photo</label>
-                    <input id="field-photo" type="file" name="photo" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-                           data-max-bytes="<?= App\Services\StudentProfileService::PHOTO_MAX_BYTES ?>"
-                           class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100 <?= $photoError ? 'rounded-lg ring-1 ring-danger-line' : '' ?>"
-                           <?= $photoError ? 'aria-invalid="true" aria-describedby="field-photo-error"' : '' ?>>
-                    <p class="mt-1.5 text-xs text-brand-gray">Optional. A head-and-shoulders photo helps the registrar identify you. JPG or PNG, up to 2 MB.</p>
-                    <?php if ($photoError): ?><p id="field-photo-error" class="field-error"><span><?= e($photoError) ?></span></p><?php endif; ?>
-                    <?php if ($hasPhoto): ?>
-                        <label class="mt-3 flex items-center gap-2 text-sm text-slate-700">
-                            <input type="checkbox" name="remove_photo" value="1" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600"> Remove my current photo
-                        </label>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </fieldset>
+        <?= partial('student/photo-field', [
+            'photoUrl' => trim((string) ($profile['photo_path'] ?? '')) !== ''
+                ? url('/student/photo') . '?v=' . urlencode((string) ($profile['updated_at'] ?? ''))
+                : null,
+            'maxBytes' => App\Services\StudentProfileService::PHOTO_MAX_BYTES,
+        ]) ?>
 
         <fieldset class="card p-5 sm:p-6">
             <legend class="float-left mb-4 w-full font-display text-base font-bold text-brand-navy">Name</legend>

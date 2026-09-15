@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\HttpException;
+use App\Core\UploadedFile;
 use App\Models\Student;
 use App\Models\User;
 
@@ -19,7 +20,7 @@ use App\Models\User;
 final class StudentRecordService
 {
     /** @param array<string,mixed> $input */
-    public static function update(User $registrar, int $studentId, array $input): void
+    public static function update(User $registrar, int $studentId, array $input, ?UploadedFile $photo = null): void
     {
         if (!$registrar->isRegistrar()) {
             throw HttpException::forbidden('Only the registrar can correct student records.');
@@ -30,6 +31,6 @@ final class StudentRecordService
             throw HttpException::notFound('That student was not found.');
         }
 
-        StudentProfileService::save($studentId, (int) $student['user_id'], $input, true, $registrar);
+        StudentProfileService::save($studentId, (int) $student['user_id'], $input, true, $registrar, $photo);
     }
 }

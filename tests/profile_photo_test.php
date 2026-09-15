@@ -11,7 +11,9 @@ require_once __DIR__ . '/support.php';
 use App\Core\Database;
 use App\Core\UploadedFile;
 use App\Models\Student;
+use App\Models\User;
 use App\Services\StudentProfileService;
+use App\Services\StudentRecordService;
 
 /** The stored photo path for a student, or null. */
 function photoPathOf(int $studentId): ?string
@@ -91,6 +93,34 @@ return [
             StudentProfileService::update($student, completeProfileInput());
             $t->assertEquals([], StudentProfileService::missingFields($studentId), 'The profile still saved without a photo');
             $t->assertNull(photoPathOf($studentId), 'Still no photo');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'the registrar can upload and replace a student\'s photo, audited as a record correction' => function (TestRunner $t): void {
+        try {
+            $student = makeStudent();
+            $studentId = (int) Database::scalar('SELECT id FROM students WHERE user_id = ?', [$student->id]);
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+
+            StudentRecordService::update($registrar, $studentId, completeProfileInput(), UploadedFile::forTesting(fixtureFile('png'), 'record.png'));
+            $path = photoPathOf($studentId);
+            $t->assertTrue($path !== null && str_starts_with($path, 'uploads/profile-photos/'), 'The registrar\'s upload is stored');
+            $t->assertTrue(is_file(STORAGE_PATH . '/' . $path), 'The file exists on disk');
+
+            // A record correction, not a self-update, and audited without the path.
+            $entry = Database::selectOne("SELECT new_values FROM audit_logs WHERE action = 'student.record_corrected' AND target_id = ? ORDER BY id DESC LIMIT 1", [$studentId]);
+            $t->assertTrue($entry !== null && str_contains((string) $entry['new_values'], 'photo') && !str_contains((string) $entry['new_values'], $path), 'Audited as a correction naming "photo" only');
+
+            // A non-registrar cannot correct the record.
+            $t->assertThrows(static fn () => StudentRecordService::update(makeUser(User::ROLE_CASHIER), $studentId, completeProfileInput()), null, 'Only the registrar corrects records');
+
+            // Removing the photo through a correction clears and deletes it.
+            StudentRecordService::update($registrar, $studentId, completeProfileInput() + ['remove_photo' => '1']);
+            $t->assertNull(photoPathOf($studentId), 'The registrar removed the photo');
+            $t->assertFalse(is_file(STORAGE_PATH . '/' . $path), 'And the file is gone');
         } finally {
             actingAs(null);
             deleteTestUsers();

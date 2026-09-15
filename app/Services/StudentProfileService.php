@@ -229,6 +229,21 @@ final class StudentProfileService
     }
 
     /**
+     * Stream a student's photo inline, or throw 404 when there is none. The caller is responsible
+     * for authorizing access to this student (the owner, or staff who may view the record).
+     *
+     * @throws \App\Core\HttpException
+     */
+    public static function streamPhoto(int $studentId): void
+    {
+        $photo = self::photo($studentId);
+        if ($photo === null) {
+            throw \App\Core\HttpException::notFound('No photo has been uploaded.');
+        }
+        FileStreamer::send($photo['path'], 'photo.' . pathinfo($photo['path'], PATHINFO_EXTENSION), $photo['mime'], true);
+    }
+
+    /**
      * Human names of the profile items still missing. Empty means complete.
      *
      * @return array<int,string>

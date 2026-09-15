@@ -45,9 +45,13 @@ error shown on the photo field, leaving the rest of the form intact. The image i
 `storage/uploads/profile-photos/` with a random name (never web-reachable), a new upload
 supersedes and deletes the old file, and the "Remove my current photo" box clears it. It is
 served only through `/student/photo` (the student's own) and `/registrar/students/{id}/photo`
-(staff with `students.view`), streamed inline via `FileStreamer` with the MIME derived from the
-stored extension; both 404 when there is no photo. The registrar sees it on the student record.
-Only that the photo changed is audited, never the path.
+(staff with `students.view`), streamed inline via `StudentProfileService::streamPhoto()` with the
+MIME derived from the stored extension; both 404 when there is no photo. The registrar sees the
+photo on the student record and can upload, replace, or remove it as part of a record correction
+(`StudentRecordService::update`), audited as `student.record_corrected`. The upload control is one
+partial (`partials/student/photo-field`) and the display one component (`components/avatar`), shared
+by the student's form, the registrar's form, and the record header. Only that the photo changed is
+audited, never the path.
 
 ## My Documents (as built, `/student/documents`)
 Everything the student uploaded or was issued, in one place, each opening in the preview
