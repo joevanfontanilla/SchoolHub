@@ -41,22 +41,24 @@ $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
         </dl>
     </div>
 
-    <table class="mt-8 w-full border border-slate-300 text-sm">
-        <thead class="bg-brand-50 text-brand-navy">
-            <tr><th scope="col" class="border-b border-slate-300 px-4 py-2 text-left">Description</th><th scope="col" class="border-b border-slate-300 px-4 py-2 text-right">Amount</th></tr>
-        </thead>
-        <tbody>
-            <tr><td class="px-4 py-3">Tuition and school fees, <?= e($payment['term_name']) ?> <?= e($payment['academic_year_code']) ?> (<?= e($payment['assessment_number']) ?>)</td><td class="px-4 py-3 text-right tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
-        </tbody>
-        <tfoot class="font-semibold">
-            <tr class="border-t border-slate-300"><th scope="row" class="px-4 py-2 text-right">Amount paid</th><td class="px-4 py-2 text-right font-display text-lg text-brand-navy tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
-            <tr><th scope="row" class="px-4 py-1 text-right font-normal text-slate-600">Total assessment</th><td class="px-4 py-1 text-right font-normal tabular-nums"><?= e(money($payment['total_amount'])) ?></td></tr>
-            <?php if ($adjustedThrough !== 0): ?>
-                <tr><th scope="row" class="px-4 py-1 text-right font-normal text-slate-600">Adjustments to date</th><td class="px-4 py-1 text-right font-normal tabular-nums"><?= e(signed_money($adjustedThrough)) ?></td></tr>
-            <?php endif; ?>
-            <tr><th scope="row" class="px-4 py-1 pb-3 text-right font-normal text-slate-600">Balance after this payment</th><td class="px-4 py-1 pb-3 text-right font-normal tabular-nums"><?= e(money($balanceAfter)) ?></td></tr>
-        </tfoot>
-    </table>
+    <div class="overflow-x-auto print:overflow-visible">
+        <table class="mt-8 w-full border border-slate-300 text-sm">
+            <thead class="bg-brand-50 text-brand-navy">
+                <tr><th scope="col" class="border-b border-slate-300 px-4 py-2 text-left">Description</th><th scope="col" class="border-b border-slate-300 px-4 py-2 text-right">Amount</th></tr>
+            </thead>
+            <tbody>
+                <tr><td class="px-4 py-3">Tuition and school fees, <?= e($payment['term_name']) ?> <?= e($payment['academic_year_code']) ?> (<?= e($payment['assessment_number']) ?>)</td><td class="px-4 py-3 text-right tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
+            </tbody>
+            <tfoot class="font-semibold">
+                <tr class="border-t border-slate-300"><th scope="row" class="px-4 py-2 text-right">Amount paid</th><td class="px-4 py-2 text-right font-display text-lg text-brand-navy tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
+                <tr><th scope="row" class="px-4 py-1 text-right font-normal text-slate-600">Total assessment</th><td class="px-4 py-1 text-right font-normal tabular-nums"><?= e(money($payment['total_amount'])) ?></td></tr>
+                <?php if ($adjustedThrough !== 0): ?>
+                    <tr><th scope="row" class="px-4 py-1 text-right font-normal text-slate-600">Adjustments to date</th><td class="px-4 py-1 text-right font-normal tabular-nums"><?= e(signed_money($adjustedThrough)) ?></td></tr>
+                <?php endif; ?>
+                <tr><th scope="row" class="px-4 py-1 pb-3 text-right font-normal text-slate-600">Balance after this payment</th><td class="px-4 py-1 pb-3 text-right font-normal tabular-nums"><?= e(money($balanceAfter)) ?></td></tr>
+            </tfoot>
+        </table>
+    </div>
 
     <?php if ($payment['remarks']): ?>
         <p class="mt-4 text-sm"><span class="text-slate-500">Remarks:</span> <?= e($payment['remarks']) ?></p>

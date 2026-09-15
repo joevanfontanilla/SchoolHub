@@ -25,26 +25,28 @@ $cell = 'border-b border-slate-200 px-2 py-1.5';
         <div class="rounded border border-slate-300 p-3"><dt class="text-slate-500">Outstanding</dt><dd class="font-display text-lg font-bold tabular-nums text-brand-navy"><?= e(money(FinanceService::money($report['balance']))) ?></dd></div>
     </dl>
 
-    <table class="w-full border border-slate-300 text-xs">
-        <thead class="bg-brand-50 text-left text-brand-navy">
-            <tr><th scope="col" class="<?= $cell ?>">Student</th><th scope="col" class="<?= $cell ?>">Program</th><th scope="col" class="<?= $cell ?>">Term</th><th scope="col" class="<?= $cell ?> text-right">Due</th><th scope="col" class="<?= $cell ?> text-right">Paid</th><th scope="col" class="<?= $cell ?> text-right">Balance</th><th scope="col" class="<?= $cell ?>">Status</th></tr>
-        </thead>
-        <tbody>
-            <?php foreach ($report['rows'] as $row): ?>
-                <tr>
-                    <td class="<?= $cell ?>"><?= e($row['last_name'] . ', ' . $row['first_name']) ?><span class="block text-slate-500"><?= e($row['student_number'] ?? $row['application_number']) ?></span></td>
-                    <td class="<?= $cell ?>"><?= e($row['program_code'] . ' · ' . $row['year_level_name']) ?></td>
-                    <td class="<?= $cell ?>"><?= e($row['term_name'] . ' ' . $row['academic_year_code']) ?></td>
-                    <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e(money(FinanceService::money(max(0, FinanceService::dueCents($row))))) ?></td>
-                    <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e(money($row['total_paid'])) ?></td>
-                    <td class="<?= $cell ?> whitespace-nowrap text-right font-semibold tabular-nums"><?= e(money($row['balance'])) ?></td>
-                    <td class="<?= $cell ?>"><?= e(ucwords(strtolower(str_replace('_', ' ', $row['payment_status'])))) ?><?= Finance::belowPolicy($row) ? ', enrolled below policy' : ($row['enrollment_state'] === 'ENROLLED' ? ', enrolled' : '') ?></td>
-                </tr>
-            <?php endforeach; ?>
-            <?php if ($report['rows'] === []): ?><tr><td colspan="7" class="<?= $cell ?> text-slate-500">No outstanding balances.</td></tr><?php endif; ?>
-        </tbody>
-        <tfoot class="font-semibold">
-            <tr><th scope="row" colspan="3" class="px-2 py-2 text-right">Totals</th><td class="px-2 py-2 text-right tabular-nums"><?= e(money(FinanceService::money($report['due']))) ?></td><td class="px-2 py-2 text-right tabular-nums"><?= e(money(FinanceService::money($report['paid']))) ?></td><td class="px-2 py-2 text-right tabular-nums"><?= e(money(FinanceService::money($report['balance']))) ?></td><td></td></tr>
-        </tfoot>
-    </table>
+    <div class="overflow-x-auto print:overflow-visible">
+        <table class="w-full border border-slate-300 text-xs">
+            <thead class="bg-brand-50 text-left text-brand-navy">
+                <tr><th scope="col" class="<?= $cell ?>">Student</th><th scope="col" class="<?= $cell ?>">Program</th><th scope="col" class="<?= $cell ?>">Term</th><th scope="col" class="<?= $cell ?> text-right">Due</th><th scope="col" class="<?= $cell ?> text-right">Paid</th><th scope="col" class="<?= $cell ?> text-right">Balance</th><th scope="col" class="<?= $cell ?>">Status</th></tr>
+            </thead>
+            <tbody>
+                <?php foreach ($report['rows'] as $row): ?>
+                    <tr>
+                        <td class="<?= $cell ?>"><?= e($row['last_name'] . ', ' . $row['first_name']) ?><span class="block text-slate-500"><?= e($row['student_number'] ?? $row['application_number']) ?></span></td>
+                        <td class="<?= $cell ?>"><?= e($row['program_code'] . ' · ' . $row['year_level_name']) ?></td>
+                        <td class="<?= $cell ?>"><?= e($row['term_name'] . ' ' . $row['academic_year_code']) ?></td>
+                        <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e(money(FinanceService::money(max(0, FinanceService::dueCents($row))))) ?></td>
+                        <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e(money($row['total_paid'])) ?></td>
+                        <td class="<?= $cell ?> whitespace-nowrap text-right font-semibold tabular-nums"><?= e(money($row['balance'])) ?></td>
+                        <td class="<?= $cell ?>"><?= e(ucwords(strtolower(str_replace('_', ' ', $row['payment_status'])))) ?><?= Finance::belowPolicy($row) ? ', enrolled below policy' : ($row['enrollment_state'] === 'ENROLLED' ? ', enrolled' : '') ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if ($report['rows'] === []): ?><tr><td colspan="7" class="<?= $cell ?> text-slate-500">No outstanding balances.</td></tr><?php endif; ?>
+            </tbody>
+            <tfoot class="font-semibold">
+                <tr><th scope="row" colspan="3" class="px-2 py-2 text-right">Totals</th><td class="px-2 py-2 text-right tabular-nums"><?= e(money(FinanceService::money($report['due']))) ?></td><td class="px-2 py-2 text-right tabular-nums"><?= e(money(FinanceService::money($report['paid']))) ?></td><td class="px-2 py-2 text-right tabular-nums"><?= e(money(FinanceService::money($report['balance']))) ?></td><td></td></tr>
+            </tfoot>
+        </table>
+    </div>
 </section>

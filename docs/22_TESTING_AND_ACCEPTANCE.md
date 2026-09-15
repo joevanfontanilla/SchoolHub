@@ -25,7 +25,7 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**228 tests in 28 files** (version 1.0.0-rc.1):
+**235 tests in 29 files**:
 
 | Area | Files (tests) |
 |---|---|
@@ -37,6 +37,7 @@ always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 | Finance | `finance` (12) |
 | Communication | `communication` (8) |
 | Administration | `admin` (11) |
+| Reports | `reports` (7) |
 | Quality | `security` (7), `deployment` (7) |
 
 Route-table tests (`registrar_access`, `teacher_access`, `rbac`) walk `routes/web.php`
@@ -89,9 +90,9 @@ rooms, and subjects, signs in through the login form, and then:
 7. Checks every page's HTML for basic accessibility (docs/21): `lang` and `<title>`, one
    `<main>`, `alt` on images, a label for every field, a name for every link and button,
    and no duplicate ids.
-8. Opens receipts, statements, exports, and printouts as their owners and as others.
+8. Opens receipts, statements, every CSV export (cashier, registrar, and teacher reports), and printouts as their owners and as others.
 
-Result at 1.0.0-rc.1: **1,420 checks, 0 failures** (700 page requests, 284 CSRF probes).
+Result with the registrar and teacher reports: **1,651 checks, 0 failures** (840 page requests, 284 CSRF probes).
 The crawl found and fixed missing `<main>` landmarks on the sign-in and printable
 layouts and an unlabeled logo upload field.
 
@@ -123,7 +124,7 @@ enrollments with 9,375 enlistments, 18,750 grades, and 37,500 attendance records
 1,500 assessments and 2,000 payments; 60 announcements with 30,000 notifications;
 100,000 audit entries and 30,000 sign-in attempts.
 
-`measure.php` signs in as each role and requests 59 pages three times each. With debug
+`measure.php` signs in as each role and requests 70 pages three times each. With debug
 on (never in production), every response carries `X-Debug-Queries` and
 `X-Debug-Time-Ms`. A page over **300 ms** of server time or **60 statements** is flagged.
 
@@ -141,6 +142,13 @@ Findings and fixes:
 Migration `022_add_reporting_indexes` holds the indexes. After the fixes **every
 measured page is under 90 ms and 33 statements** on this dataset (XAMPP on a Windows 11
 laptop).
+
+The registrar and teacher reports were measured the same way. On screen every one is
+under 100 ms and 13 statements. The requirements status list first took 165 ms and
+557 KB, because it drew an icon badge for every missing document; plain-text statuses
+brought it to 100 ms and 266 KB. The printable enrollment and applicant lists, which carry
+every row (1,500 and 2,000), are about 1.3 MB and render in 56–75 ms. The history report
+takes 21 ms.
 
 Backups at this size: 3.5 MB archive in 4.2 s, verification 0.3 s, restore into an empty
 database 11 s with every table's checksum matching the source (except `audit_logs`, which

@@ -120,10 +120,4 @@ final class FinanceDocumentController extends Controller
         };
     }
 
-    /** @param array<string,mixed> $data */
-    private function printView(string $template, array $data): void
-    {
-        $data += ['school' => SystemSetting::publicSettings(), 'user' => Auth::user()];
-        Response::html(View::render($template, $data, 'layouts/print'));
-    }
 }

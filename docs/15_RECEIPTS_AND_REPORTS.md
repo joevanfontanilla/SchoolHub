@@ -83,4 +83,35 @@ its days, times, room, section, and **teacher**, and the week at a glance.
 - Dates that are invalid, reversed, or span more than a year fall back to this month, with a
   message.
 
-Registrar and teacher reports are not built yet.
+## As built: registrar reports (`/registrar/reports`, `reports.registrar`)
+
+Registrar role **and** `reports.registrar`. Every report opens on the term being enrolled
+(else the term in session), has a Print page and an audited CSV export
+(`reports.exported`, with the filters and row count), and lists 100 rows per page on
+screen; print and CSV always cover every row. Draft applications are never counted.
+
+| Report | Screen | Filters | Contents |
+|---|---|---|---|
+| **Enrollment list** | `/registrar/reports/enrollment` | term, program, year level, section | Officially enrolled students (`enrollments.status = ENROLLED`) with counts by program, year level, and section against capacity, units carried, and counts by student type. Covers "students by program/year/section". |
+| **Applicants by status** | `/registrar/reports/applications` | term, program, status | A program × status matrix of submitted applications, and each application with required documents verified of required, payment status, and submission date. The status filter narrows the list; counts always cover every status. |
+| **Requirements status** | `/registrar/reports/requirements` | term, program | For applications still in progress (not rejected or cancelled): each requirement by status, how many applications have every required document verified, and each application still missing one, naming the documents and their status. The CSV has one line per missing document. |
+| **Enrollment history** | `/registrar/reports/history` | program | Every term (up to a year ahead), newest first: applicants, approved, enrolled, new students, units, and enrolled per program. A single student's history stays on their record. |
+
+Print and export paths add `/print` and `/export` to the screen path.
+
+## As built: teacher class reports (`/teacher/reports`, `reports.teacher`)
+
+Teacher role **and** `reports.teacher`, for **the teacher's own active classes only**: the
+class is found with `GradingService::ownedClass()`, so another teacher's class is a **404**,
+as on the roster and grade pages. `/teacher/reports` lists each class with its three reports;
+each opens as a printable page and as an audited CSV export (`reports.exported`, target
+the class).
+
+| Report | Page | Contents |
+|---|---|---|
+| **Class list** | `/teacher/classes/{id}/reports/class-list` | Enlisted students with student number, program and year, email, and a signature column. |
+| **Attendance summary** | `/teacher/classes/{id}/reports/attendance` | Per student: present, late, absent, excused, and the attendance rate, then the dated record (P/L/A/E) in blocks of 12 dates. The rate counts **late as attended** and leaves **excused** dates out: (present + late) ÷ (dates − excused). The CSV has one column per date. |
+| **Grade sheet** | `/teacher/classes/{id}/reports/grades` | Each period's grade with its weight, the computed final grade, and the remark (docs/27), with signature lines for the instructor and the registrar. Marked **not final** while any period is still open. |
+
+Exports add `/export`. Every printout's tables scroll sideways on a phone and print in
+full on paper.

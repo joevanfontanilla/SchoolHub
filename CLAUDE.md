@@ -209,6 +209,11 @@ an **audit log** entry.
   thresholds are read with `SystemSetting::security()`. Backups go through `BackupService` (PDO dump + zip +
   checksums); **restore is never exposed on the web**. The audit log has no write route and no
   `UPDATE`/`DELETE` of `audit_logs` anywhere in `app/` (a test enforces this).
+- **Reports (docs/15)** are read-only queries (`FinanceReport`, `RegistrarReport`, `ClassSchedule::attendanceSummary()`).
+  Each report is a screen page, a print page rendered with `Controller::printView()`, and a CSV export through
+  `CsvExport` that writes a `reports.exported` audit entry. Teacher class reports find the class with
+  `GradingService::ownedClass()` (another teacher's class is a 404). Printout tables sit in
+  `overflow-x-auto print:overflow-visible` so a phone scrolls the table, not the page.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
   calling `session_destroy()`. The latter keeps the old id for the rest of the request while
   deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).

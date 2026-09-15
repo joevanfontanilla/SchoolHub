@@ -38,59 +38,65 @@ $cell = 'border-b border-slate-200 px-3 py-2';
 
     <div>
         <h2 class="mb-2 font-display text-base font-bold text-brand-navy">Subjects (<?= e($number($units)) ?> units)</h2>
-        <table class="w-full border border-slate-300 text-sm">
-            <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Code</th><th scope="col" class="<?= $cell ?>">Title</th><th scope="col" class="<?= $cell ?> text-right">Units</th><th scope="col" class="<?= $cell ?> text-right">Lab units</th></tr></thead>
-            <tbody>
-                <?php foreach ($subjects as $subject): ?>
-                    <tr><td class="<?= $cell ?> font-semibold"><?= e($subject['code']) ?></td><td class="<?= $cell ?>"><?= e($subject['title']) ?></td><td class="<?= $cell ?> text-right"><?= e($number($subject['units'])) ?></td><td class="<?= $cell ?> text-right"><?= e($number($subject['lab_units'])) ?></td></tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div class="overflow-x-auto print:overflow-visible">
+            <table class="w-full border border-slate-300 text-sm">
+                <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Code</th><th scope="col" class="<?= $cell ?>">Title</th><th scope="col" class="<?= $cell ?> text-right">Units</th><th scope="col" class="<?= $cell ?> text-right">Lab units</th></tr></thead>
+                <tbody>
+                    <?php foreach ($subjects as $subject): ?>
+                        <tr><td class="<?= $cell ?> font-semibold"><?= e($subject['code']) ?></td><td class="<?= $cell ?>"><?= e($subject['title']) ?></td><td class="<?= $cell ?> text-right"><?= e($number($subject['units'])) ?></td><td class="<?= $cell ?> text-right"><?= e($number($subject['lab_units'])) ?></td></tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div>
         <h2 class="mb-2 font-display text-base font-bold text-brand-navy">Assessment of fees</h2>
-        <table class="w-full border border-slate-300 text-sm">
-            <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Fee</th><th scope="col" class="<?= $cell ?>">Basis</th><th scope="col" class="<?= $cell ?> text-right">Rate</th><th scope="col" class="<?= $cell ?> text-right">Amount</th></tr></thead>
-            <tbody>
-                <?php foreach ($items as $item): ?>
-                    <tr>
-                        <td class="<?= $cell ?>"><?= e($item['description']) ?></td>
-                        <td class="<?= $cell ?> text-slate-600"><?= e($item['basis'] === 'FIXED' ? 'Fixed' : $number($item['quantity']) . ' × ' . (FeeScheduleService::BASES[$item['basis']] ?? '')) ?></td>
-                        <td class="<?= $cell ?> text-right tabular-nums"><?= e(money($item['unit_amount'])) ?></td>
-                        <td class="<?= $cell ?> text-right tabular-nums"><?= e(money($item['amount'])) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-            <tfoot class="font-semibold">
-                <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Total assessment</th><td class="px-3 py-2 text-right font-display text-brand-navy tabular-nums"><?= e(money($assessment['total_amount'])) ?></td></tr>
-                <?php foreach ($adjustments as $adjustment): ?>
-                    <tr><th scope="row" colspan="3" class="px-3 py-1 text-right font-normal text-slate-600"><?= e(FinanceService::ADJUSTMENT_TYPES[$adjustment['type']] ?? $adjustment['type']) ?> (<?= e($adjustment['adjustment_number']) ?>): <?= e($adjustment['reason']) ?></th><td class="px-3 py-1 text-right font-normal tabular-nums"><?= e(signed_money(FinanceService::signedCents($adjustment['amount']))) ?></td></tr>
-                <?php endforeach; ?>
-                <?php if ($adjustments !== []): ?>
-                    <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Amount due</th><td class="px-3 py-2 text-right font-display text-brand-navy tabular-nums"><?= e(money(FinanceService::money(max(0, FinanceService::dueCents($assessment))))) ?></td></tr>
-                <?php endif; ?>
-                <tr><th scope="row" colspan="3" class="px-3 py-1 text-right font-normal text-slate-600">Less payments</th><td class="px-3 py-1 text-right font-normal tabular-nums"><?= e(money($assessment['total_paid'])) ?></td></tr>
-                <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Balance</th><td class="px-3 py-2 text-right font-display text-lg text-brand-navy tabular-nums"><?= e(money($assessment['balance'])) ?></td></tr>
-            </tfoot>
-        </table>
+        <div class="overflow-x-auto print:overflow-visible">
+            <table class="w-full border border-slate-300 text-sm">
+                <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Fee</th><th scope="col" class="<?= $cell ?>">Basis</th><th scope="col" class="<?= $cell ?> text-right">Rate</th><th scope="col" class="<?= $cell ?> text-right">Amount</th></tr></thead>
+                <tbody>
+                    <?php foreach ($items as $item): ?>
+                        <tr>
+                            <td class="<?= $cell ?>"><?= e($item['description']) ?></td>
+                            <td class="<?= $cell ?> text-slate-600"><?= e($item['basis'] === 'FIXED' ? 'Fixed' : $number($item['quantity']) . ' × ' . (FeeScheduleService::BASES[$item['basis']] ?? '')) ?></td>
+                            <td class="<?= $cell ?> text-right tabular-nums"><?= e(money($item['unit_amount'])) ?></td>
+                            <td class="<?= $cell ?> text-right tabular-nums"><?= e(money($item['amount'])) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot class="font-semibold">
+                    <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Total assessment</th><td class="px-3 py-2 text-right font-display text-brand-navy tabular-nums"><?= e(money($assessment['total_amount'])) ?></td></tr>
+                    <?php foreach ($adjustments as $adjustment): ?>
+                        <tr><th scope="row" colspan="3" class="px-3 py-1 text-right font-normal text-slate-600"><?= e(FinanceService::ADJUSTMENT_TYPES[$adjustment['type']] ?? $adjustment['type']) ?> (<?= e($adjustment['adjustment_number']) ?>): <?= e($adjustment['reason']) ?></th><td class="px-3 py-1 text-right font-normal tabular-nums"><?= e(signed_money(FinanceService::signedCents($adjustment['amount']))) ?></td></tr>
+                    <?php endforeach; ?>
+                    <?php if ($adjustments !== []): ?>
+                        <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Amount due</th><td class="px-3 py-2 text-right font-display text-brand-navy tabular-nums"><?= e(money(FinanceService::money(max(0, FinanceService::dueCents($assessment))))) ?></td></tr>
+                    <?php endif; ?>
+                    <tr><th scope="row" colspan="3" class="px-3 py-1 text-right font-normal text-slate-600">Less payments</th><td class="px-3 py-1 text-right font-normal tabular-nums"><?= e(money($assessment['total_paid'])) ?></td></tr>
+                    <tr><th scope="row" colspan="3" class="px-3 py-2 text-right">Balance</th><td class="px-3 py-2 text-right font-display text-lg text-brand-navy tabular-nums"><?= e(money($assessment['balance'])) ?></td></tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 
     <?php if ($payments !== []): ?>
         <div>
             <h2 class="mb-2 font-display text-base font-bold text-brand-navy">Payments</h2>
-            <table class="w-full border border-slate-300 text-sm">
-                <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Date</th><th scope="col" class="<?= $cell ?>">Receipt No.</th><th scope="col" class="<?= $cell ?>">Method</th><th scope="col" class="<?= $cell ?> text-right">Amount</th></tr></thead>
-                <tbody>
-                    <?php foreach ($payments as $payment): ?>
-                        <?php if ($payment['reversed_payment_id'] !== null): ?>
-                            <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?>">Reversal of <?= e($payment['reversed_receipt_number']) ?></td><td class="<?= $cell ?>"><?= e($payment['remarks']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(signed_money(FinanceService::signedCents($payment['amount']))) ?></td></tr>
-                        <?php else: ?>
-                            <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?> font-semibold"><?= e($payment['receipt_number']) ?><?= $payment['reversal_id'] !== null ? ' (reversed)' : '' ?></td><td class="<?= $cell ?>"><?= e($payment['payment_method']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+            <div class="overflow-x-auto print:overflow-visible">
+                <table class="w-full border border-slate-300 text-sm">
+                    <thead class="bg-brand-50 text-left text-brand-navy"><tr><th scope="col" class="<?= $cell ?>">Date</th><th scope="col" class="<?= $cell ?>">Receipt No.</th><th scope="col" class="<?= $cell ?>">Method</th><th scope="col" class="<?= $cell ?> text-right">Amount</th></tr></thead>
+                    <tbody>
+                        <?php foreach ($payments as $payment): ?>
+                            <?php if ($payment['reversed_payment_id'] !== null): ?>
+                                <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?>">Reversal of <?= e($payment['reversed_receipt_number']) ?></td><td class="<?= $cell ?>"><?= e($payment['remarks']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(signed_money(FinanceService::signedCents($payment['amount']))) ?></td></tr>
+                            <?php else: ?>
+                                <tr><td class="<?= $cell ?>"><?= e(d($payment['paid_at'])) ?></td><td class="<?= $cell ?> font-semibold"><?= e($payment['receipt_number']) ?><?= $payment['reversal_id'] !== null ? ' (reversed)' : '' ?></td><td class="<?= $cell ?>"><?= e($payment['payment_method']) ?></td><td class="<?= $cell ?> text-right tabular-nums"><?= e(money($payment['amount'])) ?></td></tr>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     <?php endif; ?>
 </section>

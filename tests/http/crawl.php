@@ -320,6 +320,7 @@ try {
     // Allowed pages that legitimately redirect or are empty for these fixtures.
     $allowedAlso = [
         '/cashier/reports'                     => [302],
+        '/registrar/reports'                   => [302],
         '/student/enrollment/apply'            => [302],
         '/registrar/applications/{id}/confirm' => [302],
         '/downloads/{id}'                      => [404],
@@ -419,7 +420,12 @@ try {
     // Exports and printouts, for their owners.
     foreach ([['registrar', '/statements/' . $ids['assessment'], 'text/html'], ['cashier', '/cashier/reports/collections/export', 'text/csv'],
               ['cashier', '/cashier/reports/outstanding/export', 'text/csv'], ['admin', '/admin/audit-logs/export?action=login', 'text/csv'],
-              ['studentA', '/student/schedule/print', 'text/html']] as [$name, $path, $type]) {
+              ['studentA', '/student/schedule/print', 'text/html'],
+              ['registrar', '/registrar/reports/enrollment/export', 'text/csv'], ['registrar', '/registrar/reports/applications/export', 'text/csv'],
+              ['registrar', '/registrar/reports/requirements/export', 'text/csv'], ['registrar', '/registrar/reports/history/export', 'text/csv'],
+              ['teacher', '/teacher/classes/' . $ids['class'] . '/reports/class-list/export', 'text/csv'],
+              ['teacher', '/teacher/classes/' . $ids['class'] . '/reports/attendance/export', 'text/csv'],
+              ['teacher', '/teacher/classes/' . $ids['class'] . '/reports/grades/export', 'text/csv']] as [$name, $path, $type]) {
         $response = http('GET', $base . $path, $jars[$name]);
         $checks++;
         if ($response['status'] !== 200 || !str_contains((string) ($response['headers']['content-type'][0] ?? ''), $type)) {

@@ -73,7 +73,10 @@ Teacher cannot access cashier functions, registrar approval functions, or system
 Defined in **`docs/27_GRADING_POLICY.md`**: the 1.00–5.00 scale, Prelim/Midterm/Finals
 weights, the final-grade rule, period locking, and the reopen procedure for corrections.
 
+### Class reports
+The class list, attendance summary, and grade sheet of each own class, printable and as
+CSV, are at `/teacher/reports` (`reports.teacher`); see docs/15.
+
 ### Not yet implemented
-- Teacher profiles and teacher account management (Phase 7). Teacher accounts are
-  created with `database/create_demo_users.php` until then.
-- Class reports and exports (reporting phase).
+- Teacher profiles (department, specialization). Teacher accounts are created by the
+  Super Admin in Administration → Users (docs/07).

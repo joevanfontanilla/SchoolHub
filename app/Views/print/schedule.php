@@ -37,36 +37,38 @@ foreach ($blocks as $block) {
     <?php if ($classes === []): ?>
         <p class="text-sm text-slate-600">No classes yet.</p>
     <?php else: ?>
-        <table class="w-full border border-slate-300 text-sm">
-            <caption class="sr-only">Classes</caption>
-            <thead class="bg-brand-50 text-left text-brand-navy">
-                <tr>
-                    <th scope="col" class="<?= $cell ?>">Code</th>
-                    <th scope="col" class="<?= $cell ?>">Subject</th>
-                    <th scope="col" class="<?= $cell ?> text-right">Units</th>
-                    <th scope="col" class="<?= $cell ?>">Days and time</th>
-                    <th scope="col" class="<?= $cell ?>">Room</th>
-                    <th scope="col" class="<?= $cell ?>">Teacher</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($classes as $class): ?>
+        <div class="overflow-x-auto print:overflow-visible">
+            <table class="w-full border border-slate-300 text-sm">
+                <caption class="sr-only">Classes</caption>
+                <thead class="bg-brand-50 text-left text-brand-navy">
                     <tr>
-                        <td class="<?= $cell ?> whitespace-nowrap font-semibold"><?= e($class['code']) ?></td>
-                        <td class="<?= $cell ?>"><?= e($class['title']) ?></td>
-                        <td class="<?= $cell ?> text-right"><?= e($number($class['units'])) ?></td>
-                        <td class="<?= $cell ?> whitespace-nowrap">
-                            <?php foreach ($class['meetings'] as $meeting): ?>
-                                <span class="block"><?= e(substr(ClassScheduleService::DAYS[(int) $meeting['day_of_week']], 0, 3)) ?> <?= e(ClassScheduleService::timeRange($meeting['start_time'], $meeting['end_time'])) ?></span>
-                            <?php endforeach; ?>
-                        </td>
-                        <td class="<?= $cell ?>"><?= e(implode(', ', array_unique(array_filter(array_column($class['meetings'], 'room_code')))) ?: 'TBA') ?></td>
-                        <td class="<?= $cell ?> font-medium"><?= e($class['teacher_name'] ?? 'To be assigned') ?></td>
+                        <th scope="col" class="<?= $cell ?>">Code</th>
+                        <th scope="col" class="<?= $cell ?>">Subject</th>
+                        <th scope="col" class="<?= $cell ?> text-right">Units</th>
+                        <th scope="col" class="<?= $cell ?>">Days and time</th>
+                        <th scope="col" class="<?= $cell ?>">Room</th>
+                        <th scope="col" class="<?= $cell ?>">Teacher</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-            <tfoot><tr><th scope="row" colspan="2" class="px-3 py-2 text-right">Total units</th><td class="px-3 py-2 text-right font-semibold"><?= e($number($units)) ?></td><td colspan="3"></td></tr></tfoot>
-        </table>
+                </thead>
+                <tbody>
+                    <?php foreach ($classes as $class): ?>
+                        <tr>
+                            <td class="<?= $cell ?> whitespace-nowrap font-semibold"><?= e($class['code']) ?></td>
+                            <td class="<?= $cell ?>"><?= e($class['title']) ?></td>
+                            <td class="<?= $cell ?> text-right"><?= e($number($class['units'])) ?></td>
+                            <td class="<?= $cell ?> whitespace-nowrap">
+                                <?php foreach ($class['meetings'] as $meeting): ?>
+                                    <span class="block"><?= e(substr(ClassScheduleService::DAYS[(int) $meeting['day_of_week']], 0, 3)) ?> <?= e(ClassScheduleService::timeRange($meeting['start_time'], $meeting['end_time'])) ?></span>
+                                <?php endforeach; ?>
+                            </td>
+                            <td class="<?= $cell ?>"><?= e(implode(', ', array_unique(array_filter(array_column($class['meetings'], 'room_code')))) ?: 'TBA') ?></td>
+                            <td class="<?= $cell ?> font-medium"><?= e($class['teacher_name'] ?? 'To be assigned') ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot><tr><th scope="row" colspan="2" class="px-3 py-2 text-right">Total units</th><td class="px-3 py-2 text-right font-semibold"><?= e($number($units)) ?></td><td colspan="3"></td></tr></tfoot>
+            </table>
+        </div>
 
         <div class="break-inside-avoid">
             <h2 class="mb-2 font-display text-base font-bold text-brand-navy">Week at a glance</h2>

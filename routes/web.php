@@ -41,6 +41,7 @@ use App\Controllers\Registrar\CatalogController;
 use App\Controllers\Registrar\ClassController as RegistrarClasses;
 use App\Controllers\Registrar\ConfirmationController;
 use App\Controllers\Registrar\GradingController;
+use App\Controllers\Registrar\ReportController as RegistrarReports;
 use App\Controllers\Registrar\RoomController;
 use App\Controllers\Registrar\StudentController as RegistrarStudents;
 use App\Controllers\Student\AcademicController as StudentAcademic;
@@ -50,6 +51,7 @@ use App\Controllers\Student\ProfileController;
 use App\Controllers\Student\RequirementController;
 use App\Controllers\Teacher\ClassController as TeacherClasses;
 use App\Controllers\Teacher\DashboardController as TeacherDashboard;
+use App\Controllers\Teacher\ReportController as TeacherReports;
 use App\Models\User;
 
 // ---------------------------------------------------------------------------
@@ -257,6 +259,15 @@ $router->post('/teacher/classes/{id}/attendance',  [TeacherClasses::class, 'save
 $router->get('/teacher/classes/{id}/grades',       [TeacherClasses::class, 'grades'],          $teacher('grades.record'));
 $router->post('/teacher/classes/{id}/grades',      [TeacherClasses::class, 'saveGrades'],      $teacher('grades.record'));
 
+// Class reports (docs/15): printable, and an audited CSV export. Own classes only.
+$router->get('/teacher/reports',                              [TeacherReports::class, 'index'],            $teacher('reports.teacher'), 'teacher.reports');
+$router->get('/teacher/classes/{id}/reports/class-list',        [TeacherReports::class, 'classList'],        $teacher('reports.teacher'));
+$router->get('/teacher/classes/{id}/reports/class-list/export', [TeacherReports::class, 'classListExport'],  $teacher('reports.teacher'));
+$router->get('/teacher/classes/{id}/reports/attendance',        [TeacherReports::class, 'attendance'],       $teacher('reports.teacher'));
+$router->get('/teacher/classes/{id}/reports/attendance/export', [TeacherReports::class, 'attendanceExport'], $teacher('reports.teacher'));
+$router->get('/teacher/classes/{id}/reports/grades',            [TeacherReports::class, 'grades'],           $teacher('reports.teacher'));
+$router->get('/teacher/classes/{id}/reports/grades/export',     [TeacherReports::class, 'gradesExport'],     $teacher('reports.teacher'));
+
 // ---------------------------------------------------------------------------
 // Registrar (Phase 3)
 //
@@ -324,6 +335,21 @@ $router->get('/registrar/grading',                     [GradingController::class
 $router->post('/registrar/grading/periods/{id}/open',  [GradingController::class, 'open'],    $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/periods/{id}/close', [GradingController::class, 'close'],   $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/terms/{id}/weights', [GradingController::class, 'weights'], $registrar('grade_periods.manage'));
+
+// Reports (docs/15): on screen, printable, and an audited CSV export.
+$router->get('/registrar/reports',                     [RegistrarReports::class, 'index'],              $registrar('reports.registrar'), 'registrar.reports');
+$router->get('/registrar/reports/enrollment',          [RegistrarReports::class, 'enrollment'],         $registrar('reports.registrar'));
+$router->get('/registrar/reports/enrollment/print',    [RegistrarReports::class, 'enrollmentPrint'],    $registrar('reports.registrar'));
+$router->get('/registrar/reports/enrollment/export',   [RegistrarReports::class, 'enrollmentExport'],   $registrar('reports.registrar'));
+$router->get('/registrar/reports/applications',        [RegistrarReports::class, 'applications'],       $registrar('reports.registrar'));
+$router->get('/registrar/reports/applications/print',  [RegistrarReports::class, 'applicationsPrint'],  $registrar('reports.registrar'));
+$router->get('/registrar/reports/applications/export', [RegistrarReports::class, 'applicationsExport'], $registrar('reports.registrar'));
+$router->get('/registrar/reports/requirements',        [RegistrarReports::class, 'requirements'],       $registrar('reports.registrar'));
+$router->get('/registrar/reports/requirements/print',  [RegistrarReports::class, 'requirementsPrint'],  $registrar('reports.registrar'));
+$router->get('/registrar/reports/requirements/export', [RegistrarReports::class, 'requirementsExport'], $registrar('reports.registrar'));
+$router->get('/registrar/reports/history',             [RegistrarReports::class, 'history'],            $registrar('reports.registrar'));
+$router->get('/registrar/reports/history/print',       [RegistrarReports::class, 'historyPrint'],       $registrar('reports.registrar'));
+$router->get('/registrar/reports/history/export',      [RegistrarReports::class, 'historyExport'],      $registrar('reports.registrar'));
 
 // Uploaded requirement documents. Signed-in users only; who may open which
 // file is decided by DocumentAccessPolicy (docs/17 section 10).

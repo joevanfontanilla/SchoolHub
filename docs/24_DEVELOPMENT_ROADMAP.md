@@ -13,12 +13,14 @@
 | 7 Administration | Done | `264d01e` |
 | 8 Quality | Done | this release: security scan, HTTP crawl, responsive pass, performance dataset and fixes, deployment preflight and guide |
 
+After Phase 8: registrar reports and teacher class reports (docs/15), completing the
+reports docs/15 lists.
+
 **1.0.0** is tagged after the school runs the preflight and the acceptance scenarios
 (docs/22) on its own server (docs/23) and fixes whatever they turn up.
 
 ### Not in 1.0.0
 Recorded in the module documents; none blocks enrollment:
-- Registrar and teacher reports (class lists, grade sheets, enrollment statistics) (docs/15).
 - Email or SMS delivery: the Super Admin hands each password link to its owner (docs/07, docs/16).
 - `INC` completion deadlines and transfer-credit evaluation (docs/27, docs/13).
 - Virus scanning of uploads (docs/10); off-site backup copies are a scheduled `robocopy`, not a feature (docs/20, docs/23).

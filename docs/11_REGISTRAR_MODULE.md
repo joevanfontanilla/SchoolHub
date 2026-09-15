@@ -77,4 +77,9 @@ never by value.
 ### Access
 Every registrar route requires the Registrar role **and** a specific permission
 (`enrollment.review`, `enrollment.approve`, `enrollment.confirm`, `requirements.verify`,
-`students.view`, `students.manage`, `academic.manage`). Super Admin is not admitted.
+`students.view`, `students.manage`, `academic.manage`, `reports.registrar`). Super Admin is not admitted.
+
+### Reports
+Enrollment list (students by program, year level, and section), applicants by status,
+requirements status, and enrollment history, each on screen, printable, and as an audited
+CSV export, at `/registrar/reports`; see docs/15.

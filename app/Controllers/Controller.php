@@ -53,6 +53,16 @@ abstract class Controller
         Response::html(View::render($template, $data, 'layouts/app'), $status);
     }
 
+    /**
+     * Render a printable document (receipts, statements, reports) on the letterhead
+     * layout, which the browser prints or saves as PDF (docs/15).
+     */
+    protected function printView(string $template, array $data = []): void
+    {
+        $data += ['school' => SystemSetting::publicSettings(), 'user' => Auth::user()];
+        Response::html(View::render($template, $data, 'layouts/print'));
+    }
+
     /** Render a view inside the minimal auth layout (login, reset). */
     protected function authView(string $template, array $data = [], int $status = 200): void
     {

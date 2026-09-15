@@ -144,6 +144,7 @@ return [
             'FinanceReport.php'         => [],
             'Notification.php'          => ['$limit', '$offset', '$where'],
             'RegistrarQueue.php'        => ['$where', '$whereSql'],
+            'RegistrarReport.php'       => ['$programFilter', '$whereSql'],
             'User.php'                  => ['$limit', '$offset', '$sqlWhere'],
             'UserAdminService.php'      => ['$field'],
             'Validator.php'             => ['$column', '$table'],

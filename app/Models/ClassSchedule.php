@@ -185,6 +185,45 @@ final class ClassSchedule
     }
 
     /**
+     * Attendance for a whole class: every date taken, oldest first, and each enlisted
+     * student's mark on each date with their totals.
+     *
+     * @return array{dates:array<int,string>,students:array<int,array<string,mixed>>}
+     */
+    public static function attendanceSummary(int $classId): array
+    {
+        $dates = [];
+        $marks = [];
+        foreach (Database::select(
+            'SELECT a.class_enlistment_id, a.attendance_date, a.status FROM attendance a
+               JOIN class_enlistments ce ON ce.id = a.class_enlistment_id
+              WHERE ce.class_schedule_id = ?
+              ORDER BY a.attendance_date',
+            [$classId]
+        ) as $row) {
+            $dates[$row['attendance_date']] = $row['attendance_date'];
+            $marks[(int) $row['class_enlistment_id']][$row['attendance_date']] = $row['status'];
+        }
+
+        $students = array_map(static function (array $student) use ($marks): array {
+            $own = $marks[(int) $student['enlistment_id']] ?? [];
+            $counts = ['PRESENT' => 0, 'ABSENT' => 0, 'LATE' => 0, 'EXCUSED' => 0];
+            foreach ($own as $status) {
+                $counts[$status] = ($counts[$status] ?? 0) + 1;
+            }
+            $taken = array_sum($counts);
+            return $student + [
+                'marks'  => $own,
+                'counts' => $counts,
+                // Late still attended; excused absences are left out of the rate.
+                'rate'   => $taken - $counts['EXCUSED'] > 0 ? (int) round(($counts['PRESENT'] + $counts['LATE']) / ($taken - $counts['EXCUSED']) * 100) : null,
+            ];
+        }, self::roster($classId));
+
+        return ['dates' => array_values($dates), 'students' => $students];
+    }
+
+    /**
      * How many enlisted students of a class have a grade for a period.
      */
     public static function gradedCount(int $classId, int $periodId): int

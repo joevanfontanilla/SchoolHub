@@ -43,7 +43,7 @@ $nav = match ($user?->role_name) {
         ['/portal/announcements', 'Announcements', 'megaphone', true],
         ['/portal/notifications', 'Notifications', 'bell', true],
         'Reports',
-        ['/teacher/reports', 'Class Reports', 'presentation', false],
+        ['/teacher/reports', 'Class Reports', 'presentation', true],
     ],
     User::ROLE_REGISTRAR => [
         ['/registrar/dashboard', 'Dashboard', 'dashboard', true],
@@ -60,7 +60,8 @@ $nav = match ($user?->role_name) {
         'Communication',
         ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
         ['/portal/notifications', 'Notifications', 'bell', true],
-        ['/registrar/reports', 'Reports', 'presentation', false],
+        'Reports',
+        ['/registrar/reports', 'Reports', 'presentation', true],
     ],
     User::ROLE_CASHIER => [
         ['/cashier/dashboard', 'Dashboard', 'dashboard', true],

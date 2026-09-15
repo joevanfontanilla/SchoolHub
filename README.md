@@ -17,8 +17,9 @@ SchoolHub runs a college's enrollment and records in one place:
   statements, schedule, attendance, grades, academic history, announcements, and notifications.
 - **Registrar:** the application queue, document review, approval with a section, automatic
   confirmation once payment policy is met, student records, programs, curricula, subjects,
-  sections, rooms, classes with conflict checks, enlistment adjustments, and grading periods.
-- **Teachers:** their own classes, rosters, attendance, and Prelim/Midterm/Finals grades.
+  sections, rooms, classes with conflict checks, enlistment adjustments, grading periods, and
+  reports (enrollment list, applicants by status, requirements, enrollment history; print and CSV).
+- **Teachers:** their own classes, rosters, attendance, Prelim/Midterm/Finals grades, and class reports (class list, attendance summary, grade sheet; print and CSV).
 - **Cashier:** fee schedule, assessments, payment verification and window payments,
   official receipts, adjustments and reversals, collections and outstanding-balance reports
   (print and CSV).
@@ -64,8 +65,8 @@ binary as `tailwindcss.exe` into the project root and run
 | `php database/restore.php <file>` | Restore a backup (command line only) |
 | `php database/dispatch_announcements.php` | Deliver scheduled announcements (Task Scheduler) |
 | `php database/check_deployment.php [--url=https://…]` | Deployment preflight |
-| `php tests/run.php [--filter=name]` | Test suite (228 tests) |
-| `php tests/http/crawl.php` | Every route as every role through Apache (1,420 checks) |
+| `php tests/run.php [--filter=name]` | Test suite (235 tests) |
+| `php tests/http/crawl.php` | Every route as every role through Apache (1,651 checks) |
 
 ## Deploying
 Deployment is on a school Windows computer running XAMPP, served over HTTPS, with the web root
