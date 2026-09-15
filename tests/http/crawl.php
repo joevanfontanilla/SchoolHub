@@ -216,24 +216,41 @@ try {
     $submissionId = FinanceService::submitPayment($studentA, (int) $assessment['id'], [
         'amount' => '50', 'method' => 'GCash', 'reference_number' => 'GC-CRAWL', 'paid_on' => date('Y-m-d'),
     ], UploadedFile::forTesting(fixtureFile('png'), 'proof.png'));
-    FinanceService::adjust($cashier, (int) $assessment['id'], ['type' => 'DISCOUNT', 'amount' => '10', 'reason' => 'Crawl ' . XSS_ATTR]);
+    FinanceService::adjust($cashier, (int) $assessment['id'], ['type' => 'DISCOUNT', 'amount' => '10', 'reason' => 'Crawl adjustment']);
 
+    // The crawl runs against the real database, so nothing it plants may reach a real account.
+    // Records are created through the services with plain text, so their audit entries hold no
+    // payload (the audit log can never be edited); the payloads are written into the tables
+    // afterwards, as fixture setup. The public announcement is not urgent (no banner on anyone's
+    // portal), and the notifications it sends to accounts other than the fixtures are removed at
+    // once. The urgent banner is still checked through the class announcement, which only the
+    // fixture class receives.
     $announcementId = AnnouncementService::save($registrar, null, [
-        'title' => 'Crawl notice ' . XSS_NAME, 'content' => "Body text for the crawl.\n\n" . XSS_ATTR, 'category' => 'General',
-        'audience' => 'EVERYONE', 'is_public' => '1', 'is_urgent' => '1', 'image_alt' => 'Poster ' . XSS_ATTR,
+        'title' => 'Crawl notice', 'content' => 'Body text for the crawl.', 'category' => 'General',
+        'audience' => 'EVERYONE', 'is_public' => '1', 'is_urgent' => '0', 'image_alt' => 'Poster',
     ], UploadedFile::forTesting(fixtureFile('png'), 'poster.png'), 'publish');
-    $announcement = App\Models\Announcement::find($announcementId);
+    Database::query(
+        'DELETE FROM notifications WHERE link_url = ? AND user_id NOT IN (SELECT id FROM (SELECT id FROM users WHERE username LIKE ?) AS fixtures)',
+        ['/portal/announcements/' . $announcementId, testPrefixPattern()]
+    );
     $classAnnouncementId = AnnouncementService::save($teacher, null, [
-        'title' => 'Class notice ' . XSS_NAME, 'content' => "Room change for the crawl class.\n\n" . XSS_ATTR, 'category' => 'Academic',
+        'title' => 'Class notice', 'content' => 'Room change for the crawl class.', 'category' => 'Academic',
         'audience' => 'CLASSES', 'classes' => [$classId], 'is_urgent' => '1',
     ], null, 'publish');
 
     $link = PasswordResetService::issue($spare, PasswordResetService::RESET, $admin);
 
-    // Script-injection payloads in names and catalog text (fixture setup, straight to the table).
+    // Script-injection payloads in names, catalog text, reasons, announcements, and the fixtures'
+    // notifications (fixture setup, straight to the tables).
     Database::update('users', ['first_name' => XSS_NAME, 'last_name' => XSS_ATTR], ['id' => $studentA->id]);
     Database::update('rooms', ['name' => XSS_NAME], ['id' => $roomId]);
     Database::update('subjects', ['title' => XSS_NAME], ['id' => $subjectId]);
+    Database::query('UPDATE financial_adjustments SET reason = ? WHERE fee_assessment_id = ?', ['Crawl ' . XSS_ATTR, (int) $assessment['id']]);
+    Database::update('announcements', ['title' => 'Crawl notice ' . XSS_NAME, 'content' => "Body text for the crawl.\n\n" . XSS_ATTR, 'image_alt' => 'Poster ' . XSS_ATTR], ['id' => $announcementId]);
+    Database::update('announcements', ['title' => 'Class notice ' . XSS_NAME, 'content' => "Room change for the crawl class.\n\n" . XSS_ATTR], ['id' => $classAnnouncementId]);
+    Database::query('UPDATE notifications SET title = CONCAT(title, ?) WHERE link_url IN (?, ?)',
+        [' ' . XSS_NAME, '/portal/announcements/' . $announcementId, '/portal/announcements/' . $classAnnouncementId]);
+    $announcement = App\Models\Announcement::find($announcementId);
 
     $ids = [
         'application'  => $applicationId,
@@ -480,12 +497,15 @@ try {
     // -- 4. Injection payloads in every filter parameter -----------------------------------
     echo "  Sending injection payloads to every page's filters…\n";
     $query = http_build_query(array_fill_keys(FILTER_PARAMS, INJECTION));
+    // A spreadsheet export cannot run a script, and exports are audited with their filters: they get
+    // the SQL part only, so no script text is written into the (unchangeable) audit log.
+    $sqlOnlyQuery = http_build_query(array_fill_keys(FILTER_PARAMS, "' OR '1'='1' -- "));
     foreach ($routes as $route) {
         if ($route['method'] !== 'GET' || str_contains($route['pattern'], '{')) {
             continue;
         }
         foreach (['visitor', 'studentA', 'teacher', 'registrar', 'cashier', 'admin'] as $name) {
-            $response = http('GET', $base . $route['pattern'] . '?' . $query, $jars[$name]);
+            $response = http('GET', $base . $route['pattern'] . '?' . (str_ends_with($route['pattern'], '/export') ? $sqlOnlyQuery : $query), $jars[$name]);
             $checks++;
             if ($response['status'] >= 500) {
                 fail("{$name} GET {$route['pattern']} with injected filters: server error {$response['status']}");
@@ -555,7 +575,20 @@ try {
         file_put_contents((string) $options['report'], json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
     if (isset($options['keep'])) {
-        echo "  Fixtures kept (password TestPass123). Remove them with: php tests/http/crawl.php --cleanup\n\n";
+        // Kept fixtures stay in the real database while someone looks around in a browser. The
+        // injection checks are done, so the planted script text becomes plain names, and the public
+        // announcement is archived: real accounts and the public website never show crawl content.
+        if (isset($ids['room'], $studentA)) {
+            Database::update('users', ['first_name' => 'Crawl', 'last_name' => 'Student'], ['id' => $studentA->id]);
+            Database::update('rooms', ['name' => 'Crawl room'], ['id' => $ids['room']]);
+            Database::update('subjects', ['title' => 'Crawl subject'], ['id' => $ids['subject']]);
+            Database::update('announcements', ['title' => 'Crawl notice', 'content' => 'Body text for the crawl.', 'image_alt' => 'Poster', 'status' => 'ARCHIVED'], ['id' => $ids['announcement']]);
+            Database::update('announcements', ['title' => 'Class notice', 'content' => 'Room change for the crawl class.'], ['id' => $ids['class_announcement']]);
+            Database::query("UPDATE financial_adjustments SET reason = 'Crawl adjustment' WHERE fee_assessment_id = ?", [$ids['assessment']]);
+            Database::query("UPDATE notifications SET title = 'Crawl notification', body = NULL WHERE title LIKE ? OR body LIKE ?", ['%sh-xss%', '%sh-xss%']);
+        }
+        echo "  Fixtures kept (password TestPass123), with the script payloads replaced by plain text.\n";
+        echo "  Remove them with: php tests/http/crawl.php --cleanup\n\n";
     } else {
         deleteTestLoginLogs();
         deleteTestUsers();

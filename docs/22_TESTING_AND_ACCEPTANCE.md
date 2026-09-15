@@ -72,9 +72,19 @@ php tests/http/crawl.php --cleanup
 
 Runs through Apache (the PHP built-in server hides real differences; see `CLAUDE.md`).
 It builds fixtures for every role (an enrolled student with a class, grades, a payment,
-an online payment awaiting verification, an adjustment, a public urgent announcement
-with an image, uploaded documents, a password link), plants script payloads in names,
-rooms, and subjects, signs in through the login form, and then:
+an online payment awaiting verification, an adjustment, a public announcement with an
+image, an urgent class announcement, uploaded documents, a password link), plants script
+payloads in names, rooms, subjects, reasons, announcements, and notifications, signs in
+through the login form, and then:
+
+**Real accounts never see crawl content.** The crawl shares the real database, and text such as
+`<script>alert("sh-xss")</script>` was once visible to real accounts during a run: the public test
+announcement was urgent and notified everyone. Now it is not urgent, its notifications to
+non-fixture accounts are deleted as soon as it is published, and the only urgent announcement
+goes to the fixture class. Records are created through the services with plain text and the
+payloads are written in afterwards, so no payload enters the audit log (exports, which audit their
+filters, get the SQL payload only). With `--keep`, the payloads are replaced by plain names and the
+public announcement is archived once the checks are done.
 
 1. Requests **every GET route** as a visitor and as each of six sessions (student,
    a second student, teacher, registrar, cashier, Super Admin). The expected status
