@@ -41,6 +41,21 @@ final class Response
     }
 
     /** Redirect to an application path (never a raw absolute URL). */
+    /**
+     * Where to send a plain-HTTP request when the production site address is https:// (docs/23).
+     * Hosting panels do not always redirect port 80 themselves, and a sign-in form reached over
+     * http:// would send the password unencrypted. Null when no redirect is needed.
+     */
+    public static function httpsRedirectTarget(Request $request): ?string
+    {
+        $base = (string) Config::get('app.base_url', '');
+        if (Config::get('app.env') !== 'production' || !preg_match('#^https://#i', $base) || $request->isSecure()) {
+            return null;
+        }
+        $query = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_QUERY);
+        return absolute_url($request->path()) . ($query !== '' ? '?' . $query : '');
+    }
+
     public static function redirect(string $path, int $status = 302): void
     {
         header('Location: ' . url($path), true, $status);

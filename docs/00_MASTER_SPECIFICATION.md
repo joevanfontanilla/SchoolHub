@@ -114,8 +114,16 @@ handling, database access, migration runner, and test runner are hand-written in
 - **Receipts and printable reports** are HTML with print CSS, not a PDF library.
 - **Spreadsheet export** uses native `fputcsv`.
 - **Tests** use a small hand-written runner (`tests/run.php`), not PHPUnit.
+- **Email** ("Forgot password?", emailed account links) goes through a hand-written SMTP client
+  (`app/Core/Mailer.php`), not a mail library.
 
 Adding any dependency requires explicit authorization and an amendment to this section.
+
+### Where it runs
+"Apache/XAMPP" in section 2 is the development environment. The same code is deployed on shared
+hosting (cPanel, hPanel), a Linux server, or the school's Windows/XAMPP computer, with Apache, PHP
+8.2+, and MySQL 8 or MariaDB 10.4+ (`23_DEPLOYMENT.md`). Every database session uses MySQL 8's strict
+SQL mode, so the code behaves the same on both databases.
 
 ### Enrollment status
 The twelve statuses listed in `09_ENROLLMENT_SYSTEM.md` are **three independent axes**,

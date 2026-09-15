@@ -9,6 +9,9 @@ storage/backups/*
 !storage/logs/.gitkeep
 !storage/backups/.gitkeep
 
+# Release zips and installation SQL built by database/build_release.php and build_install_sql.php
+build/
+
 # Tailwind standalone CLI binary (downloaded per-machine, ~100MB)
 tailwindcss.exe
 tailwindcss

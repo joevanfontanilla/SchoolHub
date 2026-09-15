@@ -80,7 +80,9 @@ $router->post('/logout', [AuthController::class, 'logout'],   ['auth'], 'logout'
 $router->get('/password/change',  [AuthController::class, 'showChangePassword'], ['auth'], 'password.change');
 $router->post('/password/change', [AuthController::class, 'changePassword'],     ['auth']);
 
-// One-time password links issued by the Super Admin (docs/07). Signed-out visitors only.
+// "Forgot password?" by email, and one-time password links (docs/07). Signed-out visitors only.
+$router->get('/password/forgot',  [PasswordResetController::class, 'showForgot'], ['guest'], 'password.forgot');
+$router->post('/password/forgot', [PasswordResetController::class, 'sendForgot'], ['guest']);
 $router->get('/password/reset/{token}',  [PasswordResetController::class, 'show'],   ['guest'], 'password.reset');
 $router->post('/password/reset/{token}', [PasswordResetController::class, 'update'], ['guest']);
 
@@ -122,6 +124,7 @@ $router->post('/admin/users/{id}/disable',    [AdminUsers::class, 'disable'],   
 $router->post('/admin/users/{id}/enable',     [AdminUsers::class, 'enable'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/unlock',     [AdminUsers::class, 'unlock'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/reset-link', [AdminUsers::class, 'resetLink'], $admin('users.manage'));
+$router->post('/admin/users/{id}/email-link', [AdminUsers::class, 'emailLink'], $admin('users.manage'));
 
 $router->get('/admin/roles',                   [AdminRoles::class, 'index'],  $admin('roles.manage'), 'admin.roles');
 $router->post('/admin/roles/{id}/permissions', [AdminRoles::class, 'update'], $admin('roles.manage'));

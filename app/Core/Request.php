@@ -72,9 +72,69 @@ final class Request
         return isset($_POST[$key]) || isset($_GET[$key]);
     }
 
+    /**
+     * The visitor's address. Behind a hosting provider's proxy or Cloudflare, REMOTE_ADDR is the
+     * proxy, shared by every visitor, and one person's failed sign-ins would block the whole
+     * school. X-Forwarded-For is believed only when the request comes from a proxy listed in
+     * app.trusted_proxies (docs/23); anyone can send that header directly.
+     */
     public function ip(): string
     {
-        return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $proxies = (array) Config::get('app.trusted_proxies', []);
+        if ($proxies === [] || !self::ipInRanges($remote, $proxies)) {
+            return $remote;
+        }
+        // The right-most address not added by a trusted proxy is the visitor.
+        $chain = array_reverse(array_map('trim', explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''))));
+        foreach ($chain as $address) {
+            if (filter_var($address, FILTER_VALIDATE_IP) === false) {
+                break;
+            }
+            if (!self::ipInRanges($address, $proxies)) {
+                return $address;
+            }
+        }
+        return $remote;
+    }
+
+    /** Whether the visitor's connection is HTTPS, directly or through a trusted proxy that ended it. */
+    public function isSecure(): bool
+    {
+        $https = (string) ($_SERVER['HTTPS'] ?? '');
+        if ($https !== '' && strtolower($https) !== 'off') {
+            return true;
+        }
+        $proxies = (array) Config::get('app.trusted_proxies', []);
+        return $proxies !== []
+            && self::ipInRanges((string) ($_SERVER['REMOTE_ADDR'] ?? ''), $proxies)
+            && strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0])) === 'https';
+    }
+
+    /** @param array<int,string> $ranges addresses or CIDR ranges ("10.0.0.0/8", "2400:cb00::/32") */
+    public static function ipInRanges(string $ip, array $ranges): bool
+    {
+        $packed = @inet_pton($ip);
+        if ($packed === false) {
+            return false;
+        }
+        foreach ($ranges as $range) {
+            [$network, $bits] = str_contains((string) $range, '/') ? explode('/', (string) $range, 2) : [(string) $range, null];
+            $net = @inet_pton(trim($network));
+            if ($net === false || strlen($net) !== strlen($packed)) {
+                continue;
+            }
+            $bits = $bits === null ? strlen($packed) * 8 : max(0, min(strlen($packed) * 8, (int) $bits));
+            $bytes = intdiv($bits, 8);
+            if (substr($packed, 0, $bytes) !== substr($net, 0, $bytes)) {
+                continue;
+            }
+            $rest = $bits % 8;
+            if ($rest === 0 || ((ord($packed[$bytes]) ^ ord($net[$bytes])) & (0xFF << (8 - $rest)) & 0xFF) === 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function userAgent(): string

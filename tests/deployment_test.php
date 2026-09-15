@@ -25,6 +25,15 @@ const PRODUCTION_CONFIG = [
     'session.idle_timeout' => 1800,
     'db.username'          => 'schoolhub_app',
     'db.password'          => 'a-long-random-database-password',
+    'app.trusted_proxies'  => [],
+    'mail.driver'          => 'smtp',
+    'mail.host'            => 'smtp.hostinger.com',
+    'mail.port'            => 587,
+    'mail.encryption'      => 'tls',
+    'mail.verify_peer'     => true,
+    'mail.username'        => 'no-reply@lyceum.edu.ph',
+    'mail.password'        => 'mailbox-password',
+    'mail.from_address'    => 'no-reply@lyceum.edu.ph',
 ];
 
 return [
@@ -49,6 +58,20 @@ return [
         $t->assertEquals('FAIL', checkStatuses(DeploymentCheck::configChecks(array_merge(PRODUCTION_CONFIG, ['app.base_url' => null])))['Site address (app.base_url)'], 'An unset address fails');
         $t->assertEquals('WARN', checkStatuses(DeploymentCheck::configChecks(array_merge(PRODUCTION_CONFIG, ['db.password' => 'short'])))['Database password'], 'A short password warns');
         $t->assertEquals('WARN', checkStatuses(DeploymentCheck::configChecks(array_merge(PRODUCTION_CONFIG, ['session.idle_timeout' => 14400])))['Idle sign-out'], 'A four-hour idle time warns');
+    },
+
+    'email and proxy settings that would fail online are reported' => function (TestRunner $t): void {
+        $status = static fn (array $change, string $label): ?string => checkStatuses(DeploymentCheck::configChecks(array_merge(PRODUCTION_CONFIG, $change)))[$label] ?? null;
+        $t->assertEquals('FAIL', $status(['mail.driver' => 'log'], 'Mail driver'), 'The development log driver fails');
+        $t->assertEquals('WARN', $status(['mail.driver' => 'none'], 'Mail driver'), 'Email off only warns');
+        $t->assertEquals('WARN', $status(['mail.driver' => null], 'Mail driver'), 'Unset in production means off');
+        $t->assertEquals('FAIL', $status(['mail.host' => ''], 'Mail server'), 'No mail server fails');
+        $t->assertEquals('FAIL', $status(['mail.encryption' => 'none'], 'Mail encryption'), 'An unencrypted remote server fails');
+        $t->assertEquals('OK', $status(['mail.encryption' => 'none', 'mail.host' => 'localhost'], 'Mail encryption'), 'A relay on the same server is fine');
+        $t->assertEquals('WARN', $status(['mail.verify_peer' => false], 'Certificate check'), 'Not checking the certificate warns');
+        $t->assertEquals('FAIL', $status(['mail.from_address' => 'no-reply@schoolhub.test'], 'Sender address'), 'The sample sender fails');
+        $t->assertEquals('FAIL', $status(['app.trusted_proxies' => ['0.0.0.0/0']], 'Trusted proxies'), 'Trusting every address fails');
+        $t->assertEquals('OK', $status(['app.trusted_proxies' => ['173.245.48.0/20']], 'Trusted proxies'), 'A provider range is fine');
     },
 
     'demo accounts and leftover test accounts are found, and disabled ones are not' => function (TestRunner $t): void {

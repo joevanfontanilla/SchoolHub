@@ -11,7 +11,7 @@
 | 5 Finance | Done | `af1a073` |
 | 6 Communication | Done | `1c86cac` |
 | 7 Administration | Done | `264d01e` |
-| 8 Quality | Done | this release: security scan, HTTP crawl, responsive pass, performance dataset and fixes, deployment preflight and guide |
+| 8 Quality | Done | this release: security scan, HTTP crawl, responsive pass, performance dataset and fixes, deployment preflight and guide; then online readiness: release zip and install SQL, shared hosting and Linux guides, "Forgot password?" by email, trusted proxies and HTTPS redirect, MySQL 8 strict mode |
 
 After Phase 8: registrar reports and teacher class reports (docs/15), completing the
 reports docs/15 lists, the Super Admin's administrative reports (docs/19), teacher

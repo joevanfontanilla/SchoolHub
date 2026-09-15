@@ -58,6 +58,7 @@ final class SettingsService
             'reset_link_minutes'         => ['Reset link lifetime (minutes)', 'int:10,1440', null],
             'setup_link_hours'           => ['New account link lifetime (hours)', 'int:1,336', null],
             'registration_limit_per_hour' => ['Student sign-ups per IP address per hour', 'int:1,100', null],
+            'reset_requests_per_hour'     => ['Reset link requests per IP address per hour', 'int:1,100', '"Forgot password?" requests from one network address. Each account is also sent at most 3 links an hour.'],
         ]],
         'backups' => ['Backups', 'What a backup contains and how many are kept (docs/20).', [
             'backup_include_uploads' => ['Include uploaded files', 'bool', 'Requirement documents, payment proofs, and images.'],

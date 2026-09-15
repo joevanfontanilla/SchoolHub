@@ -74,7 +74,7 @@ if (!function_exists('absolute_url')) {
         if (preg_match('#^https?://#i', $configured)) {
             return rtrim($configured, '/') . '/' . ltrim($path, '/');
         }
-        $https = ($_SERVER['HTTPS'] ?? '') !== '' && strtolower((string) $_SERVER['HTTPS']) !== 'off';
+        $https = (new App\Core\Request())->isSecure();
         $host = preg_replace('/[^A-Za-z0-9.:\-\[\]]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
         return ($https ? 'https' : 'http') . '://' . $host . url($path);
     }
@@ -85,7 +85,7 @@ if (!function_exists('asset')) {
     function asset(string $path): string
     {
         $relative = ltrim($path, '/');
-        $file = BASE_PATH . '/public/' . $relative;
+        $file = PUBLIC_PATH . '/' . $relative;
         $version = is_file($file) ? '?v=' . filemtime($file) : '';
         return url($relative) . $version;
     }

@@ -84,7 +84,7 @@ $destinations = portal_destinations($user?->role_name);
                             <?php if ($unread > 0): ?>
                                 <form method="POST" action="<?= e(url('/portal/notifications/read-all')) ?>">
                                     <?= csrf_field() ?>
-                                    <button type="submit" class="text-xs font-semibold text-brand-600 hover:underline">Mark all read</button>
+                                    <button type="submit" class="-my-1 inline-flex min-h-[1.75rem] items-center rounded-md px-2 text-xs font-semibold text-brand-600 hover:bg-brand-50 hover:underline">Mark all read</button>
                                 </form>
                             <?php endif; ?>
                         </div>

@@ -76,7 +76,7 @@ $now = date('Y-m-d H:i:s');
 $hash = password_hash('PerfPass123', PASSWORD_DEFAULT);
 $roles = array_column(Database::select('SELECT id, name FROM roles'), 'id', 'name');
 $term = Term::openForEnrollment()[0] ?? throw new RuntimeException('No open term. Run the seeder.');
-$programs = Database::select("SELECT p.id, p.code, c.id AS curriculum_id FROM programs p JOIN curricula c ON c.program_id = p.id WHERE p.is_active = 1 GROUP BY p.id");
+$programs = Database::select("SELECT p.id, p.code, MIN(c.id) AS curriculum_id FROM programs p JOIN curricula c ON c.program_id = p.id WHERE p.is_active = 1 GROUP BY p.id, p.code");
 $yearLevels = array_column(Database::select('SELECT id, sequence FROM year_levels ORDER BY sequence'), 'id', 'sequence');
 $periods = array_column(Database::select('SELECT id FROM grade_periods WHERE term_id = ? ORDER BY sequence', [$term['id']]), 'id');
 $requirementTypes = array_column(Database::select('SELECT id FROM requirement_types ORDER BY sort_order LIMIT 6'), 'id');

@@ -25,7 +25,7 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**250 tests in 33 files**:
+**262 tests in 35 files**:
 
 | Area | Files (tests) |
 |---|---|
@@ -38,7 +38,8 @@ always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 | Communication | `communication` (8), `class_announcement` (4) |
 | Administration | `admin` (11) |
 | Reports | `reports` (7), `admin_reports` (6) |
-| Quality | `security` (7), `deployment` (7), `confirmation` (1: every deciding button asks first, docs/21) |
+| Quality | `security` (7), `deployment` (8), `confirmation` (1: every deciding button asks first, docs/21) |
+| Online hosting | `mail` (7: message headers, the SMTP conversation with and without STARTTLS against a local test server, "Forgot password?", emailed admin links), `portability` (4: letter case of every referenced file, trusted proxies, the HTTPS redirect, MySQL 8 strict mode and time zone) |
 
 Route-table tests (`registrar_access`, `teacher_access`, `rbac`) walk `routes/web.php`
 itself, so a new route without the right role and permission gates fails the suite.
@@ -92,7 +93,7 @@ rooms, and subjects, signs in through the login form, and then:
    and no duplicate ids.
 8. Opens receipts, statements, every CSV export (cashier, registrar, teacher, and administrative reports), and printouts as their owners and as others.
 
-Result with document preview: **1,898 checks, 0 failures** (959 page requests, 304 CSRF probes). The crawl also checks the preview headers: an inline file or embedded page may be framed by this site only, a download stays a download, every other page is never framed, and another student's file is still a 404.
+Result with document preview and the online-hosting changes: **1,919 checks, 0 failures** (966 page requests over 138 GET routes, 312 CSRF probes), with every database session in MySQL 8's strict SQL mode. The crawl also checks the preview headers: an inline file or embedded page may be framed by this site only, a download stays a download, every other page is never framed, and another student's file is still a 404.
 
 **Run the suite and the crawl on an idle copy.** Both read the real database. Someone signing in
 or out of the same installation during a run changes `users` and writes audit entries, which fails
@@ -162,6 +163,18 @@ grouped query, added up in PHP, brought it to 268 ms. A covering index would hav
 another 55 ms but slows every audited action, so it was not added. The account review lists
 2,067 accounts in 40 ms, the sign-in summary takes 102 ms, and system usage 94 ms.
 
+The ISO/IEC 25010 evaluation later measured the activity summary at 314 ms and 442 ms, over the
+300 ms budget. The daily counts are now folded into the grouped query, and the ten busiest people
+are counted from the `(user_id, created_at)` index without reading the entries (their roles and
+failures come from those ten people's entries only): **201–203 ms**. In that run every one of the 74
+timed pages was under 300 ms (median 28 ms, at most 36 statements).
+
+**MySQL 8 strict mode.** Setting `ONLY_FULL_GROUP_BY` and the other MySQL 8 defaults on every
+connection (`Database::sessionSetup()`) failed four report queries that grouped by a primary key but
+selected other columns (applicants by status, requirements status, enrollment history, system usage)
+and two queries in the performance scripts; each now lists its columns. The full suite, the crawl, the
+dataset generator, and the measurement all pass in that mode.
+
 Backups at this size: 3.5 MB archive in 4.2 s, verification 0.3 s, restore into an empty
 database 11 s with every table's checksum matching the source (except `audit_logs`, which
 gains the restore's own entries).
@@ -170,8 +183,18 @@ gains the restore's own entries).
 
 `tests/deployment_test.php` proves the preflight fails on each development default
 (environment, debug, http address, insecure cookie, root account, empty password,
-server-wide privileges, demo and leftover test accounts) and passes a correct
+server-wide privileges, demo and leftover test accounts, the development mail log, a sample sender
+address, an unencrypted mail server, trusting every proxy) and passes a correct
 production configuration.
+
+**Release and hosting layout.** `build_release.php` was unzipped into the shared-hosting layout
+(`schoolhub/` beside `public_html/`), the database was imported with the `mysql` client from
+`build_install_sql.php`'s file (22 migrations recorded, 5 roles, 39 permissions, 342 subjects, the first
+Super Admin required to change the temporary password), and only `public_html` was served, in
+production mode. The front controller found the application, assets loaded, private paths were 404,
+no debug headers were sent, the first sign-in went to *change password*, "Forgot password?" answered
+the same for a known and an unknown address and refused to build a link without an `https://`
+address, and the preflight found the moved web folder. See docs/23 §D.
 
 The preflight was also run against this XAMPP installation switched temporarily to
 production settings over HTTPS (`https://localhost/SchoolHub/public/`, self-signed):

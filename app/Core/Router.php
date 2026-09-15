@@ -99,6 +99,12 @@ final class Router
         $method = $request->method();
         $path = $request->path();
 
+        if (($secure = Response::httpsRedirectTarget($request)) !== null) {
+            // 308 keeps a form's method and body; a page load gets a permanent 301.
+            header('Location: ' . $secure, true, in_array($method, ['GET', 'HEAD'], true) ? 301 : 308);
+            return;
+        }
+
         $pathMatched = false;
 
         foreach ($this->routes as $route) {

@@ -60,10 +60,23 @@ the configured threshold the account moves to `Locked` with a `locked_until` tim
 Both thresholds are `system_settings` values. A lockout is written to the audit log.
 
 ## Password Reset Delivery
-The reset flow stores a **hash** of a single-use, expiring token. Delivery in v1.0 uses
-PHP's native `mail()` where SMTP is configured; where it is not, a Super Admin issues
-the reset link directly to the user. No third-party mail library is used, per the
-zero-dependency rule in `00_MASTER_SPECIFICATION.md`.
+The reset flow stores a **hash** of a single-use, expiring token. As built: where email is set up
+(`mail.driver` smtp), anyone can ask for a link at **Forgot password?**, and the Super Admin can
+email any link they issue; where it is not, the Super Admin gives the link to the person. Mail goes
+through `App\Core\Mailer`, a hand-written SMTP client (no mail library and not PHP's `mail()`, per
+the zero-dependency rule in `00_MASTER_SPECIFICATION.md`). See "Forgot password and email" below.
+
+## Visitor address and HTTPS behind a proxy
+The per-IP limits above, `login_logs`, and the audit log use the visitor's address. Behind Cloudflare
+or a hosting provider's load balancer the connection comes from the proxy, so `X-Forwarded-For` and
+`X-Forwarded-Proto` are believed **only** from addresses listed in `app.trusted_proxies`
+(`Request::ip()`, `Request::isSecure()`); the visitor is the right-most address not added by a
+trusted proxy, so a header a visitor sends themselves cannot pick an address. With the list empty
+(the default) both headers are ignored. The preflight fails on a list that trusts everyone.
+
+In production with an `https://` `app.base_url`, a plain-HTTP request is redirected to that address
+(301 for a page, 308 for a form, before any route runs), so a sign-in form is never sent unencrypted
+even where the hosting panel does not redirect.
 
 ---
 
@@ -90,8 +103,9 @@ nothing (`default-src 'none'`). The HTTP crawl checks these headers.
 - Using a link (`/password/reset/{token}`, signed-out visitors only) applies the password
   policy, activates a Pending account, and unlocks a Locked one. Invalid, used, and expired
   links all show the same message. Every issue and use is audited (`password.*`).
-- No mail is sent: the administrator gives the link to the person. The sign-in page says
-  to contact the school administrator.
+- The link page offers **Email the link**, which sends it to the account's own address (the token
+  must still be an unused link of that account; audited `password.link_emailed`). Without email the
+  administrator gives the link to the person, and the sign-in page says to contact them.
 
 ### Account administration (`UserAdminService`)
 - Edit name, username, and email (unique); disable with a required reason; enable; unlock.
@@ -105,6 +119,25 @@ nothing (`default-src 'none'`). The HTTP crawl checks these headers.
 ### Security settings
 `max_login_attempts`, `lockout_minutes`, `ip_max_attempts`, `ip_window_minutes`,
 `password_min_length`, `reset_link_minutes`, `setup_link_hours`, and
-`registration_limit_per_hour` are system settings edited in System Settings → Security
+`registration_limit_per_hour`, and `reset_requests_per_hour` are system settings edited in System Settings → Security
 (`SystemSetting::security()`, falling back to `config security.*`). The per-IP limit may not
 be lower than the per-account limit.
+
+### Forgot password and email (online deployment)
+- `/password/forgot` (signed-out visitors) asks for the account's email address. The answer is
+  **always the same** ("If an account uses …, a link is on its way"), whether the address has an
+  account or not, and where the server supports it the email is sent after the answer has reached the
+  browser, so neither the words nor the timing reveal an account.
+- A link is sent only to an **Active or Locked** account (a Pending staff account gets its set-up link
+  from the Super Admin; a Disabled one gets nothing), at most `reset_requests_per_hour` requests from
+  one address per hour (default 5, counted from the audit log) and 3 links per account per hour.
+- Every request is audited as `password.reset_requested` with the outcome, **without the address that
+  was typed**; a delivery failure is `password.reset_email_failed` and goes to the error log.
+- In production a link is emailed only when `app.base_url` is an `https://` address; it is never built
+  from the Host header a visitor sent.
+- `Mailer` refuses a recipient or subject that would add a header line, encodes the text and HTML parts
+  in base64, uses STARTTLS (587) or TLS (465), verifies the mail server's certificate by default, signs
+  in with AUTH PLAIN or LOGIN only after encryption, and never repeats the password in an error. The
+  `log` driver (development) writes messages to `storage/logs/mail.log`; the preflight fails on it in
+  production. `tests/mail_test.php` runs the SMTP conversation against a local test server, with and
+  without STARTTLS.

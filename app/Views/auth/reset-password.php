@@ -12,8 +12,12 @@ $min = App\Models\SystemSetting::security('password_min_length', 8);
 <div class="card p-6 sm:p-8">
     <?php if ($found === null): ?>
         <h1 class="text-xl font-semibold text-brand-navy">This link can't be used</h1>
-        <p class="mt-2 text-sm text-slate-600">It may have expired, been used already, or been replaced by a newer link. Ask the school administrator for a new one.</p>
-        <a href="<?= e(url('/login')) ?>" class="btn-secondary mt-6 w-full">Back to sign in</a>
+        <p class="mt-2 text-sm text-slate-600">It may have expired, been used already, or been replaced by a newer link.
+            <?= App\Core\Mailer::enabled() ? 'Request a new one, or ask the school administrator.' : 'Ask the school administrator for a new one.' ?></p>
+        <?php if (App\Core\Mailer::enabled()): ?>
+            <a href="<?= e(url('/password/forgot')) ?>" class="btn-primary mt-6 w-full"><?= icon('send', 'h-5 w-5') ?> Request a new link</a>
+        <?php endif; ?>
+        <a href="<?= e(url('/login')) ?>" class="btn-secondary mt-3 w-full">Back to sign in</a>
     <?php else: ?>
         <h1 class="text-xl font-semibold text-brand-navy"><?= $found['purpose'] === PasswordResetService::SETUP ? 'Set your password' : 'Reset your password' ?></h1>
         <p class="mt-1.5 text-sm text-slate-600">

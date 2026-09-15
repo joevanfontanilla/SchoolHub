@@ -38,6 +38,16 @@
             <p><strong>This is the only time the link is shown.</strong> It is not stored and cannot be displayed again. Share it privately with the person, not in a group chat. If it is lost, issue a new one.</p>
         </div>
 
-        <a href="<?= e(url('/admin/users/' . $account->id)) ?>" class="btn-primary">Done</a>
+        <div class="flex flex-wrap gap-3">
+            <?php if (App\Core\Mailer::enabled()): ?>
+                <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/email-link')) ?>"
+                      data-confirm="The link goes to <?= e($account->email) ?>, the address on this account. Anyone who can read that mailbox can set the password." data-confirm-title="Email the link?" data-confirm-tone="primary" data-confirm-label="Send email">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="token" value="<?= e(basename($link)) ?>">
+                    <button type="submit" class="btn-primary" data-busy-label="Sending…"><?= icon('mail', 'h-5 w-5') ?> Email the link</button>
+                </form>
+            <?php endif; ?>
+            <a href="<?= e(url('/admin/users/' . $account->id)) ?>" class="<?= App\Core\Mailer::enabled() ? 'btn-secondary' : 'btn-primary' ?>">Done</a>
+        </div>
     </section>
 </div>

@@ -2,10 +2,10 @@
 ## Integrated School Enrollment and Management System
 
 **For:** Lyceum of the East Aurora (college / tertiary)
-**Status:** Release candidate. All eight roadmap phases are built and tested; awaiting
-acceptance on the school's server
+**Status:** Release candidate. All eight roadmap phases are built and tested, and the release is
+packaged for shared hosting, a Linux server, or the school's own computer; awaiting acceptance
 **Version:** 1.0.0-rc.1
-**Stack:** PHP 8.2, MariaDB, Tailwind CSS (standalone binary), vanilla JavaScript, Apache on XAMPP (Windows)
+**Stack:** PHP 8.2+, MySQL 8 or MariaDB 10.4+, Tailwind CSS (standalone binary), vanilla JavaScript, Apache (XAMPP for development)
 **Dependencies:** none. No Composer, no npm, no Node
 
 ## What it does
@@ -25,13 +25,14 @@ SchoolHub runs a college's enrollment and records in one place:
   (print and CSV).
 - **Announcements:** written by the registrar or Super Admin for everyone or for roles,
   programs, and year levels; scheduled, urgent banners, one notification per recipient.
-- **Super Admin:** staff accounts with one-time password links, role permissions, system
+- **Super Admin:** staff accounts with one-time password links (shown once or emailed), role permissions, system
   settings, the audit log and sign-in activity, backups, system health, and administrative
   reports (account review, sign-in and activity summaries, system usage).
 
 Across the portal: a document preview window for uploaded requirements, payment proofs,
 receipts, statements, and schedules (with Previous/Next); a My Documents page for students; a
-quick search in the top bar (press `/`); and dashboard cards that open the list behind each number.
+quick search in the top bar (press `/`); dashboard cards that open the list behind each number; and
+"Forgot password?" by email once a mailbox is configured.
 
 Every protected action is authorized on the server, every form is CSRF-protected, every
 change that matters is written to an append-only audit log, and financial records are
@@ -70,13 +71,17 @@ binary as `tailwindcss.exe` into the project root and run
 | `php database/restore.php <file>` | Restore a backup (command line only) |
 | `php database/dispatch_announcements.php` | Deliver scheduled announcements (Task Scheduler) |
 | `php database/check_deployment.php [--url=https://…]` | Deployment preflight |
-| `php tests/run.php [--filter=name]` | Test suite (250 tests) |
-| `php tests/http/crawl.php` | Every route as every role through Apache (1,898 checks) |
+| `php database/build_release.php` | Package `build/schoolhub-<version>.zip` for a server (`schoolhub/` + `public_html/`) |
+| `php database/build_install_sql.php --username= --email= --first= --last=` | Importable installation SQL with the first Super Admin, for hosting without a command line |
+| `php database/send_test_email.php you@example.com` | Check the mail settings |
+| `php tests/run.php [--filter=name]` | Test suite (262 tests) |
+| `php tests/http/crawl.php` | Every route as every role through Apache (1,919 checks) |
 
 ## Deploying
-Deployment is on a school Windows computer running XAMPP, served over HTTPS, with the web root
-at `public/`, a dedicated MariaDB account, nightly backups, and an off-machine copy. Follow
-**`docs/23_DEPLOYMENT.md`**, then run the preflight until it reports no failures.
+Build the release with `php database/build_release.php`, then follow **`docs/23_DEPLOYMENT.md`**
+for shared hosting (cPanel, hPanel), a Linux server, or a school Windows computer: HTTPS, a
+dedicated database account, the production settings in `deploy/config.production.php`, an SMTP
+mailbox, scheduled backups with an off-server copy. Run the preflight until it reports no failures.
 
 ## Documentation
 `docs/` is the authoritative specification, updated alongside the code.
@@ -88,7 +93,7 @@ at `public/`, a dedicated MariaDB account, nightly backups, and an off-machine c
 | `docs/04_USER_ROLES_AND_PERMISSIONS.md` | What each role can and cannot do |
 | `docs/17_DATABASE_DESIGN.md` | Schema, integrity rules, identifier formats |
 | `docs/22_TESTING_AND_ACCEPTANCE.md` | Test levels, results, acceptance scenarios |
-| `docs/23_DEPLOYMENT.md` | Windows/XAMPP deployment procedure |
+| `docs/23_DEPLOYMENT.md` | Deployment: shared hosting, Linux server, or Windows/XAMPP |
 | `docs/24_DEVELOPMENT_ROADMAP.md` | Phase status and what is not in 1.0.0 |
 | `docs/26_STATUS_TRANSITIONS.md` | Enrollment status transition matrix |
 | `docs/27_GRADING_POLICY.md` | Grading scale and final-grade rule |

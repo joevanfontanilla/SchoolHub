@@ -68,7 +68,7 @@ $student = Database::selectOne("SELECT u.username, s.id AS student_id, ea.id AS 
     FROM users u JOIN students s ON s.user_id = u.id JOIN enrollment_applications ea ON ea.student_id = s.id JOIN fee_assessments fa ON fa.application_id = ea.id
     WHERE u.username LIKE 'perf_student%' AND ea.enrollment_state = 'ENROLLED' ORDER BY u.id LIMIT 1");
 $teacher = Database::selectOne("SELECT u.username, cs.id AS class_id FROM class_schedules cs JOIN users u ON u.id = cs.teacher_user_id
-    JOIN class_enlistments ce ON ce.class_schedule_id = cs.id GROUP BY cs.id ORDER BY COUNT(ce.id) DESC LIMIT 1");
+    JOIN class_enlistments ce ON ce.class_schedule_id = cs.id GROUP BY cs.id, u.username ORDER BY COUNT(ce.id) DESC LIMIT 1");
 $sectionId = $one('SELECT section_id FROM class_schedules WHERE id = ?', [$teacher['class_id']]);
 $submissionId = $one("SELECT id FROM payment_submissions WHERE status = 'PENDING' LIMIT 1");
 $receiptId = $one('SELECT id FROM payments WHERE fee_assessment_id = ? LIMIT 1', [$student['assessment_id']]);

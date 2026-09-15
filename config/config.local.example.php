@@ -4,6 +4,9 @@
  *
  * config.local.php is gitignored. It is merged recursively over config.php, so
  * include only the keys you want to change.
+ *
+ * These are development settings for XAMPP. For a server, start from
+ * deploy/config.production.php instead (docs/23).
  */
 
 return [
@@ -19,4 +22,9 @@ return [
         'username' => 'root',
         'password' => '',
     ],
+
+    // Outside production, email is written to storage/logs/mail.log instead of being sent,
+    // so "Forgot password?" can be tried locally. To send real mail, set 'driver' => 'smtp'
+    // and the server settings shown in deploy/config.production.php.
+    // 'mail' => ['driver' => 'log'],
 ];

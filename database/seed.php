@@ -116,6 +116,7 @@ const SETTINGS = [
     ['minimum_downpayment_percent', '20', 'int', 'enrollment', 'Percent of assessment required to confirm enrollment', 0],
     ['max_units_per_term', '27', 'int', 'academic', 'Maximum units a student may enlist in per term', 0],
     ['registration_limit_per_hour', '5', 'int', 'security', 'Student sign-ups allowed from one IP address per hour', 0],
+    ['reset_requests_per_hour', '5', 'int', 'security', '"Forgot password?" requests allowed from one IP address per hour', 0],
     ['payment_instructions', "GCash: 0917 000 0000 (Lyceum of the East Aurora)\nBank deposit: Landbank, Account No. 0000-0000-00, Lyceum of the East Aurora\nKeep your reference number and a screenshot or photo of the receipt.", 'string', 'finance', 'Where students send online payments. SAMPLE details: replace with the school\'s real accounts.', 0],
     ['enrollment_open_message', 'Enrollment for the coming semester is now open.', 'string', 'enrollment', 'Shown on the public enrollment page', 1],
     ['school_logo', '', 'string', 'school', 'Stored logo file (set from System Settings); empty uses the built-in seal', 1],

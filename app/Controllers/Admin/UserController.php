@@ -7,6 +7,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\Controller;
 use App\Core\Auth;
 use App\Core\Request;
+use App\Core\Session;
 use App\Core\ValidationException;
 use App\Models\AuditLog;
 use App\Models\User;
@@ -116,6 +117,26 @@ final class UserController extends Controller
             return;
         }
         $this->linkView(User::find($account->id), $link['token'], $link['expires_at'], false);
+    }
+
+    public function emailLink(Request $request): void
+    {
+        $account = $this->account($request);
+        $token = (string) $request->input('token', '');
+        try {
+            $user = UserAdminService::emailLink(Auth::user(), $account->id, $token);
+        } catch (ValidationException $e) {
+            // Show the link again with the problem, so it can still be copied.
+            $found = \App\Services\PasswordResetService::find($token);
+            if ($found !== null && $found['user']->id === $account->id) {
+                Session::flash('error', $e->getMessage());
+                $this->linkView($account, $token, $found['expires_at'], $found['purpose'] === \App\Services\PasswordResetService::SETUP && $account->status === User::STATUS_PENDING);
+                return;
+            }
+            $this->failWith($e, [], "/admin/users/{$account->id}");
+            return;
+        }
+        $this->success("The link was emailed to {$user->email}.", "/admin/users/{$account->id}");
     }
 
     private function act(User $account, callable $action, string $message): void

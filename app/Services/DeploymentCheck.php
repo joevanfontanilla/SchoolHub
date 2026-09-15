@@ -10,8 +10,8 @@ use App\Models\User;
 
 /**
  * The deployment preflight (docs/23): everything that must be true before SchoolHub is
- * opened to students on the school's Windows/XAMPP server. Run by
- * database/check_deployment.php. Read-only.
+ * opened to students, on shared hosting, a Linux server, or the school's Windows/XAMPP
+ * computer. Run by database/check_deployment.php. Read-only.
  *
  * Each check is OK, WARN, or FAIL, in the same shape as SystemHealth, whose runtime
  * checks (PHP, database, storage, backups) are included.
@@ -24,7 +24,7 @@ final class DeploymentCheck
     /** Files that must never be served, relative to the project root. */
     public const PRIVATE_FILES = [
         '.git/HEAD', '.htaccess', 'config/config.php', 'config/config.local.php', 'bootstrap.php',
-        'storage/logs/php-error.log', 'storage/backups/', 'storage/uploads/', 'database/seed.php',
+        'storage/logs/php-error.log', 'storage/logs/mail.log', 'storage/backups/', 'storage/uploads/', 'database/seed.php',
         'docs/00_MASTER_SPECIFICATION.md', 'tests/run.php', 'README.md', 'CLAUDE.md', 'tailwindcss.exe',
     ];
 
@@ -81,6 +81,53 @@ final class DeploymentCheck
         $timeout = (int) $get('session.idle_timeout', 1800);
         $add('Idle sign-out', $timeout > 3600 ? 'WARN' : 'OK', intdiv($timeout, 60) . ' minutes' . ($timeout > 3600 ? ': longer than an hour on shared school computers.' : ''));
 
+        $proxies = array_map('strval', (array) $get('app.trusted_proxies', []));
+        $everyone = array_intersect(array_map('trim', $proxies), ['0.0.0.0/0', '::/0', '*']);
+        $add('Trusted proxies', $everyone === [] ? 'OK' : 'FAIL', $everyone !== []
+            ? 'Every address is trusted (' . implode(', ', $everyone) . '): any visitor could pretend to be someone else and dodge the sign-in limits. List only the hosting provider\'s or Cloudflare\'s ranges.'
+            : ($proxies === [] ? 'None (right when visitors connect to this server directly)' : count($proxies) . ' range(s)'));
+
+        return array_merge($checks, self::mailChecks($override));
+    }
+
+    /**
+     * Email for "Forgot password?" and emailed account links. Off is allowed (the Super Admin then
+     * gives out links), but a development setting or a sample sender address is not.
+     *
+     * @return array<int,array{group:string,label:string,status:string,detail:string}>
+     */
+    public static function mailChecks(array $override = []): array
+    {
+        $get = static fn (string $key, mixed $default = null): mixed => array_key_exists($key, $override) ? $override[$key] : Config::get($key, $default);
+        $checks = [];
+        $add = self::adder($checks, 'Email');
+
+        $configured = $get('mail.driver');
+        $driver = is_string($configured) && $configured !== '' ? strtolower($configured) : ((string) $get('app.env', 'local') === 'production' ? 'none' : 'log');
+        if ($driver === 'none') {
+            $add('Mail driver', 'WARN', 'Off: "Forgot password?" is not offered, and the Super Admin must hand out every password link. Set up SMTP (docs/23).');
+            return $checks;
+        }
+        if ($driver !== 'smtp') {
+            $add('Mail driver', 'FAIL', "\"{$driver}\" only writes messages to a file; nobody receives them. Set mail.driver to smtp.");
+            return $checks;
+        }
+        $add('Mail driver', 'OK', 'smtp');
+
+        $host = (string) $get('mail.host', '');
+        $encryption = strtolower((string) $get('mail.encryption', 'tls'));
+        $localRelay = in_array(strtolower($host), ['127.0.0.1', 'localhost', '::1'], true);
+        $add('Mail server', $host === '' ? 'FAIL' : 'OK', $host === '' ? 'mail.host is not set.' : $host . ':' . (int) $get('mail.port', 587));
+        $add('Mail encryption', in_array($encryption, ['tls', 'ssl'], true) || $localRelay ? 'OK' : 'FAIL',
+            in_array($encryption, ['tls', 'ssl'], true) ? strtoupper($encryption) : ($localRelay ? 'None (a relay on this server)' : "\"{$encryption}\": the mail password would cross the internet unencrypted. Use tls (port 587) or ssl (port 465)."));
+        $add('Certificate check', (bool) $get('mail.verify_peer', true) ? 'OK' : 'WARN', (bool) $get('mail.verify_peer', true) ? 'On' : 'Off: anyone between this server and the mail server could read the mail password.');
+        $add('Mail sign-in', (string) $get('mail.username', '') !== '' && (string) $get('mail.password', '') !== '' || $localRelay ? 'OK' : 'WARN',
+            (string) $get('mail.username', '') !== '' ? (string) $get('mail.username') : 'No username: most hosting mail servers refuse to send without one.');
+
+        $from = (string) $get('mail.from_address', '');
+        $fromOk = filter_var($from, FILTER_VALIDATE_EMAIL) !== false && !preg_match('/\.(test|local|example)$/i', $from);
+        $add('Sender address', $fromOk ? 'OK' : 'FAIL', $fromOk ? $from : ($from === '' ? 'mail.from_address is not set.' : "{$from} is a sample address: use a real mailbox on the school's domain, or mail will be rejected as spam."));
+
         return $checks;
     }
 
@@ -107,17 +154,28 @@ final class DeploymentCheck
         return $checks;
     }
 
-    /** The MariaDB server: who the application connects as, and who else can connect. */
+    /** The database server: who the application connects as, and who else can connect. */
     public static function databaseChecks(): array
     {
         $checks = [];
-        $add = self::adder($checks, 'MariaDB');
+        $add = self::adder($checks, 'Database server');
         try {
-            $variables = array_column(Database::select("SHOW VARIABLES WHERE Variable_name IN ('bind_address', 'skip_networking')"), 'Value', 'Variable_name');
+            $host = strtolower((string) Config::get('db.host', '127.0.0.1'));
+            $variables = array_column(Database::select("SHOW VARIABLES WHERE Variable_name IN ('bind_address', 'skip_networking', 'version_comment')"), 'Value', 'Variable_name');
             $bind = (string) ($variables['bind_address'] ?? '');
             $localOnly = in_array($bind, ['127.0.0.1', 'localhost', '::1'], true) || strtoupper((string) ($variables['skip_networking'] ?? '')) === 'ON';
-            $add('Network access', $localOnly ? 'OK' : 'FAIL', $localOnly ? 'Only this computer can connect'
-                : 'MariaDB accepts connections from the network' . ($bind !== '' ? " ({$bind})" : '') . '. Set bind-address=127.0.0.1 in C:\xampp\mysql\bin\my.ini and restart MySQL.');
+            $strongAccount = !in_array(strtolower((string) Config::get('db.username', '')), ['', 'root'], true) && strlen((string) Config::get('db.password', '')) >= 16;
+            $config = PHP_OS_FAMILY === 'Windows' ? 'C:\xampp\mysql\bin\my.ini' : 'the server\'s my.cnf (for example /etc/mysql/mariadb.conf.d/50-server.cnf)';
+            if (!in_array($host, ['127.0.0.1', 'localhost', '::1'], true)) {
+                // A hosting provider's or cloud database on another machine: its network rules are the provider's.
+                $add('Network access', $strongAccount ? 'OK' : 'FAIL', $strongAccount
+                    ? "Separate database server ({$host}); access is controlled by the provider"
+                    : "Separate database server ({$host}) reached over the network: use a dedicated account with a long password.");
+            } else {
+                $add('Network access', $localOnly ? 'OK' : ($strongAccount ? 'WARN' : 'FAIL'), $localOnly ? 'Only this computer can connect'
+                    : 'The database accepts connections from the network' . ($bind !== '' ? " ({$bind})" : '') . ". Set bind-address=127.0.0.1 in {$config} and restart it"
+                      . ($strongAccount ? ', or make sure the firewall blocks port 3306 (on shared hosting the provider does).' : '. The application account is also weak, so this must be fixed.'));
+            }
 
             $grants = implode("\n", array_map(static fn (array $row) => (string) reset($row), Database::select('SHOW GRANTS')));
             $global = self::hasServerPrivileges($grants);
@@ -196,15 +254,24 @@ final class DeploymentCheck
         $checks = [];
         $add = self::adder($checks, 'Files');
 
-        foreach (['.htaccess' => 'refuses everything outside public/', 'public/.htaccess' => 'sends every page to index.php', 'storage/.htaccess' => 'refuses uploads, logs, and backups'] as $file => $purpose) {
-            $add($file, is_file(BASE_PATH . '/' . $file) ? 'OK' : 'FAIL', is_file(BASE_PATH . '/' . $file) ? ucfirst($purpose) : "Missing: it {$purpose}.");
+        $movedWebFolder = realpath(PUBLIC_PATH) !== realpath(BASE_PATH . '/public');
+        if ($movedWebFolder || !is_file(PUBLIC_PATH . '/index.php')) {
+            $found = is_file(PUBLIC_PATH . '/index.php');
+            $add('Web folder', $found ? 'OK' : 'FAIL', $found ? PUBLIC_PATH . ' (moved out of the application folder)'
+                : PUBLIC_PATH . ' has no index.php. On shared hosting set app.public_path to the full path of public_html (docs/23).');
+        }
+        foreach (['.htaccess' => [BASE_PATH, 'refuses everything outside public/'], 'Web folder .htaccess' => [PUBLIC_PATH, 'sends every page to index.php'], 'storage/.htaccess' => [BASE_PATH . '/storage', 'refuses uploads, logs, and backups']] as $label => [$dir, $purpose]) {
+            $file = $dir . '/.htaccess';
+            // In the moved layout the application folder is outside the web root, so its own .htaccess is only a second guard.
+            $optional = $label === '.htaccess' && $movedWebFolder;
+            $add($label, is_file($file) ? 'OK' : ($optional ? 'WARN' : 'FAIL'), is_file($file) ? ucfirst($purpose) : "Missing: it {$purpose}.");
         }
 
-        $extra = array_values(array_diff(array_map('basename', glob(BASE_PATH . '/public/*.php') ?: []), ['index.php']));
-        $add('PHP files in public/', $extra === [] ? 'OK' : 'FAIL', $extra === [] ? 'Only index.php' : 'Remove: ' . implode(', ', $extra));
+        $extra = array_values(array_diff(array_map('basename', glob(PUBLIC_PATH . '/*.php') ?: []), ['index.php']));
+        $add('PHP files in the web folder', $extra === [] ? 'OK' : 'FAIL', $extra === [] ? 'Only index.php' : 'Remove: ' . implode(', ', $extra));
 
         // The stylesheet is committed, so a release carries it; the server has no Tailwind binary.
-        $css = BASE_PATH . '/public/assets/app.css';
+        $css = PUBLIC_PATH . '/assets/app.css';
         $built = is_file($css) && filesize($css) > 10000;
         $add('Compiled stylesheet', $built ? 'OK' : 'FAIL', $built ? SystemHealth::bytes((int) filesize($css)) : 'public/assets/app.css is missing: build it with tailwindcss.exe --minify and copy it over.');
         return $checks;

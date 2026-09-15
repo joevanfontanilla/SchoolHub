@@ -342,6 +342,7 @@ final class BackupService
         return new PDO($dsn, (string) Config::get('db.username', 'root'), (string) Config::get('db.password', ''), [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::MYSQL_ATTR_INIT_COMMAND => Database::sessionSetup(),
         ]);
     }
 

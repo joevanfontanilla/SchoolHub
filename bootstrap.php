@@ -53,6 +53,13 @@ if (is_file($localConfig)) {
 
 App\Core\Config::load($config);
 
+// The web folder: set by public/index.php for web requests. Command-line scripts use app.public_path
+// when the web folder was moved out of the project, as on shared hosting (docs/23).
+if (!defined('PUBLIC_PATH')) {
+    $publicPath = App\Core\Config::get('app.public_path');
+    define('PUBLIC_PATH', is_string($publicPath) && $publicPath !== '' ? rtrim($publicPath, '/\\') : BASE_PATH . '/public');
+}
+
 // Outside production, SCHOOLHUB_DATABASE points the app at another database, such as
 // the throwaway performance database (tests/perf). Production ignores it.
 $databaseOverride = getenv('SCHOOLHUB_DATABASE');

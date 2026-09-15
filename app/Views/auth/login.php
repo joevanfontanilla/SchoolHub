@@ -76,6 +76,9 @@ $features = [
                 'icon'         => 'lock',
                 'autofocus'    => old('login') !== '',
             ]) ?>
+            <?php if (App\Core\Mailer::enabled()): ?>
+                <p class="-mt-3 text-right text-sm"><a href="<?= e(url('/password/forgot')) ?>" class="inline-block py-1 font-semibold text-brand-600 hover:underline">Forgot password?</a></p>
+            <?php endif; ?>
 
             <button type="submit" class="btn-primary w-full py-3 text-base" data-busy-label="Signing in…">
                 Sign in <?= icon('arrow-right', 'h-5 w-5') ?>
@@ -89,7 +92,7 @@ $features = [
             </div>
             <p class="flex items-start gap-2 rounded-xl bg-brand-50 px-4 py-3 text-sm text-slate-700">
                 <span class="mt-0.5 text-brand-600"><?= icon('key', 'h-5 w-5') ?></span>
-                <span><strong class="text-brand-navy">Forgot your password?</strong> Ask the school administrator for a one-time reset link.</span>
+                <span><?php if (App\Core\Mailer::enabled()): ?><strong class="text-brand-navy">No longer use your account's email?</strong> Ask the school administrator for a one-time reset link.<?php else: ?><strong class="text-brand-navy">Forgot your password?</strong> Ask the school administrator for a one-time reset link.<?php endif; ?></span>
             </p>
         </div>
     </div>

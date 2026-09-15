@@ -184,6 +184,30 @@ final class UserAdminService
         return PasswordResetService::issue($user, $purpose, $admin);
     }
 
+    /**
+     * Email a link the Super Admin was just shown to the account's own address. The link page
+     * sends the token back; it must still be an unused link of this very account.
+     *
+     * @throws ValidationException
+     */
+    public static function emailLink(User $admin, int $userId, string $token): User
+    {
+        self::assertAdmin($admin);
+        $user = self::user($userId);
+        $found = PasswordResetService::find($token);
+        if ($found === null || $found['user']->id !== $user->id) {
+            throw ValidationException::withMessage('That link is no longer valid. Issue a new one and email it from there.');
+        }
+        try {
+            PasswordResetService::emailLink($user, $token, $found['purpose'], $found['expires_at']);
+        } catch (\RuntimeException $e) {
+            AuditService::log('password.link_email_failed', 'auth', 'User', $user->id, null, null, 'FAILURE', substr($e->getMessage(), 0, 250), $admin->id, $admin->role_name);
+            throw ValidationException::withMessage('The email could not be sent: ' . $e->getMessage() . ' The link still works; copy it instead, or check the mail settings.');
+        }
+        AuditService::log('password.link_emailed', 'auth', 'User', $user->id, null, ['purpose' => $found['purpose']], 'SUCCESS', null, $admin->id, $admin->role_name);
+        return $user;
+    }
+
     /** Why a role change is refused, or null when it is allowed. */
     public static function roleChangeProblem(User $admin, User $user, string $newRole): ?string
     {

@@ -27,6 +27,9 @@ php database/create_admin.php       # interactively create the first Super Admin
 php database/backup.php             # backup: database + uploads (--scheduled for Task Scheduler, --verify=ID)
 php database/restore.php <file>     # restore a backup: command line only, typed confirmation, safety backup first
 php database/check_deployment.php --url=https://…/   # deployment preflight (docs/23); exit 1 on any FAIL
+php database/build_release.php      # build/schoolhub-<version>.zip: schoolhub/ + public_html/ for a server
+php database/build_install_sql.php --username= --email= --first= --last=   # importable install SQL (hosting without SSH)
+php database/send_test_email.php you@example.com    # check the mail settings (log driver writes storage/logs/mail.log)
 
 php tests/run.php                   # full test suite (hand-rolled runner, no PHPUnit)
 php tests/run.php --filter=auth     # a single test group
@@ -99,7 +102,8 @@ app/Views/         PHP templates: layouts/, partials/, components/, and per-modu
 app/Helpers/       url(), asset(), e(), old(), flash(), money(), dt(); icons.php
 config/            config.php (committed) + config.local.php (gitignored secrets)
 routes/            web.php
-database/          migrations/, seeds/, and the migrate/seed/backup/restore/preflight scripts
+database/          migrations/, seeds/, lib/, and the migrate/seed/backup/restore/preflight/release scripts
+deploy/            production templates: config.production.php, crontab.txt, user.ini, apache-vhost.conf
 storage/           uploads, logs, backups — deny-all, never web-reachable
 tests/             run.php + *_test.php; http/crawl.php; perf/ (dataset generator + timing)
 src/input.css      Tailwind source
@@ -125,6 +129,10 @@ an **audit log** entry.
   filename (never trust the original); store under `storage/`, never under `public/`;
   serve only through an authorizing controller route that streams the file.
 - Secrets live in `config/config.local.php`, which is gitignored.
+- The visitor's address is `Request::ip()` and HTTPS is `Request::isSecure()`: forwarded headers count only
+  from `app.trusted_proxies`. Never read `REMOTE_ADDR`, `X-Forwarded-For`, or `HTTPS` directly.
+- Email goes only through `App\Core\Mailer` (hand-written SMTP, no library, not `mail()`). Links in email use
+  `absolute_url()`, which needs `app.base_url` in production; never build one from the Host header.
 - Log security- and money-sensitive actions to `audit_logs`. Audit logs are
   **append-only — including for Super Admin.**
 
@@ -229,6 +237,12 @@ an **audit log** entry.
 - **Portal navigation** (sidebar and quick search) is defined once in `app/Helpers/navigation.php`.
   Add a page there with its search words; do not add placeholder "Soon" links. Dashboard stat cards
   take an `href` to the list behind their number.
+- **Online hosting (docs/23).** Every database session runs MySQL 8's strict SQL mode and the app time zone
+  (`Database::sessionSetup()`), so list every selected column in `GROUP BY` and never rely on the server's
+  clock or mode. File names are case-sensitive on Linux: `tests/portability_test.php` checks every class,
+  template, asset, and `require`. The web folder is `PUBLIC_PATH` (it may sit outside the project, as
+  `public_html`), never `BASE_PATH . '/public'`. "Forgot password?" goes through
+  `PasswordResetService::requestByEmail()`, which answers the same whether or not an account exists.
 - **Ending a session uses `Session::destroy()`**, which regenerates to a fresh id rather than
   calling `session_destroy()`. The latter keeps the old id for the rest of the request while
   deleting the browser's cookie, which broke every sign-in after an idle timeout (CSRF 403).

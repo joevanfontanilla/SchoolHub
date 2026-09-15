@@ -123,7 +123,9 @@ final class RegistrarReport
                JOIN year_levels yl    ON yl.id = ea.year_level_id
           LEFT JOIN enrollment_requirements er ON er.application_id = ea.id
               WHERE " . implode(' AND ', $where) . '
-              GROUP BY ea.id
+              GROUP BY ea.id, ea.application_number, ea.application_status, ea.payment_status, ea.enrollment_state, ea.student_type,
+                       ea.submitted_at, ea.updated_at, st.student_number, u.first_name, u.middle_name, u.last_name, u.email,
+                       p.code, yl.name, yl.sequence
               ORDER BY p.code, yl.sequence, u.last_name, u.first_name',
             $bindings
         );
@@ -166,7 +168,7 @@ final class RegistrarReport
                JOIN enrollment_applications ea ON ea.id = er.application_id
                JOIN requirement_types rt ON rt.id = er.requirement_type_id
               WHERE {$whereSql}
-              GROUP BY rt.id, er.status
+              GROUP BY rt.id, rt.name, rt.sort_order, er.status
               ORDER BY rt.sort_order, rt.name",
             $bindings
         ) as $row) {
@@ -250,7 +252,7 @@ final class RegistrarReport
                JOIN sections sec ON sec.id = e.section_id
                JOIN programs p   ON p.id = sec.program_id
               WHERE e.status = 'ENROLLED'{$programFilter}
-              GROUP BY e.term_id, p.id
+              GROUP BY e.term_id, p.id, p.code
               ORDER BY p.code",
             $bindings
         ) as $row) {

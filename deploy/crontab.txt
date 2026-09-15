@@ -1,0 +1,18 @@
+# SchoolHub scheduled tasks (docs/23).
+#
+# Linux server:     crontab -e   (as the account that owns the files), then paste the lines below.
+# cPanel / hPanel:  Advanced → Cron Jobs. Add each command with the schedule shown.
+#
+# Replace /home/ACCOUNT/schoolhub with the application folder, and /usr/bin/php with the PHP 8.2
+# command your host gives (cPanel often shows /usr/local/bin/php or /opt/cpanel/ea-php82/root/usr/bin/php).
+#
+# minute hour day month weekday  command
+
+# Deliver scheduled announcements on time, every 5 minutes.
+*/5 * * * *   /usr/bin/php /home/ACCOUNT/schoolhub/database/dispatch_announcements.php >/dev/null 2>&1
+
+# Back up the database and uploaded documents every night at 2:00, keeping the newest copies.
+0 2 * * *     /usr/bin/php /home/ACCOUNT/schoolhub/database/backup.php --scheduled >> /home/ACCOUNT/schoolhub/storage/logs/backup.log 2>&1
+
+# Also download a backup to a computer at the school every week: Super Admin → Backups → Download.
+# A backup that only exists on the same server is lost with the server.

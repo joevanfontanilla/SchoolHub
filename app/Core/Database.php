@@ -49,6 +49,7 @@ final class Database
                     // Real prepared statements, not client-side emulation.
                     PDO::ATTR_EMULATE_PREPARES   => false,
                     PDO::ATTR_STRINGIFY_FETCHES  => false,
+                    PDO::MYSQL_ATTR_INIT_COMMAND => self::sessionSetup(),
                 ]
             );
         } catch (\PDOException $e) {
@@ -73,8 +74,20 @@ final class Database
             $dsn,
             (string) Config::get('db.username', 'root'),
             (string) Config::get('db.password', ''),
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::MYSQL_ATTR_INIT_COMMAND => self::sessionSetup()]
         );
+    }
+
+    /**
+     * Run on every connection, so the database behaves the same on XAMPP's MariaDB and on a
+     * hosting provider's MySQL 8 (docs/23): MySQL 8's strict SQL mode, which refuses loose
+     * GROUP BY queries and invalid dates that MariaDB's default mode lets through; and the
+     * application's time zone, so CURRENT_TIMESTAMP agrees with PHP's clock even when the
+     * database server runs on UTC or another country's time.
+     */
+    public static function sessionSetup(): string
+    {
+        return "SET SESSION sql_mode = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', time_zone = '" . date('P') . "'";
     }
 
     public static function query(string $sql, array $bindings = []): PDOStatement

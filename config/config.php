@@ -17,6 +17,13 @@ return [
         // Leave null to auto-detect the base path from the request. Auto-detection
         // is what lets the app run from a subdirectory without configuration.
         'base_url' => null,
+        // Proxies allowed to tell SchoolHub the visitor's real address and that the connection is
+        // HTTPS (X-Forwarded-For, X-Forwarded-Proto): a hosting provider's load balancer or
+        // Cloudflare's published ranges. Empty means none is believed (docs/23).
+        'trusted_proxies' => [],
+        // Only for command-line scripts when the web folder was moved out of the project, as on
+        // shared hosting: the full path of public_html. Web requests find it on their own.
+        'public_path' => null,
     ],
 
     'db' => [
@@ -43,6 +50,22 @@ return [
         'ip_window_minutes'     => 15,
         'password_min_length'   => 8,
         'reset_token_ttl_min'   => 60,
+    ],
+
+    // Email for "Forgot password?" and emailed account links (docs/07, docs/23). The password
+    // belongs in config.local.php. driver: smtp | log | none. Left null, it is "log" outside
+    // production (messages go to storage/logs/mail.log) and "none" in production.
+    'mail' => [
+        'driver'       => null,
+        'host'         => '',
+        'port'         => 587,
+        'encryption'   => 'tls',     // tls = STARTTLS (usually port 587) | ssl (usually port 465)
+        'username'     => '',
+        'password'     => '',
+        'from_address' => 'no-reply@schoolhub.test',
+        'from_name'    => null,      // null uses the school name from System Settings
+        'timeout'      => 15,
+        'verify_peer'  => true,
     ],
 
     'uploads' => [

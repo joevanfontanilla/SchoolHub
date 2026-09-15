@@ -160,24 +160,26 @@ final class AdminReport
         $range = 'a.created_at >= ? AND a.created_at < DATE_ADD(?, INTERVAL 1 DAY)';
         $bindings = [$from, $to];
 
-        // One pass over the period at the finest grouping the report needs; the totals and
-        // the module, role, and action counts are added up from it. A period of a busy
+        // One pass over the period at the finest grouping the report needs; the totals, the
+        // daily counts, and the module, role, and action counts are added up from it. A busy
         // month holds tens of thousands of entries, and each separate GROUP BY scanned them all.
         $total = 0;
         $failures = 0;
         $modules = [];
         $roles = [];
         $actions = [];
+        $byDay = [];
         foreach (Database::select(
-            "SELECT a.module, a.action, a.actor_role, a.result <> 'SUCCESS' AS failed, COUNT(*) AS entries
+            "SELECT DATE(a.created_at) AS day, a.module, a.action, a.actor_role, a.result <> 'SUCCESS' AS failed, COUNT(*) AS entries
                FROM audit_logs a WHERE {$range}
-              GROUP BY a.module, a.action, a.actor_role, failed",
+              GROUP BY day, a.module, a.action, a.actor_role, failed",
             $bindings
         ) as $row) {
             $entries = (int) $row['entries'];
             $failed = (int) $row['failed'] === 1 ? $entries : 0;
             $total += $entries;
             $failures += $failed;
+            $byDay[$row['day']] = ($byDay[$row['day']] ?? 0) + $entries;
             foreach ([[&$modules, $row['module'], ['module' => $row['module']]], [&$roles, $row['actor_role'], ['actor_role' => $row['actor_role']]],
                       [&$actions, $row['action'] . "\0" . $row['module'], ['action' => $row['action'], 'module' => $row['module']]]] as [&$bucket, $key, $fields]) {
                 $bucket[$key] ??= $fields + ['entries' => 0, 'failures' => 0];
@@ -191,34 +193,56 @@ final class AdminReport
             return array_slice($rows, 0, $limit);
         };
 
-        $byDay = array_column(Database::select(
-            "SELECT DATE(a.created_at) AS day, COUNT(*) AS entries FROM audit_logs a WHERE {$range} GROUP BY DATE(a.created_at)",
-            $bindings
-        ), 'entries', 'day');
         $days = [];
         for ($day = new \DateTime($from); $day->format('Y-m-d') <= $to; $day->modify('+1 day')) {
             $days[] = ['day' => $day->format('Y-m-d'), 'entries' => (int) ($byDay[$day->format('Y-m-d')] ?? 0)];
         }
 
+        // The ten busiest people are counted from the (user_id, created_at) index alone, without
+        // reading the entries (docs/22 §4); their roles and failures then come from their own
+        // entries only.
         $actors = Database::select(
-            "SELECT a.user_id, a.actor_role, COUNT(*) AS entries, SUM(a.result <> 'SUCCESS') AS failures, MAX(a.created_at) AS last_entry
+            "SELECT a.user_id, COUNT(*) AS entries, MAX(a.created_at) AS last_entry
                FROM audit_logs a
               WHERE {$range} AND a.user_id IS NOT NULL
-              GROUP BY a.user_id, a.actor_role
-              ORDER BY entries DESC LIMIT 10",
+              GROUP BY a.user_id
+              ORDER BY entries DESC, a.user_id LIMIT 10",
             $bindings
         );
-        // Names for at most ten people, looked up after grouping rather than joined into it.
-        $ids = array_values(array_unique(array_map(static fn (array $row) => (int) $row['user_id'], $actors)));
+        $ids = array_map(static fn (array $row) => (int) $row['user_id'], $actors);
         $people = [];
+        $details = [];
         if ($ids !== []) {
             $in = implode(', ', array_fill(0, count($ids), '?'));
             foreach (Database::select("SELECT id, username, CONCAT(first_name, ' ', last_name) AS actor_name FROM users WHERE id IN ({$in})", $ids) as $person) {
                 $people[(int) $person['id']] = $person;
             }
+            foreach (Database::select(
+                "SELECT a.user_id, a.actor_role, COUNT(*) AS entries, SUM(a.result <> 'SUCCESS') AS failures
+                   FROM audit_logs a WHERE a.user_id IN ({$in}) AND {$range}
+                  GROUP BY a.user_id, a.actor_role",
+                array_merge($ids, $bindings)
+            ) as $row) {
+                $id = (int) $row['user_id'];
+                $details[$id]['failures'] = ($details[$id]['failures'] ?? 0) + (int) $row['failures'];
+                // A person whose role changed during the period is shown with the role they acted in most.
+                if ((int) $row['entries'] > ($details[$id]['role_entries'] ?? -1)) {
+                    $details[$id]['actor_role'] = $row['actor_role'];
+                    $details[$id]['role_entries'] = (int) $row['entries'];
+                }
+            }
         }
         foreach ($actors as &$actor) {
-            $actor += ['username' => $people[(int) $actor['user_id']]['username'] ?? null, 'actor_name' => $people[(int) $actor['user_id']]['actor_name'] ?? null];
+            $id = (int) $actor['user_id'];
+            $actor = [
+                'user_id'    => $actor['user_id'],
+                'actor_role' => $details[$id]['actor_role'] ?? null,
+                'entries'    => $actor['entries'],
+                'failures'   => $details[$id]['failures'] ?? 0,
+                'last_entry' => $actor['last_entry'],
+                'username'   => $people[$id]['username'] ?? null,
+                'actor_name' => $people[$id]['actor_name'] ?? null,
+            ];
         }
         unset($actor);
 
@@ -241,7 +265,7 @@ final class AdminReport
     public static function usage(): array
     {
         $roles = array_map('intval', array_column(Database::select(
-            'SELECT r.name, COUNT(u.id) AS accounts FROM roles r LEFT JOIN users u ON u.id IS NOT NULL AND u.role_id = r.id GROUP BY r.id ORDER BY r.id'
+            'SELECT r.name, COUNT(u.id) AS accounts FROM roles r LEFT JOIN users u ON u.id IS NOT NULL AND u.role_id = r.id GROUP BY r.id, r.name ORDER BY r.id'
         ), 'accounts', 'name'));
 
         $terms = Database::select(
