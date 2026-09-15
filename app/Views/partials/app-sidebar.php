@@ -77,7 +77,7 @@ $itemClass = 'group relative flex items-center gap-3 whitespace-nowrap rounded-x
 
         <div class="relative px-3 pb-6">
             <div class="mx-4 border-t border-white/15"></div>
-            <form method="POST" action="<?= e(url('/logout')) ?>" class="mt-3">
+            <form method="POST" action="<?= e(url('/logout')) ?>" data-confirm="You will need to sign in again to use the portal. Anything you have not saved on this page is lost." data-confirm-title="Sign out?" data-confirm-tone="primary" data-confirm-label="Sign out" class="mt-3">
                 <?= csrf_field() ?>
                 <button type="submit" class="<?= $itemClass ?> w-full text-white/85 hover:bg-white/10 hover:text-white">
                     <?= icon('logout', 'h-[22px] w-[22px]') ?>

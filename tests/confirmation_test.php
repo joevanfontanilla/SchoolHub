@@ -16,7 +16,7 @@ return [
             'app/Views/portal/notifications/index.php', // archive / move to inbox
             'app/Views/admin/backups/index.php:Verify', // a read-only checksum check
         ];
-        $decision = '/\b(approve|reject|delete|disable|enable|reverse|drop|cancel|archive|restore|publish|post|unlock|override|verify|confirm|return|correction|enlist|adjustment)\b/i';
+        $decision = '/\b(approve|reject|delete|disable|enable|reverse|drop|cancel|archive|restore|publish|post|unlock|override|verify|confirm|return|correction|enlist|adjustment|logout|sign out)\b/i';
         $checked = 0;
         $missing = [];
         $badRequires = [];

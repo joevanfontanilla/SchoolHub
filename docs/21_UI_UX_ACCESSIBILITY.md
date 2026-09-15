@@ -79,5 +79,5 @@ Support light/dark mode if practical, while preserving readability and contrast.
   sent. The window is a modal `<dialog>` titled by its heading; Escape or "Go back" cancels; a danger
   action starts on "Go back". Accepting sends the form with the button that was pressed (its name,
   value, and `formaction`). Without `<dialog>` support the browser's own confirmation is used.
-  Routine saves and reversible housekeeping (mark read, archive a notification, sign out) do not
-  ask. `tests/confirmation_test.php` fails when a deciding button has no confirmation.
+  Signing out asks too ("Sign out?"), from the sidebar and the account menu. Routine saves and
+  reversible housekeeping (mark read, archive a notification) do not ask. `tests/confirmation_test.php` fails when a deciding button has no confirmation.

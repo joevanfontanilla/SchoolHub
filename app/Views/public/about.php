@@ -16,15 +16,19 @@ $schoolName = $school['school_name'] ?? 'SchoolHub';
         <section class="card p-6">
             <h2 class="text-base font-semibold text-brand-navy">Mission</h2>
             <p class="mt-2 text-sm text-slate-600">
-                To deliver accessible, quality tertiary education supported by clear and dependable
-                administrative service.
+                To educate, train and provide our graduates with appropriate and excellent intellect,
+                knowledge and courageous enough to expeditiously respond with manifest and inherit
+                capabilities to face ever-changing challenges in man's search for peace, prosperity
+                and world harmony.
             </p>
         </section>
         <section class="card p-6">
             <h2 class="text-base font-semibold text-brand-navy">Vision</h2>
             <p class="mt-2 text-sm text-slate-600">
-                A school where every student can see exactly where they stand — academically,
-                financially, and administratively.
+                The premiere institution furthering the excellent transformation of human intellect
+                pillared on discipline, integrity and service to empower its graduates with provident
+                knowledge totally responsive to our hopes and aspirations as Filipinos and as prominent
+                citizens of the global community.
             </p>
         </section>
     </div>

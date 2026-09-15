@@ -128,7 +128,7 @@ $destinations = portal_destinations($user?->role_name);
                             <a href="<?= e(url('/student/profile')) ?>" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-navy"><?= icon('user', 'h-5 w-5 text-brand-600') ?> My profile</a>
                         <?php endif; ?>
                         <a href="<?= e(url('/password/change')) ?>" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-navy"><?= icon('key', 'h-5 w-5 text-brand-600') ?> Change password</a>
-                        <form method="POST" action="<?= e(url('/logout')) ?>">
+                        <form method="POST" action="<?= e(url('/logout')) ?>" data-confirm="You will need to sign in again to use the portal. Anything you have not saved on this page is lost." data-confirm-title="Sign out?" data-confirm-tone="primary" data-confirm-label="Sign out">
                             <?= csrf_field() ?>
                             <button type="submit" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-navy"><?= icon('logout', 'h-5 w-5 text-brand-600') ?> Sign out</button>
                         </form>
