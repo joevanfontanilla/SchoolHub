@@ -27,7 +27,7 @@ return [
             ['/student/credentials', 'Document Requests', 'inbox', true],
             ['/portal/announcements', 'Announcements', 'megaphone', true],
             ['/portal/notifications', 'Notifications', 'bell', true],
-            ['/password/change', 'Password & Security', 'key', true],
+            ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_TEACHER => [
             ['/teacher/dashboard', 'Dashboard', 'dashboard', true],
@@ -42,6 +42,7 @@ return [
             ['/portal/notifications', 'Notifications', 'bell', true],
             'Reports',
             ['/teacher/reports', 'Class Reports', 'presentation', true],
+            ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_REGISTRAR => [
             ['/registrar/dashboard', 'Dashboard', 'dashboard', true],
@@ -62,6 +63,7 @@ return [
             ['/portal/notifications', 'Notifications', 'bell', true],
             'Reports',
             ['/registrar/reports', 'Reports', 'presentation', true],
+            ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_CASHIER => [
             ['/cashier/dashboard', 'Dashboard', 'dashboard', true],
@@ -73,6 +75,7 @@ return [
             'Communication',
             ['/portal/announcements', 'Announcements', 'megaphone', true],
             ['/portal/notifications', 'Notifications', 'bell', true],
+            ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_SUPER_ADMIN => [
             ['/admin/dashboard', 'Dashboard', 'dashboard', true],
@@ -89,6 +92,7 @@ return [
             'Communication',
             ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
             ['/portal/notifications', 'Notifications', 'bell', true],
+            ['/account', 'My Account', 'user', true],
         ],
     ],
 
@@ -133,6 +137,7 @@ return [
         '/student/account'          => 'payment pay fees balance tuition receipt statement gcash',
         '/student/documents'        => 'files uploads receipts statements schedule proof download print',
         '/password/change'          => 'settings password security account',
+        '/account'                  => 'my account profile photo avatar picture password security',
         '/teacher/classes'          => 'roster students list',
         '/teacher/grades'           => 'prelim midterm finals grade sheet',
         '/teacher/announcements'    => 'post notice class announcement',

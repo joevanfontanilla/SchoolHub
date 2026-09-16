@@ -41,6 +41,7 @@ Super Admin implicitly holds every permission and needs no rows here.
 | `first_name`, `middle_name`, `last_name` | VARCHAR(100) | middle nullable |
 | `status` | VARCHAR(20) | `Pending`, `Active`, `Disabled`, `Locked` |
 | `must_change_password` | TINYINT(1) | default 0 |
+| `avatar_path` | VARCHAR(255) | nullable — a non-student's profile photo, under `storage/`, never web-reachable (a student's photo is on `student_profiles.photo_path`); see `AvatarService`, docs/08 |
 | `failed_login_attempts` | SMALLINT | default 0 |
 | `locked_until` | DATETIME | nullable |
 | `last_login_at` | DATETIME | nullable |

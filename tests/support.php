@@ -188,6 +188,9 @@ function deleteTestUsers(): void
     // Again, now that fixture applications no longer hold fixture programs.
     deleteTestCatalog();
 
+    foreach (Database::select("SELECT avatar_path FROM users WHERE id IN ({$in}) AND avatar_path IS NOT NULL", $ids) as $row) {
+        @unlink(STORAGE_PATH . '/' . $row['avatar_path']);
+    }
     Database::query("DELETE FROM login_logs WHERE user_id IN ({$in})", $ids);
     Database::query("DELETE FROM audit_logs WHERE user_id IN ({$in})", $ids);
     Database::query("DELETE FROM users WHERE id IN ({$in})", $ids);

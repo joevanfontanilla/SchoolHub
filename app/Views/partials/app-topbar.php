@@ -114,7 +114,7 @@ $destinations = portal_destinations($user?->role_name);
 
                 <details class="relative" data-dropdown>
                     <summary class="flex cursor-pointer list-none items-center gap-3 rounded-2xl border-l border-brand-100 py-1 pl-3 pr-1 hover:bg-brand-50 sm:pl-4 [&::-webkit-details-marker]:hidden">
-                        <?php $photoUrl = App\Services\StudentProfileService::currentPhotoUrl($user); ?>
+                        <?php $photoUrl = App\Services\AvatarService::currentUrl($user); ?>
                         <?php if ($photoUrl !== null): ?>
                             <img src="<?= e($photoUrl) ?>" alt="Your profile photo" class="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-brand-100">
                         <?php else: ?>

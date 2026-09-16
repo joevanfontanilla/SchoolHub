@@ -22,6 +22,7 @@ use App\Controllers\Admin\RoleController as AdminRoles;
 use App\Controllers\Admin\SettingController as AdminSettings;
 use App\Controllers\Admin\UserController as AdminUsers;
 use App\Controllers\PasswordResetController;
+use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
@@ -82,6 +83,11 @@ $router->post('/logout', [AuthController::class, 'logout'],   ['auth'], 'logout'
 
 $router->get('/password/change',  [AuthController::class, 'showChangePassword'], ['auth'], 'password.change');
 $router->post('/password/change', [AuthController::class, 'changePassword'],     ['auth']);
+
+// My Account: profile photo and password, for every signed-in role.
+$router->get('/account',        [AccountController::class, 'show'],      ['auth'], 'account');
+$router->post('/account/photo', [AccountController::class, 'savePhoto'], ['auth']);
+$router->get('/account/photo',  [AccountController::class, 'photo'],     ['auth'], 'account.photo');
 
 // "Forgot password?" by email, and one-time password links (docs/07). Signed-out visitors only.
 $router->get('/password/forgot',  [PasswordResetController::class, 'showForgot'], ['guest'], 'password.forgot');

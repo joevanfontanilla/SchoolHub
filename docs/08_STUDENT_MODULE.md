@@ -54,6 +54,19 @@ by the student's form, the registrar's form, and the record header. Only that th
 audited, never the path. The upload shows a live preview before saving, and once a student has a
 photo it appears in the top-bar account menu in place of their initials.
 
+### Every user has a photo — `/account` and `AvatarService`
+Staff have no student record, so their photo lives on `users.avatar_path` instead. `AvatarService`
+is the single entry point the top bar and the shared **My Account** page (`/account`, every signed-in
+role) use: it dispatches by role — a student's photo is still their record photo on
+`student_profiles.photo_path` (settable by the student and the registrar, never duplicated onto
+`users`), and every other role keeps theirs on `users.avatar_path`. `AvatarService::save()` runs the
+same `assertGenuineFile()` check, stores under `storage/uploads/profile-photos/` (student) or
+`storage/uploads/avatars/` (staff) with a random name, supersedes and deletes the old file, and
+audits `user.avatar_updated` / `user.avatar_removed` by nothing but the fact of the change. The photo
+is served only through `/account/photo` (the signed-in user's own, 404 when none), with the same live
+preview before saving; it replaces the user's initials in the top-bar account menu for every role.
+The account page also links to Change password.
+
 ## My Documents (as built, `/student/documents`)
 Everything the student uploaded or was issued, in one place, each opening in the preview
 window (docs/10): the files uploaded for each application (drafts included) with their review

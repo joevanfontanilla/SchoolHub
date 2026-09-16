@@ -181,6 +181,13 @@ an **audit log** entry.
   `CredentialRequestService` (`credentials.request`); the registrar works the queue (`credentials.manage`),
   advancing REQUESTED → PROCESSING → READY → RELEASED or REJECTED, and the student is notified each step.
   A COR (Certificate of Registration) is assembled read-only by `RegistrationDocumentService::certificate()`.
+- **Profile photos (docs/08).** Every user has an optional photo, set on the shared **My Account** page
+  (`/account`, any signed-in role) through `AvatarService` — the one entry point the top bar and account
+  page use. It dispatches by role: a student's photo stays their record photo on
+  `student_profiles.photo_path` (also settable by the registrar), every other role uses `users.avatar_path`,
+  never both. It runs the same `assertGenuineFile()` upload check, stores under `storage/` with a random
+  name, supersedes the old file, serves only through `/account/photo` (404 when none), and audits the change
+  by fact only, never the path.
 - **Curricula (docs/28).** Subjects belong to a curriculum; **a subject code is unique within its
   curriculum, not school-wide** (`CORE 1` means different subjects in BSA and BPA), so never
   look a subject up by code alone. A subject's curriculum never changes, and prerequisites

@@ -25,13 +25,13 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**282 tests in 40 files**:
+**286 tests in 41 files**:
 
 | Area | Files (tests) |
 |---|---|
 | Authentication and sessions | `auth` (13), `csrf` (6), `rbac` (7), `registration` (7), `validation` (13) |
 | Enrollment | `enrollment_application` (12), `enrollment_status` (10), `enrollment_flow` (9), `enrollment_confirmation` (8) |
-| Documents | `upload` (11), `document_access` (5), `requirement_review` (8), `documents` (4), `profile_photo` (5), `cor` (2) |
+| Documents | `upload` (11), `document_access` (5), `requirement_review` (8), `documents` (4), `profile_photo` (5), `avatar` (4), `cor` (2) |
 | Registrar | `registrar_access` (5), `registrar_decisions` (6), `academic_catalog` (8), `curriculum` (11), `academic_calendar` (4), `credited_subject` (4), `credential_request` (4) |
 | Academic | `class_schedule` (9), `enlistment` (7), `grade_calculator` (11), `grading` (7), `attendance` (3), `academic_record` (2), `teacher_access` (5) |
 | Finance | `finance` (12) |
@@ -103,7 +103,7 @@ public announcement is archived once the checks are done.
    and no duplicate ids.
 8. Opens receipts, statements, every CSV export (cashier, registrar, teacher, and administrative reports), and printouts as their owners and as others.
 
-Result with document preview and the online-hosting changes: **2,026 checks, 0 failures** (1,015 page requests over 145 GET routes, 340 CSRF probes), with every database session in MySQL 8's strict SQL mode. The crawl also checks the preview headers: an inline file or embedded page may be framed by this site only, a download stays a download, every other page is never framed, and another student's file is still a 404.
+Result with document preview and the online-hosting changes: **2,056 checks, 0 failures** (1,029 page requests over 147 GET routes, 344 CSRF probes), with every database session in MySQL 8's strict SQL mode. The crawl also checks the preview headers: an inline file or embedded page may be framed by this site only, a download stays a download, every other page is never framed, and another student's file is still a 404.
 
 **Run the suite and the crawl on an idle copy.** Both read the real database. Someone signing in
 or out of the same installation during a run changes `users` and writes audit entries, which fails

@@ -418,6 +418,9 @@ try {
                 if ($expected === [200] && $route['pattern'] === '/student/cor' && $name === 'studentB') {
                     $expected = [404]; // studentB is not enrolled, so has no certificate of registration
                 }
+                if ($expected === [200] && $route['pattern'] === '/account/photo' && $name !== 'studentA') {
+                    $expected = [404]; // only studentA has a photo; other roles have no avatar yet
+                }
                 if ($expected !== [403] && isset($allowedAlso[$route['pattern']])) {
                     $expected = array_merge($expected, $allowedAlso[$route['pattern']]);
                 }
