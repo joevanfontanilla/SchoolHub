@@ -38,6 +38,7 @@ use App\Controllers\Registrar\DashboardController as RegistrarDashboard;
 use App\Controllers\DocumentController;
 use App\Controllers\RegisterController;
 use App\Controllers\Registrar\AcademicCalendarController;
+use App\Controllers\Registrar\CredentialController as RegistrarCredentials;
 use App\Controllers\Registrar\ApplicationController as RegistrarApplications;
 use App\Controllers\Registrar\CatalogController;
 use App\Controllers\Registrar\ClassController as RegistrarClasses;
@@ -47,6 +48,7 @@ use App\Controllers\Registrar\ReportController as RegistrarReports;
 use App\Controllers\Registrar\RoomController;
 use App\Controllers\Registrar\StudentController as RegistrarStudents;
 use App\Controllers\Student\AcademicController as StudentAcademic;
+use App\Controllers\Student\CredentialController as StudentCredentials;
 use App\Controllers\Student\DashboardController as StudentDashboard;
 use App\Controllers\Student\DocumentsController as StudentDocuments;
 use App\Controllers\Student\EnrollmentController;
@@ -194,6 +196,10 @@ $router->get('/student/attendance', [StudentAcademic::class, 'attendance'], [...
 $router->get('/student/history',    [StudentAcademic::class, 'history'],    [...$student, 'can:grades.view'],     'student.history');
 $router->get('/student/schedule/print', [FinanceDocumentController::class, 'schedule'], [...$student, 'can:schedule.view'], 'student.schedule.print');
 $router->get('/student/cor', [FinanceDocumentController::class, 'cor'], [...$student, 'can:enrollment.view'], 'student.cor');
+
+$router->get('/student/credentials',  [StudentCredentials::class, 'index'],  [...$student, 'can:credentials.request'], 'student.credentials');
+$router->post('/student/credentials', [StudentCredentials::class, 'store'],  [...$student, 'can:credentials.request']);
+$router->post('/student/credentials/{id}/cancel', [StudentCredentials::class, 'cancel'], [...$student, 'can:credentials.request']);
 
 // My Documents: uploads, receipts, statements, schedules, and proofs, each previewable.
 $router->get('/student/documents', [StudentDocuments::class, 'index'], $student, 'student.documents');
@@ -371,6 +377,9 @@ $router->get('/registrar/rooms/create',     [RoomController::class, 'create'], $
 $router->post('/registrar/rooms/create',    [RoomController::class, 'save'],   $registrar('academic.manage'));
 $router->get('/registrar/rooms/{id}/edit',  [RoomController::class, 'edit'],   $registrar('academic.manage'));
 $router->post('/registrar/rooms/{id}/edit', [RoomController::class, 'save'],   $registrar('academic.manage'));
+
+$router->get('/registrar/credentials',        [RegistrarCredentials::class, 'index'],   $registrar('credentials.manage'), 'registrar.credentials');
+$router->post('/registrar/credentials/{id}',  [RegistrarCredentials::class, 'process'], $registrar('credentials.manage'));
 
 $router->get('/registrar/calendar',              [AcademicCalendarController::class, 'index'],    $registrar('academic.manage'), 'registrar.calendar');
 $router->post('/registrar/calendar/terms/{id}',  [AcademicCalendarController::class, 'saveTerm'],  $registrar('academic.manage'));

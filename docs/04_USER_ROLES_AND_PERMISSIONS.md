@@ -9,6 +9,7 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Manage own profile
 - Create and submit enrollment application
 - Upload own requirements
+- Request official documents from the registrar (TOR, Good Moral, COE; `credentials.request`, docs/08)
 - View requirement status
 - View enrollment status/history
 - View schedule
@@ -52,6 +53,8 @@ Users may access only functions explicitly allowed for their role. Backend autho
   enrollment windows; `academic.manage`)
 - Credit subjects to a student — transfer credit, or study before this system
   (`academic.credit`, docs/28)
+- Process student document requests — TOR, Good Moral, Certificate of Enrollment
+  (`credentials.manage`, docs/08)
 - Manage enrollment records
 - Assign students/classes
 - Generate registrar reports

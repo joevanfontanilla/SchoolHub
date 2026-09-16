@@ -140,6 +140,7 @@ return [
             'DeploymentCheck.php'       => ['$in'],
             'CatalogService.php'        => ['$table'],
             'ClassSchedule.php'         => ['$in'],
+            'CredentialRequest.php'     => ['$in', '$where'],
             'EnrollmentApplication.php' => ['$placeholders'],
             'Finance.php'               => ['$limit', '$offset'],
             'FinanceReport.php'         => [],

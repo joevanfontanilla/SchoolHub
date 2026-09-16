@@ -45,6 +45,7 @@ use App\Core\UploadedFile;
 use App\Models\Finance;
 use App\Models\User;
 use App\Services\AnnouncementService;
+use App\Services\CredentialRequestService;
 use App\Services\FinanceService;
 use App\Services\PasswordResetService;
 
@@ -248,6 +249,9 @@ try {
     }
     copy(fixtureFile('png'), STORAGE_PATH . '/' . $photoPath);
     Database::update('student_profiles', ['photo_path' => $photoPath], ['student_id' => $enrolled['student_id']]);
+
+    // A document request, so the student and registrar credential pages have a row to render.
+    CredentialRequestService::request($studentA, ['type' => 'TRANSCRIPT', 'purpose' => 'For the crawl', 'copies' => 1]);
 
     // Script-injection payloads in names, catalog text, reasons, announcements, and the fixtures'
     // notifications (fixture setup, straight to the tables).

@@ -74,8 +74,8 @@ binary as `tailwindcss.exe` into the project root and run
 | `php database/build_release.php` | Package `build/schoolhub-<version>.zip` for a server (`schoolhub/` + `public_html/`) |
 | `php database/build_install_sql.php --username= --email= --first= --last=` | Importable installation SQL with the first Super Admin, for hosting without a command line |
 | `php database/send_test_email.php you@example.com` | Check the mail settings |
-| `php tests/run.php [--filter=name]` | Test suite (278 tests) |
-| `php tests/http/crawl.php` | Every route as every role through Apache (1,988 checks) |
+| `php tests/run.php [--filter=name]` | Test suite (282 tests) |
+| `php tests/http/crawl.php` | Every route as every role through Apache (2,026 checks) |
 
 ## Deploying
 Build the release with `php database/build_release.php`, then follow **`docs/23_DEPLOYMENT.md`**

@@ -164,10 +164,10 @@ $cardTitle = 'flex items-center gap-3 font-display text-lg font-bold text-brand-
                     <?= icon('calendar', 'h-7 w-7') ?>
                     <span>View Class Schedule</span>
                 </a>
-                <span class="flex cursor-not-allowed items-center gap-3 rounded-xl bg-brand-50/70 p-3 text-sm text-slate-600" title="Coming soon">
-                    <span class="text-brand-600"><?= icon('history', 'h-7 w-7') ?></span>
-                    <span>Request Official Transcript <span class="block text-[10px] font-semibold uppercase tracking-wide text-brand-600">Soon</span></span>
-                </span>
+                <a href="<?= e(url('/student/credentials')) ?>" class="flex items-center gap-3 rounded-xl bg-brand-50 p-3 text-sm font-medium text-brand-700 hover:ring-2 hover:ring-brand-200">
+                    <span class="text-brand-600"><?= icon('document', 'h-7 w-7') ?></span>
+                    <span>Request Official Transcript</span>
+                </a>
             </div>
         </section>
     </div>

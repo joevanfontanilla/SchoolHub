@@ -27,6 +27,7 @@ const PERMISSIONS = [
     'enrollment.apply'    => ['enrollment', 'Create and submit an enrollment application'],
     'enrollment.view'     => ['enrollment', 'View enrollment applications'],
     'requirements.upload' => ['requirements', 'Upload requirement documents'],
+    'credentials.request' => ['requirements', 'Request official documents from the registrar'],
     'schedule.view'       => ['academic', 'View class schedule'],
     'grades.view'         => ['academic', 'View grades'],
     'attendance.view'     => ['academic', 'View attendance'],
@@ -52,6 +53,7 @@ const PERMISSIONS = [
     'academic.manage'     => ['academic', 'Manage programs, subjects, sections, and the academic calendar'],
     'academic.assign'     => ['academic', 'Assign classes, teachers, and rooms'],
     'academic.credit'     => ['academic', 'Credit subjects to a student (transfer credit)'],
+    'credentials.manage'  => ['students', 'Process student document requests (TOR, Good Moral, COE)'],
     'grade_periods.manage' => ['academic', 'Open and close grading periods'],
     'announcements.manage' => ['communication', 'Create and edit announcements'],
     'announcements.publish' => ['communication', 'Publish announcements'],
@@ -76,7 +78,7 @@ const PERMISSIONS = [
 const ROLE_PERMISSIONS = [
     User::ROLE_STUDENT => [
         'profile.manage', 'enrollment.apply', 'enrollment.view', 'requirements.upload',
-        'schedule.view', 'grades.view', 'attendance.view', 'finance.view_account',
+        'credentials.request', 'schedule.view', 'grades.view', 'attendance.view', 'finance.view_account',
         'payments.view', 'announcements.view', 'notifications.view',
     ],
     User::ROLE_TEACHER => [
@@ -87,7 +89,7 @@ const ROLE_PERMISSIONS = [
         'students.view', 'students.manage', 'enrollment.view', 'enrollment.review',
         'enrollment.approve', 'enrollment.confirm', 'requirements.verify',
         'academic.manage', 'academic.assign', 'academic.credit', 'grade_periods.manage',
-        'announcements.view', 'announcements.manage', 'announcements.publish',
+        'credentials.manage', 'announcements.view', 'announcements.manage', 'announcements.publish',
         'reports.registrar', 'notifications.view',
     ],
     User::ROLE_CASHIER => [

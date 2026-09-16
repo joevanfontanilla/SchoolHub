@@ -52,9 +52,8 @@ $tabLabels = ['grades' => 'Grades', 'schedule' => 'Class Schedule', 'attendance'
             <p class="field-input bg-brand-50/60 text-slate-700"><?= e($enrollment['section_code'] ?? '—') ?></p>
         </div>
         <noscript><button type="submit" class="btn-secondary">Show</button></noscript>
-        <span class="btn-secondary ml-auto cursor-not-allowed opacity-70" title="Official transcripts are requested from the registrar; online requests come later">
-            <?= icon('document', 'h-5 w-5') ?> View Official Transcript
-            <span class="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-brand-600">Soon</span>
-        </span>
+        <a href="<?= e(url('/student/credentials')) ?>" class="btn-secondary ml-auto">
+            <?= icon('document', 'h-5 w-5') ?> Request Official Transcript
+        </a>
     </form>
 <?php endif; ?>

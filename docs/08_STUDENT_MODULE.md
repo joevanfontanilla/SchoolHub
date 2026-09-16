@@ -62,6 +62,17 @@ and the proofs of payment they sent with their verification status. The page tak
 id, so only the signed-in student's documents can appear (`StudentDocuments::forStudent()`).
 Receipts, statements, and schedules open as printable pages inside the window, with Print.
 
+## Document requests (as built)
+A student requests official documents from the registrar on **Document Requests**
+(`/student/credentials`, `credentials.request`): Transcript of Records, Certificate of Good Moral
+Character, Certificate of Enrollment, or a copy of grades, with a purpose and number of copies.
+Only one open request per document type at a time. The registrar works the queue at
+`/registrar/credentials` (`credentials.manage`), moving each request REQUESTED → PROCESSING →
+READY → RELEASED (or REJECTED with a reason), optionally noting a fee to settle at the cashier; the
+student is notified at every step and can cancel while it is still pending. All through
+`CredentialRequestService`, audited; a request is never deleted, only cancelled or rejected. (The
+fee is informational here — it is not yet a finance assessment.)
+
 ## Certificate of Registration (as built)
 An enrolled student can open a **Certificate of Registration** (COR) from the Account page — the
 official one-page proof of enrollment for the term: the enlisted subjects with their schedule,

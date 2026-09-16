@@ -177,6 +177,10 @@ an **audit log** entry.
   through `CreditedSubjectService` (permission `academic.credit`). A credit counts as passed:
   `AcademicRecordService::passedSubjectIds()` unions the credited subject ids, so prerequisites and
   progress honor it. Units are snapshotted; changes are audited by subject code only.
+- **Credential requests (docs/08).** Students request official documents (TOR, Good Moral, COE) through
+  `CredentialRequestService` (`credentials.request`); the registrar works the queue (`credentials.manage`),
+  advancing REQUESTED → PROCESSING → READY → RELEASED or REJECTED, and the student is notified each step.
+  A COR (Certificate of Registration) is assembled read-only by `RegistrationDocumentService::certificate()`.
 - **Curricula (docs/28).** Subjects belong to a curriculum; **a subject code is unique within its
   curriculum, not school-wide** (`CORE 1` means different subjects in BSA and BPA), so never
   look a subject up by code alone. A subject's curriculum never changes, and prerequisites
