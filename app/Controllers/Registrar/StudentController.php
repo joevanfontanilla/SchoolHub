@@ -123,6 +123,22 @@ final class StudentController extends Controller
         StudentProfileService::streamPhoto((int) $this->student($request)['id']);
     }
 
+    /** A student's Certificate of Registration, printable (registrar with students.view). */
+    public function cor(Request $request): void
+    {
+        $student = $this->student($request);
+        $cor = \App\Services\RegistrationDocumentService::certificate((int) $student['id'], (int) $request->input('term_id', 0) ?: null);
+        if ($cor === null) {
+            throw HttpException::notFound('This student has no enrolled term.');
+        }
+        $name = trim($student['first_name'] . ' ' . $student['last_name']);
+        $this->printView('print/cor', $cor + [
+            'title'   => 'Certificate of Registration · ' . $name,
+            'student' => $student + ['name' => $name],
+            'back'    => '/registrar/students/' . $student['id'],
+        ]);
+    }
+
     /** Credit a subject to this student (transfer credit; academic.credit). */
     public function creditSubject(Request $request): void
     {

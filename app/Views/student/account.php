@@ -80,7 +80,8 @@ $failed = errors() !== [];
                     <p class="flex items-center gap-3 text-sm"><?= icon('attendance', 'h-6 w-6') ?> <span><strong>You are officially enrolled</strong> for <?= e($assessment['term_name'] . ', A.Y. ' . $assessment['academic_year_code']) ?>. Your subjects and schedule are ready.</span></p>
                     <div class="flex flex-wrap gap-2">
                         <a href="<?= e(url('/student/schedule?term_id=' . $assessment['term_id'])) ?>" class="btn-secondary"><?= icon('calendar', 'h-5 w-5') ?> Weekly schedule</a>
-                        <?= partial('preview-link', ['path' => '/student/schedule/print?term_id=' . $assessment['term_id'], 'kind' => 'page', 'title' => 'Class schedule', 'label' => 'Print schedule', 'icon' => 'document', 'class' => 'btn-primary']) ?>
+                        <?= partial('preview-link', ['path' => '/student/cor?term_id=' . $assessment['term_id'], 'kind' => 'page', 'title' => 'Certificate of Registration', 'label' => 'Certificate of Registration', 'icon' => 'document', 'class' => 'btn-primary']) ?>
+                        <?= partial('preview-link', ['path' => '/student/schedule/print?term_id=' . $assessment['term_id'], 'kind' => 'page', 'title' => 'Class schedule', 'label' => 'Print schedule', 'icon' => 'document', 'class' => 'btn-secondary']) ?>
                     </div>
                 </section>
             <?php endif; ?>

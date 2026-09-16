@@ -61,3 +61,13 @@ status; official receipts; statements of account; the class schedule of each enr
 and the proofs of payment they sent with their verification status. The page takes no record
 id, so only the signed-in student's documents can appear (`StudentDocuments::forStudent()`).
 Receipts, statements, and schedules open as printable pages inside the window, with Print.
+
+## Certificate of Registration (as built)
+An enrolled student can open a **Certificate of Registration** (COR) from the Account page — the
+official one-page proof of enrollment for the term: the enlisted subjects with their schedule,
+room, section and total units, and the fee assessment (fees, adjustments, amount due, payments,
+balance). It opens in the preview window and prints. The registrar opens the same COR from the
+student record. Both are assembled by `RegistrationDocumentService::certificate()` from the
+enrollment and finance data, so they always match; a term with no assessment yet still prints the
+subjects. Routes: `/student/cor` (own, `enrollment.view`) and `/registrar/students/{id}/cor`
+(`students.view`).

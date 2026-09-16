@@ -58,9 +58,14 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
                 </p>
             </div>
         </div>
-        <span class="badge <?= $missing === [] ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text' ?>">
-            <?= $missing === [] ? 'Profile complete' : 'Profile incomplete' ?>
-        </span>
+        <div class="flex items-center gap-2">
+            <?php if ($enrollment !== null): ?>
+                <?= partial('preview-link', ['path' => '/registrar/students/' . $id . '/cor?term_id=' . $enrollment['term_id'], 'kind' => 'page', 'title' => 'Certificate of Registration', 'label' => 'Certificate of Registration', 'icon' => 'document', 'class' => 'btn-secondary']) ?>
+            <?php endif; ?>
+            <span class="badge <?= $missing === [] ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text' ?>">
+                <?= $missing === [] ? 'Profile complete' : 'Profile incomplete' ?>
+            </span>
+        </div>
     </div>
 
     <section class="card" aria-labelledby="apps-heading">

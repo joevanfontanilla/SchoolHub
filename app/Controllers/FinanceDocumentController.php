@@ -60,6 +60,26 @@ final class FinanceDocumentController extends Controller
         ]);
     }
 
+    /** The signed-in student's Certificate of Registration for an enrolled term (docs/08). */
+    public function cor(Request $request): void
+    {
+        $user = Auth::user();
+        if ($user === null || !$user->isStudent()) {
+            throw HttpException::forbidden('Only students can print their own Certificate of Registration here.');
+        }
+        $student = RegistrationService::ensureStudentRecord($user);
+        $cor = \App\Services\RegistrationDocumentService::certificate((int) $student['id'], (int) $request->input('term_id', 0) ?: null);
+        if ($cor === null) {
+            throw HttpException::notFound('You have no enrolled term yet.');
+        }
+
+        $this->printView('print/cor', $cor + [
+            'title'   => 'Certificate of Registration · ' . $cor['enrollment']['term_name'] . ' ' . $cor['enrollment']['academic_year_code'],
+            'student' => $student + ['name' => $user->fullName()],
+            'back'    => '/student/account',
+        ]);
+    }
+
     /** The signed-in student's class schedule, ready to print (docs/08). */
     public function schedule(Request $request): void
     {

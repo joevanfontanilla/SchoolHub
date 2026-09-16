@@ -411,6 +411,9 @@ try {
                 if ($expected === [200] && $route['pattern'] === '/student/photo' && $name === 'studentB') {
                     $expected = [404]; // studentB has uploaded no photo
                 }
+                if ($expected === [200] && $route['pattern'] === '/student/cor' && $name === 'studentB') {
+                    $expected = [404]; // studentB is not enrolled, so has no certificate of registration
+                }
                 if ($expected !== [403] && isset($allowedAlso[$route['pattern']])) {
                     $expected = array_merge($expected, $allowedAlso[$route['pattern']]);
                 }
