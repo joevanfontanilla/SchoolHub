@@ -73,8 +73,8 @@ $enumLabels = [
             <?php if ($group === 'school'): ?>
                 <fieldset class="rounded-xl border border-brand-100 p-4">
                     <legend class="px-1 font-display text-sm font-bold text-brand-navy">Logo</legend>
-                    <div class="flex flex-wrap items-center gap-4">
-                        <img src="<?= e(school_logo_url()) ?>" alt="Current school logo" class="h-20 w-20 rounded-full object-cover ring-2 ring-brand-100">
+                    <div class="flex flex-wrap items-center gap-4" data-image-field>
+                        <img data-image-preview-target src="<?= e(school_logo_url()) ?>" alt="Current school logo" class="h-20 w-20 rounded-full object-cover ring-2 ring-brand-100">
                         <div class="min-w-0 flex-1 space-y-2">
                             <label for="field-logo" class="field-label">Upload a new logo</label>
                             <input id="field-logo" type="file" name="logo" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-max-bytes="<?= SettingsService::LOGO_MAX_BYTES ?>"

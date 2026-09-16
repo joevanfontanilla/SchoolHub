@@ -57,6 +57,14 @@ Support light/dark mode if practical, while preserving readability and contrast.
   whatever display class it has; every grid cell may shrink below its content, so a wide table
   scrolls inside its own container instead of widening the page on a phone.
 - **Empty states** show an icon and a sentence saying what will appear there.
+- **Image uploads preview before submit.** Every image file input (profile photo, student photo set
+  by the registrar, announcement image, school logo, payment proof) sits in a `data-image-field`
+  wrapper with a `data-image-preview-target` image; picking a file shows it at once, so the user
+  confirms the picture before clicking upload. A non-image (e.g. a PDF proof) reverts to the saved
+  image or the placeholder. Without JavaScript the upload still works, just without the live preview.
+- **The top-bar avatar** shows a student's profile photo when they have uploaded one, in place of
+  their initials (`StudentProfileService::currentPhotoUrl`); other roles, and students with no photo,
+  keep the initials tile.
 - **Password fields** (sign-in, registration, reset, change password) have an eye button to show or
   hide what was typed: a real button with an accessible name that changes between "Show password"
   and "Hide password" and `aria-pressed`; the field is hidden again before the form is sent. A

@@ -51,7 +51,8 @@ photo on the student record and can upload, replace, or remove it as part of a r
 (`StudentRecordService::update`), audited as `student.record_corrected`. The upload control is one
 partial (`partials/student/photo-field`) and the display one component (`components/avatar`), shared
 by the student's form, the registrar's form, and the record header. Only that the photo changed is
-audited, never the path.
+audited, never the path. The upload shows a live preview before saving, and once a student has a
+photo it appears in the top-bar account menu in place of their initials.
 
 ## My Documents (as built, `/student/documents`)
 Everything the student uploaded or was issued, in one place, each opening in the preview

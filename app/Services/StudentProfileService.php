@@ -229,6 +229,24 @@ final class StudentProfileService
     }
 
     /**
+     * The signed-in user's own profile-photo URL for the top bar, cache-busted, or null when they
+     * are not a student or have no photo. One light indexed lookup; used on every portal page.
+     */
+    public static function currentPhotoUrl(User $user): ?string
+    {
+        if (!$user->isStudent()) {
+            return null;
+        }
+        $row = Database::selectOne(
+            'SELECT sp.photo_path, sp.updated_at
+               FROM students s JOIN student_profiles sp ON sp.student_id = s.id
+              WHERE s.user_id = ? AND sp.photo_path IS NOT NULL',
+            [$user->id]
+        );
+        return $row === null ? null : url('/student/photo') . '?v=' . urlencode((string) $row['updated_at']);
+    }
+
+    /**
      * Stream a student's photo inline, or throw 404 when there is none. The caller is responsible
      * for authorizing access to this student (the owner, or staff who may view the record).
      *

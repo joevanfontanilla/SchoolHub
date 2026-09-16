@@ -166,15 +166,18 @@ $groupError = static fn (string $field) => ($message = error_for($field)) === nu
             <div class="grid gap-5 sm:grid-cols-2">
                 <div>
                     <label for="field-image" class="field-label">Image</label>
-                    <input id="field-image" type="file" name="image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-max-bytes="<?= App\Services\AnnouncementService::IMAGE_MAX_BYTES ?>"
-                           class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100">
-                    <p class="mt-1 text-xs text-brand-gray">Optional. JPG or PNG, up to 2 MB.</p>
-                    <?php if ($editing && $announcement['image_path']): ?>
+                    <div data-image-field>
+                        <input id="field-image" type="file" name="image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-max-bytes="<?= App\Services\AnnouncementService::IMAGE_MAX_BYTES ?>"
+                               class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100">
+                        <p class="mt-1 text-xs text-brand-gray">Optional. JPG or PNG, up to 2 MB. The preview updates before you save.</p>
+                        <?php $currentImage = $editing && $announcement['image_path'] ? url('/announcement-images/' . $announcement['id']) : null; ?>
                         <div class="mt-3 flex items-start gap-3">
-                            <img src="<?= e(url('/announcement-images/' . $announcement['id'])) ?>" alt="<?= e($announcement['image_alt'] ?? '') ?>" class="h-20 w-32 rounded-lg object-cover ring-1 ring-brand-100">
-                            <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="remove_image" value="1" class="<?= $check ?>"> Remove this image</label>
+                            <img data-image-preview-target src="<?= e($currentImage ?? '') ?>" alt="Selected image preview" class="h-20 w-32 rounded-lg object-cover ring-1 ring-brand-100" <?= $currentImage === null ? 'hidden' : '' ?>>
+                            <?php if ($currentImage !== null): ?>
+                                <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="remove_image" value="1" class="<?= $check ?>"> Remove this image</label>
+                            <?php endif; ?>
                         </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
                 <?= component('field', ['name' => 'image_alt', 'label' => 'Image description', 'value' => $val('image_alt'), 'help' => 'What the image shows, for people using screen readers. Required with an image.']) ?>
             </div>

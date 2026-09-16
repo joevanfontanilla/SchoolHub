@@ -394,6 +394,38 @@
         }
     });
 
+    // Live preview for image uploads: show the chosen picture before it is submitted, so the user
+    // confirms it first. A field wraps its file input, a preview <img>, and an optional placeholder.
+    document.querySelectorAll('[data-image-field]').forEach(function (field) {
+        var input = field.querySelector('input[type="file"]');
+        var img = field.querySelector('[data-image-preview-target]');
+        if (!input || !img) {
+            return;
+        }
+        var placeholder = field.querySelector('[data-image-preview-placeholder]');
+        var originalSrc = img.getAttribute('src') || '';
+        var objectUrl = null;
+
+        input.addEventListener('change', function () {
+            var file = input.files && input.files[0];
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+                objectUrl = null;
+            }
+            if (file && /^image\//.test(file.type)) {
+                objectUrl = URL.createObjectURL(file);
+                img.src = objectUrl;
+                img.hidden = false;
+                if (placeholder) { placeholder.hidden = true; }
+            } else {
+                // Nothing chosen, or not an image: fall back to the saved picture or the placeholder.
+                img.src = originalSrc;
+                img.hidden = originalSrc === '';
+                if (placeholder) { placeholder.hidden = originalSrc !== ''; }
+            }
+        });
+    });
+
     // Guardian rows on the profile form: add and remove.
     document.querySelectorAll('[data-repeater]').forEach(function (repeater) {
         var list = repeater.querySelector('[data-repeater-list]');

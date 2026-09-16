@@ -114,7 +114,12 @@ $destinations = portal_destinations($user?->role_name);
 
                 <details class="relative" data-dropdown>
                     <summary class="flex cursor-pointer list-none items-center gap-3 rounded-2xl border-l border-brand-100 py-1 pl-3 pr-1 hover:bg-brand-50 sm:pl-4 [&::-webkit-details-marker]:hidden">
-                        <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-700 font-display text-sm font-bold text-white ring-2 ring-brand-100" aria-hidden="true"><?= e($user->initials()) ?></span>
+                        <?php $photoUrl = App\Services\StudentProfileService::currentPhotoUrl($user); ?>
+                        <?php if ($photoUrl !== null): ?>
+                            <img src="<?= e($photoUrl) ?>" alt="Your profile photo" class="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-brand-100">
+                        <?php else: ?>
+                            <span class="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-brand-primary to-brand-700 font-display text-sm font-bold text-white ring-2 ring-brand-100" aria-hidden="true"><?= e($user->initials()) ?></span>
+                        <?php endif; ?>
                         <span class="hidden min-w-0 max-w-[14rem] text-left sm:block">
                             <span class="block truncate font-display text-sm font-bold text-brand-navy" title="<?= e($user->fullName()) ?>"><?= e($user->fullName()) ?></span>
                             <span class="block truncate text-xs text-brand-gray"><?= e($portal['subtitle'] ?? $user->role_name) ?></span>

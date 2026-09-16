@@ -214,12 +214,13 @@ $failed = errors() !== [];
                         </div>
                         <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'required' => true, 'value' => old('reference_number'), 'help' => 'From the GCash or Maya confirmation, or the deposit slip.']) ?>
                         <?= component('field', ['name' => 'paid_on', 'label' => 'Date paid', 'type' => 'date', 'required' => true, 'value' => old('paid_on', date('Y-m-d'))]) ?>
-                        <div>
+                        <div data-image-field>
                             <label for="field-proof" class="field-label">Proof of payment <span class="text-brand-alert" aria-hidden="true">*</span></label>
                             <input id="field-proof" type="file" name="proof" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required
                                    class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
                                    data-max-bytes="<?= 5 * 1024 * 1024 ?>">
-                            <p class="mt-1 text-xs text-brand-gray">A screenshot or photo (JPG, PNG) or PDF, up to 5 MB.</p>
+                            <p class="mt-1 text-xs text-brand-gray">A screenshot or photo (JPG, PNG) or PDF, up to 5 MB. An image preview shows before you send.</p>
+                            <img data-image-preview-target src="" alt="Selected proof preview" class="mt-3 max-h-56 rounded-lg object-contain ring-1 ring-brand-100" hidden>
                         </div>
                         <button type="submit" class="btn-primary w-full"><?= icon('send', 'h-5 w-5') ?> Send for verification</button>
                     </form>
