@@ -2,7 +2,7 @@
 /**
  * Bachelor of Science in Entrepreneurship, effective SY 2024-2025.
  *
- * Transcribed from "Entrepreneurship Curiculum.pdf" (prepared by the Registrar,
+ * Transcribed from "Entrepreneurship Curriculum.pdf" (prepared by the Registrar,
  * noted by the President and CEO, contents noted 7-23-24). Format: docs/28.
  */
 

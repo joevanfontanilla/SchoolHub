@@ -234,6 +234,83 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
         <?= partial('student-documents', ['documents' => $documents, 'forStudent' => false]) ?>
     </section>
 
+    <section id="credits" class="card" aria-labelledby="credits-heading">
+        <div class="flex flex-wrap items-end justify-between gap-2 border-b border-slate-200 px-5 py-4">
+            <h2 id="credits-heading" class="text-base">Credited subjects</h2>
+            <p class="text-sm text-brand-gray">Transfer credit, or subjects earned before this system. They count as passed.</p>
+        </div>
+
+        <?php if ($credits === []): ?>
+            <p class="px-5 py-4 text-sm text-brand-gray">No credited subjects.</p>
+        <?php else: ?>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-brand-gray">
+                            <th class="px-5 py-2 font-semibold">Subject</th>
+                            <th class="px-5 py-2 font-semibold">Units</th>
+                            <th class="px-5 py-2 font-semibold">Grade</th>
+                            <th class="px-5 py-2 font-semibold">Source</th>
+                            <th class="px-5 py-2 font-semibold">Credited by</th>
+                            <?php if ($canCredit): ?><th class="px-5 py-2"><span class="sr-only">Actions</span></th><?php endif; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($credits as $credit): ?>
+                            <tr class="border-b border-slate-100 last:border-b-0 align-top">
+                                <td class="px-5 py-3"><span class="font-semibold text-brand-navy"><?= e($credit['subject_code']) ?></span><span class="block text-xs text-brand-gray"><?= e($credit['subject_title']) ?></span></td>
+                                <td class="px-5 py-3 tabular-nums"><?= e(rtrim(rtrim(number_format((float) $credit['units'], 1), '0'), '.')) ?></td>
+                                <td class="px-5 py-3 tabular-nums"><?= e($credit['grade'] ?? '—') ?></td>
+                                <td class="px-5 py-3"><?= e($credit['source'] ?? '—') ?><?php if ($credit['remarks']): ?><span class="block text-xs text-brand-gray"><?= e($credit['remarks']) ?></span><?php endif; ?></td>
+                                <td class="px-5 py-3 text-xs text-brand-gray"><?= e($credit['credited_by_name']) ?><span class="block"><?= e(dt($credit['created_at'])) ?></span></td>
+                                <?php if ($canCredit): ?>
+                                    <td class="px-5 py-3 text-right">
+                                        <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/credits/' . $credit['id'] . '/delete')) ?>"
+                                              data-confirm="This subject stops counting as passed for the student. This cannot be undone." data-confirm-title="Remove this credit?" data-confirm-tone="danger" data-confirm-label="Remove credit">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="text-sm font-semibold text-danger-text hover:underline">Remove</button>
+                                        </form>
+                                    </td>
+                                <?php endif; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($canCredit): ?>
+            <?php if ($creditable === []): ?>
+                <p class="border-t border-slate-100 px-5 py-4 text-sm text-brand-gray">Every subject in this student's curriculum is already credited or passed.</p>
+            <?php else: ?>
+                <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/credits')) ?>" class="grid gap-4 border-t border-slate-100 px-5 py-4 sm:grid-cols-2" novalidate
+                      data-confirm="The subject is recorded as credit for this student and counts as passed." data-confirm-title="Credit this subject?" data-confirm-tone="warning" data-confirm-label="Credit subject" data-confirm-requires="#credit-subject" data-confirm-requires-message="Choose the subject to credit.">
+                    <?= csrf_field() ?>
+                    <div class="sm:col-span-2">
+                        <label for="credit-subject" class="field-label">Subject <span class="text-danger-text" aria-hidden="true">*</span></label>
+                        <select id="credit-subject" name="subject_id" class="field-input <?= error_for('subject_id') ? 'field-input-error' : '' ?>">
+                            <option value="">Select a subject…</option>
+                            <?php foreach ($creditable as $s): ?>
+                                <option value="<?= e($s['id']) ?>" <?= (string) old('subject_id') === (string) $s['id'] ? 'selected' : '' ?>>
+                                    <?= e($s['code'] . ' — ' . $s['title']) ?> (<?= e(rtrim(rtrim(number_format((float) $s['units'], 1), '0'), '.')) ?> units<?= $s['curriculum_code'] ? ', ' . e($s['curriculum_code']) : '' ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if ($m = error_for('subject_id')): ?><p class="field-error"><span><?= e($m) ?></span></p><?php endif; ?>
+                    </div>
+                    <?= component('field', ['name' => 'grade', 'label' => 'Grade (optional)', 'value' => old('grade'), 'help' => 'A mark like 1.75, if known. Crediting counts as passed regardless.']) ?>
+                    <?= component('field', ['name' => 'source', 'label' => 'Source (optional)', 'value' => old('source'), 'help' => 'e.g. Transferred from ABC College.']) ?>
+                    <div class="sm:col-span-2">
+                        <?= component('field', ['name' => 'remarks', 'label' => 'Note (optional)', 'value' => old('remarks')]) ?>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button type="submit" class="btn-primary">Credit subject</button>
+                    </div>
+                </form>
+            <?php endif; ?>
+        <?php endif; ?>
+    </section>
+
     <?php if ($history !== []): ?>
         <section class="card" aria-labelledby="history-heading">
             <h2 id="history-heading" class="border-b border-slate-200 px-5 py-4 text-base">Academic history</h2>

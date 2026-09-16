@@ -180,6 +180,13 @@ final class AcademicRecordService
      */
     public static function passedSubjectIds(int $studentId): array
     {
+        // Subjects credited by the registrar (transfer credit, or study before this system;
+        // docs/28) count as passed the same as an earned final grade.
+        $passed = [];
+        foreach (\App\Models\CreditedSubject::subjectIdsFor($studentId) as $subjectId) {
+            $passed[$subjectId] = true;
+        }
+
         // Every enlisted class with its grades in two queries; the final is computed
         // with the term's weights exactly as classesForEnrollment() does.
         $classes = Database::select(
@@ -191,7 +198,7 @@ final class AcademicRecordService
             [$studentId]
         );
         if ($classes === []) {
-            return [];
+            return array_keys($passed);
         }
 
         $in = implode(',', array_fill(0, count($classes), '?'));
@@ -201,7 +208,6 @@ final class AcademicRecordService
         }
 
         $weightsByTerm = [];
-        $passed = [];
         foreach ($classes as $class) {
             $termId = (int) $class['term_id'];
             if (!isset($weightsByTerm[$termId])) {

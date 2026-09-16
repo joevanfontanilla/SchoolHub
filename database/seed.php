@@ -49,8 +49,9 @@ const PERMISSIONS = [
     'enrollment.approve'  => ['enrollment', 'Approve, reject, or request correction'],
     'enrollment.confirm'  => ['enrollment', 'Confirm enrollment and assign sections'],
     'requirements.verify' => ['requirements', 'Verify or reject submitted requirements'],
-    'academic.manage'     => ['academic', 'Manage programs, subjects, and sections'],
+    'academic.manage'     => ['academic', 'Manage programs, subjects, sections, and the academic calendar'],
     'academic.assign'     => ['academic', 'Assign classes, teachers, and rooms'],
+    'academic.credit'     => ['academic', 'Credit subjects to a student (transfer credit)'],
     'grade_periods.manage' => ['academic', 'Open and close grading periods'],
     'announcements.manage' => ['communication', 'Create and edit announcements'],
     'announcements.publish' => ['communication', 'Publish announcements'],
@@ -85,7 +86,7 @@ const ROLE_PERMISSIONS = [
     User::ROLE_REGISTRAR => [
         'students.view', 'students.manage', 'enrollment.view', 'enrollment.review',
         'enrollment.approve', 'enrollment.confirm', 'requirements.verify',
-        'academic.manage', 'academic.assign', 'grade_periods.manage',
+        'academic.manage', 'academic.assign', 'academic.credit', 'grade_periods.manage',
         'announcements.view', 'announcements.manage', 'announcements.publish',
         'reports.registrar', 'notifications.view',
     ],
@@ -338,24 +339,9 @@ function seedEnrollmentWindows(): void
  */
 function seedGradePeriods(): void
 {
-    $periods = [['Prelim', 1, 30], ['Midterm', 2, 30], ['Finals', 3, 40]];
     $added = 0;
-
     foreach (Database::select('SELECT id FROM terms') as $term) {
-        $has = (int) Database::scalar('SELECT COUNT(*) FROM grade_periods WHERE term_id = ?', [$term['id']]);
-        if ($has > 0) {
-            continue;
-        }
-        foreach ($periods as [$name, $sequence, $weight]) {
-            Database::insert('grade_periods', [
-                'term_id'  => (int) $term['id'],
-                'name'     => $name,
-                'sequence' => $sequence,
-                'weight'   => $weight,
-                'is_open'  => 0,
-            ]);
-            $added++;
-        }
+        $added += App\Services\GradingService::seedPeriods((int) $term['id']);
     }
 
     echo "  grade periods ........ {$added} added\n";

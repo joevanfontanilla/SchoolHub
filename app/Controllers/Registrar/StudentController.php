@@ -49,6 +49,9 @@ final class StudentController extends Controller
             'addable'      => $enrollmentId === null ? [] : ClassSchedule::addableFor($enrollmentId),
             'unitLimit'    => $enrollment === null ? null : EnlistmentService::unitLimit($enrollment),
             'history'      => AcademicRecordService::history($id),
+            'credits'      => \App\Models\CreditedSubject::forStudent($id),
+            'creditable'   => Auth::user()->hasPermission('academic.credit') ? \App\Models\CreditedSubject::creditableFor($id) : [],
+            'canCredit'    => Auth::user()->hasPermission('academic.credit'),
             'documents'    => \App\Models\StudentDocuments::forStudent($id, false),
             'title'        => trim($student['first_name'] . ' ' . $student['last_name']),
             'student'      => $student,
@@ -118,6 +121,27 @@ final class StudentController extends Controller
     public function photo(Request $request): void
     {
         StudentProfileService::streamPhoto((int) $this->student($request)['id']);
+    }
+
+    /** Credit a subject to this student (transfer credit; academic.credit). */
+    public function creditSubject(Request $request): void
+    {
+        $id = (int) $this->student($request)['id'];
+        try {
+            \App\Services\CreditedSubjectService::add(Auth::user(), $id, $request->all());
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), "/registrar/students/{$id}#credits");
+            return;
+        }
+        $this->success('Subject credited to the student.', "/registrar/students/{$id}#credits");
+    }
+
+    /** Remove a credited subject from this student (academic.credit). */
+    public function removeCredit(Request $request): void
+    {
+        $id = (int) $this->student($request)['id'];
+        \App\Services\CreditedSubjectService::remove(Auth::user(), $id, (int) $request->param('creditId'));
+        $this->success('Credited subject removed.', "/registrar/students/{$id}#credits");
     }
 
     private function student(Request $request): array

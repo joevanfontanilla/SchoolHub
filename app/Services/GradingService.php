@@ -21,6 +21,26 @@ use App\Models\User;
  */
 final class GradingService
 {
+    /** The grading periods every term has, closed to start: [name, sequence, default weight]. */
+    public const DEFAULT_PERIODS = [['Prelim', 1, 30], ['Midterm', 2, 30], ['Finals', 3, 40]];
+
+    /**
+     * Create the standard closed grading periods for a term, if it has none yet. Used by the
+     * seeder and when the registrar adds a new academic year. Returns how many were created.
+     */
+    public static function seedPeriods(int $termId): int
+    {
+        if ((int) Database::scalar('SELECT COUNT(*) FROM grade_periods WHERE term_id = ?', [$termId]) > 0) {
+            return 0;
+        }
+        foreach (self::DEFAULT_PERIODS as [$name, $sequence, $weight]) {
+            Database::insert('grade_periods', [
+                'term_id' => $termId, 'name' => $name, 'sequence' => $sequence, 'weight' => $weight, 'is_open' => 0,
+            ]);
+        }
+        return count(self::DEFAULT_PERIODS);
+    }
+
     // -- Periods (registrar) ---------------------------------------------------
 
     public static function openPeriod(User $registrar, int $periodId): void

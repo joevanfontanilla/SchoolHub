@@ -3,7 +3,7 @@
  * Bachelor of Science in Tourism Management, for non-ABM senior high graduates,
  * effective SY 2024-2025.
  *
- * Transcribed from "Tourism Management Curiculum.pdf" (prepared by the Registrar,
+ * Transcribed from "Tourism Management Curriculum.pdf" (prepared by the Registrar,
  * noted by the Dean of Tourism Management, approved by the President and CEO,
  * contents noted 7/23/2024). Format: docs/28.
  *

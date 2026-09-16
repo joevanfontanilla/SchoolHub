@@ -37,6 +37,7 @@ use App\Controllers\PublicController;
 use App\Controllers\Registrar\DashboardController as RegistrarDashboard;
 use App\Controllers\DocumentController;
 use App\Controllers\RegisterController;
+use App\Controllers\Registrar\AcademicCalendarController;
 use App\Controllers\Registrar\ApplicationController as RegistrarApplications;
 use App\Controllers\Registrar\CatalogController;
 use App\Controllers\Registrar\ClassController as RegistrarClasses;
@@ -328,6 +329,8 @@ $router->get('/registrar/students/{id}',  [RegistrarStudents::class, 'show'],   
 $router->get('/registrar/students/{id}/photo', [RegistrarStudents::class, 'photo'], $registrar('students.view'), 'registrar.students.photo');
 $router->post('/registrar/students/{id}', [RegistrarStudents::class, 'update'], $registrar('students.manage'));
 $router->post('/registrar/students/{id}/enlistments', [RegistrarStudents::class, 'addClass'],  $registrar('academic.assign'));
+$router->post('/registrar/students/{id}/credits', [RegistrarStudents::class, 'creditSubject'], $registrar('academic.credit'));
+$router->post('/registrar/students/{id}/credits/{creditId}/delete', [RegistrarStudents::class, 'removeCredit'], $registrar('academic.credit'));
 $router->post('/registrar/enlistments/{id}/drop',     [RegistrarStudents::class, 'dropClass'], $registrar('academic.assign'));
 
 $router->get('/registrar/programs',            [CatalogController::class, 'programs'],      $registrar('academic.manage'), 'registrar.programs');
@@ -366,6 +369,10 @@ $router->get('/registrar/rooms/create',     [RoomController::class, 'create'], $
 $router->post('/registrar/rooms/create',    [RoomController::class, 'save'],   $registrar('academic.manage'));
 $router->get('/registrar/rooms/{id}/edit',  [RoomController::class, 'edit'],   $registrar('academic.manage'));
 $router->post('/registrar/rooms/{id}/edit', [RoomController::class, 'save'],   $registrar('academic.manage'));
+
+$router->get('/registrar/calendar',              [AcademicCalendarController::class, 'index'],    $registrar('academic.manage'), 'registrar.calendar');
+$router->post('/registrar/calendar/terms/{id}',  [AcademicCalendarController::class, 'saveTerm'],  $registrar('academic.manage'));
+$router->post('/registrar/calendar/years',       [AcademicCalendarController::class, 'addYear'],   $registrar('academic.manage'));
 
 $router->get('/registrar/grading',                     [GradingController::class, 'index'],   $registrar('grade_periods.manage'), 'registrar.grading');
 $router->post('/registrar/grading/periods/{id}/open',  [GradingController::class, 'open'],    $registrar('grade_periods.manage'));

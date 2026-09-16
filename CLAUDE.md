@@ -168,6 +168,15 @@ an **audit log** entry.
   changes through `CatalogService` (prerequisite cycles and capacity floors are enforced
   there). The registrar may correct a student's locked legal name via
   `StudentRecordService`, audited by field name only.
+- **Academic calendar (docs/09).** The registrar sets each semester's dates and enrollment window
+  through `AcademicCalendarService` (permission `academic.manage`, `/registrar/calendar`), and adds
+  the next academic year with its semesters (`GradingService::seedPeriods` creates each new term's
+  grading periods). The enrollment window, not a hardcoded date, is what opens a term
+  (`Term::openForEnrollment`).
+- **Credited subjects (docs/28).** The registrar credits transfer/prior subjects to a student
+  through `CreditedSubjectService` (permission `academic.credit`). A credit counts as passed:
+  `AcademicRecordService::passedSubjectIds()` unions the credited subject ids, so prerequisites and
+  progress honor it. Units are snapshotted; changes are audited by subject code only.
 - **Curricula (docs/28).** Subjects belong to a curriculum; **a subject code is unique within its
   curriculum, not school-wide** (`CORE 1` means different subjects in BSA and BPA), so never
   look a subject up by code alone. A subject's curriculum never changes, and prerequisites

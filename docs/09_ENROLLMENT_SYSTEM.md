@@ -52,6 +52,14 @@ A student may apply only for a term whose `enrollment_opens_at` … `enrollment_
 window contains the current time, and may hold only one non-terminal application per term.
 A cancelled or rejected application does not block a new one; it stays on record.
 
+**The registrar sets these dates** (as built) on the Academic Calendar
+(`/registrar/calendar`, `academic.manage`, `AcademicCalendarService`): each semester's start
+and end, and its enrollment window. The window is what actually opens and closes enrollment
+for the term, so it is set by the school, not fixed by the installer. The registrar also adds
+the next academic year there — its 1st and 2nd semesters (and an optional summer), each with
+its own dates; the standard closed grading periods are created for every new term. Every
+change is audited (`academic.term_dates_set`, `academic.year_added`).
+
 ## Profile Completeness
 Submitting requires a complete profile: date of birth, sex, civil status, mobile number,
 barangay, city or municipality, province, nationality, and at least one guardian marked as

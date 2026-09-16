@@ -2,7 +2,7 @@
 /**
  * Bachelor of Science in Accountancy, effective SY 2024-2025.
  *
- * Transcribed from "Accountancy Curiculum.pdf" (prepared by the Registrar, noted
+ * Transcribed from "Accountancy Curriculum.pdf" (prepared by the Registrar, noted
  * by the President and CEO, contents noted 07-23-2024). Format: docs/28.
  *
  * Subject: [code, title, units, prerequisites, options]

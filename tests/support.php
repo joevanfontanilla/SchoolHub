@@ -236,6 +236,7 @@ function deleteTestCatalog(): void
         $in = implode(',', array_fill(0, count($subjectIds), '?'));
         Database::query("DELETE FROM application_subjects WHERE subject_id IN ({$in})", $subjectIds);
         Database::query("DELETE FROM subject_prerequisites WHERE subject_id IN ({$in}) OR prerequisite_subject_id IN ({$in})", array_merge($subjectIds, $subjectIds));
+        Database::query("DELETE FROM credited_subjects WHERE subject_id IN ({$in})", $subjectIds);
         Database::query("DELETE FROM subjects WHERE id IN ({$in})", $subjectIds);
     }
 

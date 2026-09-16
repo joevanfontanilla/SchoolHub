@@ -2,7 +2,7 @@
 /**
  * Bachelor of Public Administration, effective SY 2024-2025.
  *
- * Transcribed from "Public Administration Curiculum.pdf" (prepared by the
+ * Transcribed from "Public Administration Curriculum.pdf" (prepared by the
  * Registrar, noted by the President and CEO). Format: docs/28.
  *
  * The PDF writes the major codes both "PUB AD 1" and "Pub Ad 2"; codes are stored

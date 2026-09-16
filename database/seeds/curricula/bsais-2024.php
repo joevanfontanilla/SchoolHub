@@ -2,7 +2,7 @@
 /**
  * Bachelor of Science in Accounting Information System, effective SY 2024-2025.
  *
- * Transcribed from "Accounting Information System Curiculum.pdf" (prepared by
+ * Transcribed from "Accounting Information System Curriculum.pdf" (prepared by
  * the Registrar, noted by the President and CEO, contents noted 07-23-2024).
  * Format: docs/28.
  */

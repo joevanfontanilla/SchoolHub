@@ -3,7 +3,7 @@
  * Bachelor of Science in Criminology, effective SY 2022-2023
  * (CMO No. 5 s. 2018 and CMO No. 4 s. 2018).
  *
- * Transcribed from "Criminology Curiculum.pdf" (prepared by the Registrar, noted
+ * Transcribed from "Criminology Curriculum.pdf" (prepared by the Registrar, noted
  * by the Dean of Criminology, approved by the President and CEO). Format: docs/28.
  *
  * This is the only curriculum that prints weekly lecture | laboratory hours, so

@@ -106,11 +106,25 @@ and abbreviated prerequisites written in full (`TOU 2` is `TOU 002`, `TOU 7` is 
 | BSTM | Internship requires "75% of academic subjects completed". | 75% of the curriculum's units passed. |
 | BSTM | POM requires TOU 002. | As printed. |
 
+## Credited subjects (as built)
+
+The registrar credits subjects to a specific student on the student record
+(`/registrar/students/{id}`, permission `academic.credit`, `CreditedSubjectService`): transfer
+credit, or subjects earned before the school moved onto this system (so a student already in
+2nd, 3rd, or 4th year keeps the subjects they have passed). A credited subject counts as
+**passed** — `AcademicRecordService::passedSubjectIds()` unions in the credited subject ids —
+so it satisfies prerequisites and curriculum progress exactly as an earned final grade does.
+The subject's units are snapshotted, an optional numeric grade and a free-text source
+("Transferred from …") are kept, and every credit and removal is audited by subject code
+(`student.subject_credited`, `student.subject_credit_removed`), never as a second copy of the
+grade. A credit is refused for a subject already passed or already credited. This replaces the
+prerequisite-override workaround for transferees and shiftees.
+
 ## Not yet supported
 
 - Choosing a specific elective for a placeholder slot (BSTM ELEC 1–5).
 - Changing a student's curriculum from the student record (for example, to an ABM
   curriculum). Today it is set only at confirmation.
-- Crediting a subject passed under one curriculum toward an equivalent subject in
-  another (shiftees, transferees). The registrar uses the audited prerequisite override.
+- Mapping a credited subject onto a *different* subject code in the target curriculum
+  (equivalency). A credit is recorded against the subject as it exists here.
 - Showing curricula on the public Programs page.

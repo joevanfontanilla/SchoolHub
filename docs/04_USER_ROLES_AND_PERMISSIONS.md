@@ -48,7 +48,10 @@ Users may access only functions explicitly allowed for their role. Backend autho
 - Verify requirements
 - Approve/reject/request corrections
 - Manage student records
-- Manage programs, subjects, sections
+- Manage programs, subjects, sections, and the academic calendar (semester dates and
+  enrollment windows; `academic.manage`)
+- Credit subjects to a student — transfer credit, or study before this system
+  (`academic.credit`, docs/28)
 - Manage enrollment records
 - Assign students/classes
 - Generate registrar reports
