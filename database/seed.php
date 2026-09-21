@@ -335,7 +335,7 @@ function seedEnrollmentWindows(): void
 }
 
 /**
- * Prelim, Midterm, Finals (30/30/40) for every term that has none (docs/27).
+ * Prelim, Midterm, Semi-Finals, Finals (20/20/20/40) for every term that has none (docs/27).
  * Inserted closed; the registrar opens each one when grading starts. Terms that
  * already have periods are left exactly as the registrar set them.
  */

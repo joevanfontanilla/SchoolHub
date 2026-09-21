@@ -18,12 +18,6 @@ return [
             $enrolled = enrolledStudent(currentTermId());
             $teacher = makeUser(User::ROLE_TEACHER);
             $subjects = ['pass' => makeSubject(), 'fail' => makeSubject(), 'inc' => makeSubject(), 'partial' => makeSubject()];
-            $grades = [
-                'pass'    => ['1.50', '1.75', '2.00'],
-                'fail'    => ['3.00', '3.00', '5.00'],
-                'inc'     => ['2.00', '2.00', 'INC'],
-                'partial' => ['2.00', '2.00', ''],
-            ];
 
             $classes = [];
             $day = 1;
@@ -31,12 +25,22 @@ return [
                 $classes[$key] = makeClass($enrolled['registrar'], $enrolled['section_id'], $subjectId, $teacher->id, [meeting($day++, '08:00', '09:00')]);
             }
 
-            withGradePeriods(currentTermId(), static function (array $periods) use ($teacher, $classes, $grades, $enrolled): void {
-                Database::query('UPDATE grade_periods SET weight = CASE sequence WHEN 1 THEN 30 WHEN 2 THEN 30 ELSE 40 END WHERE id IN (?, ?, ?)', array_values($periods));
-                foreach (array_values($periods) as $index => $periodId) {
+            // The value each subject gets in period #$index. Outcomes are weight- and
+            // period-count-independent: all passing, all failing, one INC, or one left blank.
+            $valueFor = static fn (string $key, int $index, int $last): string => match ($key) {
+                'fail'    => '5.00',
+                'inc'     => $index === 0 ? 'INC' : '2.00',
+                'partial' => $index === $last ? '' : '2.00',
+                default   => '1.50',
+            };
+
+            withGradePeriods(currentTermId(), static function (array $periods) use ($teacher, $classes, $enrolled, $valueFor): void {
+                $ids = array_values($periods);
+                $last = count($ids) - 1;
+                foreach ($ids as $index => $periodId) {
                     openPeriodForTest((int) $periodId);
                     foreach ($classes as $key => $classId) {
-                        Grading::recordGrades($teacher, $classId, (int) $periodId, [enlistmentIdFor($enrolled['enrollment_id'], $classId) => $grades[$key][$index]]);
+                        Grading::recordGrades($teacher, $classId, (int) $periodId, [enlistmentIdFor($enrolled['enrollment_id'], $classId) => $valueFor($key, $index, $last)]);
                     }
                 }
             });
@@ -66,7 +70,8 @@ return [
             $history = Record::history($enrolled['student_id']);
             $t->assertEquals(1, count($history));
             $t->assertEquals(currentTermId(), (int) $history[0]['term_id']);
-            $t->assertEquals(3, count($history[0]['periods']), 'Prelim, Midterm, Finals');
+            $expectedPeriods = (int) Database::scalar('SELECT COUNT(*) FROM grade_periods WHERE term_id = ?', [currentTermId()]);
+            $t->assertEquals($expectedPeriods, count($history[0]['periods']), 'One history row per grading period');
             $t->assertEquals(1, count($history[0]['classes']));
             $t->assertEquals(1, count($history[0]['classes'][0]['meetings']));
 

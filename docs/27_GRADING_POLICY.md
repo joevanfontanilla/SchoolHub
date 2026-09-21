@@ -19,16 +19,21 @@ accepted and stored as 1.50 and 2.00.
 
 ## Periods and weights
 
-Each term has three grading periods, created by `database/seed.php`, **closed**:
+Each term has four grading periods, created by `database/seed.php`, **closed**:
 
 | Period | Default weight |
 |---|---|
-| Prelim | 30% |
-| Midterm | 30% |
+| Prelim | 20% |
+| Midterm | 20% |
+| Semi-Finals | 20% |
 | Finals | 40% |
 
 The registrar may change a term's weights on **Registrar → Grading periods**. They must
 total exactly 100, and they are **fixed once any grade has been recorded in that term**.
+The number of periods is not hardcoded — `GradeCalculator` weights whatever periods a term
+has — but every term seeded from `GradingService::DEFAULT_PERIODS` gets these four. A term
+that already had grades recorded before Semi-Finals was introduced keeps its original
+three-period scheme, so its past finals never shift (migration 026).
 
 ## The final grade
 
@@ -38,7 +43,7 @@ leave a stale final behind.
 1. If any period is `DRP`, the final is **DRP**.
 2. Otherwise, if any period is `INC`, the final is **INC**.
 3. Otherwise, if any period has no grade yet, the final is blank: **In progress**.
-4. Otherwise it is the weighted average of the three period grades:
+4. Otherwise it is the weighted average of the period grades:
    - an average **above 3.00 is 5.00 (Failed)**. It is never rounded down into a pass;
      3.10 fails.
    - an average of **3.00 or better** is rounded to the nearest 0.25 step. A value exactly
@@ -49,8 +54,8 @@ The average is first rounded to the hundredth (so 3.004 counts as 3.00, and 3.00
 3.01, which fails); the step rounding is then done in whole hundredths, not floating
 point.
 
-Example: Prelim 1.75, Midterm 2.00, Finals 1.50 gives
-0.30 × 1.75 + 0.30 × 2.00 + 0.40 × 1.50 = 1.725, which rounds to **1.75, Passed**.
+Example: Prelim 1.75, Midterm 2.00, Semi-Finals 1.75, Finals 1.50 gives
+0.20 × 1.75 + 0.20 × 2.00 + 0.20 × 1.75 + 0.40 × 1.50 = 1.70, which rounds to **1.75, Passed**.
 
 A class the registrar dropped shows **DRP** as its final, whatever grades it had.
 

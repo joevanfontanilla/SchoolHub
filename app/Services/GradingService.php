@@ -22,7 +22,7 @@ use App\Models\User;
 final class GradingService
 {
     /** The grading periods every term has, closed to start: [name, sequence, default weight]. */
-    public const DEFAULT_PERIODS = [['Prelim', 1, 30], ['Midterm', 2, 30], ['Finals', 3, 40]];
+    public const DEFAULT_PERIODS = [['Prelim', 1, 20], ['Midterm', 2, 20], ['Semi-Finals', 3, 20], ['Finals', 4, 40]];
 
     /**
      * Create the standard closed grading periods for a term, if it has none yet. Used by the

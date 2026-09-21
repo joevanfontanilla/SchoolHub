@@ -47,7 +47,7 @@ return [
             $t->assertEquals('2098-08-01', $terms[0]['start_date']);
             $t->assertEquals('1st Semester', $terms[0]['name']);
             $t->assertTrue($terms[0]['enrollment_opens_at'] !== null, 'The enrollment window is stored');
-            $t->assertEquals(3, (int) Database::scalar('SELECT COUNT(*) FROM grade_periods WHERE term_id = ?', [(int) $terms[0]['id']]), 'Prelim/Midterm/Finals seeded');
+            $t->assertEquals(4, (int) Database::scalar('SELECT COUNT(*) FROM grade_periods WHERE term_id = ?', [(int) $terms[0]['id']]), 'Prelim/Midterm/Semi-Finals/Finals seeded');
             $t->assertEquals('2098-2099', Database::scalar('SELECT code FROM academic_years WHERE id = ?', [(int) $terms[0]['academic_year_id']]));
         } finally {
             deleteFixtureYear($code);

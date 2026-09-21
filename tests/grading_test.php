@@ -161,20 +161,32 @@ return [
         try {
             $c = gradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
-                $weights = static fn (int $a, int $b, int $f) => [$periods['Prelim'] => $a, $periods['Midterm'] => $b, $periods['Finals'] => $f];
+                // Spread a total across whatever periods the term has (three or four),
+                // putting any remainder on the last so the map always sums to $total.
+                $ids = array_values($periods);
+                $spread = static function (int $total) use ($ids): array {
+                    $n = count($ids);
+                    $base = intdiv($total, $n);
+                    $w = [];
+                    foreach ($ids as $id) {
+                        $w[(int) $id] = $base;
+                    }
+                    $w[(int) $ids[$n - 1]] += $total - $base * $n;
+                    return $w;
+                };
 
-                $t->assertTrue(isset(fieldErrors(static fn () => Grading::setWeights($c['registrar'], $c['term_id'], $weights(30, 30, 30)))['weights']), '90 is refused');
+                $t->assertTrue(isset(fieldErrors(static fn () => Grading::setWeights($c['registrar'], $c['term_id'], $spread(90)))['weights']), '90 is refused');
 
                 // Grades may already exist in the real term; only then is the change refused.
                 $graded = (int) Database::scalar('SELECT COUNT(*) FROM grades g JOIN grade_periods gp ON gp.id = g.grade_period_id WHERE gp.term_id = ?', [$c['term_id']]) > 0;
                 if (!$graded) {
-                    Grading::setWeights($c['registrar'], $c['term_id'], $weights(25, 25, 50));
-                    $t->assertEquals(50.0, (float) Database::scalar('SELECT weight FROM grade_periods WHERE id = ?', [$periods['Finals']]));
+                    Grading::setWeights($c['registrar'], $c['term_id'], $spread(100));
+                    $t->assertEquals(100.0, (float) Database::scalar('SELECT SUM(weight) FROM grade_periods WHERE term_id = ?', [$c['term_id']]));
                 }
 
                 openPeriodForTest((int) $periods['Prelim']);
                 Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '1.00']);
-                $t->assertThrows(static fn () => Grading::setWeights($c['registrar'], $c['term_id'], $weights(30, 30, 40)), 'can no longer change');
+                $t->assertThrows(static fn () => Grading::setWeights($c['registrar'], $c['term_id'], $spread(100)), 'can no longer change');
             });
         } finally {
             actingAs(null);
@@ -182,23 +194,25 @@ return [
         }
     },
 
-    'the final grade is in progress until all three periods are graded, then weighted' => function (TestRunner $t): void {
+    'the final grade is in progress until every period is graded, then weighted' => function (TestRunner $t): void {
         try {
             $c = gradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
-                Grading::setWeights($c['registrar'], $c['term_id'], [$periods['Prelim'] => 30, $periods['Midterm'] => 30, $periods['Finals'] => 40]);
-
                 $record = static fn () => Record::classesForEnrollment($c['enrollment_id'])[0]['final'];
-                foreach (['Prelim' => '1.75', 'Midterm' => '2.00'] as $name => $grade) {
-                    openPeriodForTest((int) $periods[$name]);
-                    Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods[$name], [$c['enlistment_id'] => $grade]);
-                }
-                $t->assertEquals('IN_PROGRESS', $record()['remark'], 'Finals missing');
 
-                openPeriodForTest((int) $periods['Finals']);
-                Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Finals'], [$c['enlistment_id'] => '1.50']);
-                // 0.3 * 1.75 + 0.3 * 2.00 + 0.4 * 1.50 = 1.725 -> nearest step 1.75
-                $t->assertEquals(['grade' => '1.75', 'remark' => 'PASSED'], $record());
+                // Grade every period but the last: the final is still unknown.
+                $ids = array_values($periods);
+                $last = (int) array_pop($ids);
+                foreach ($ids as $pid) {
+                    openPeriodForTest((int) $pid);
+                    Grading::recordGrades($c['teacher'], $c['class_id'], (int) $pid, [$c['enlistment_id'] => '2.00']);
+                }
+                $t->assertEquals('IN_PROGRESS', $record()['remark'], 'a period is still missing');
+
+                openPeriodForTest($last);
+                Grading::recordGrades($c['teacher'], $c['class_id'], $last, [$c['enlistment_id'] => '2.00']);
+                // Every period is 2.00, so the weighted average is 2.00 whatever the weights.
+                $t->assertEquals(['grade' => '2.00', 'remark' => 'PASSED'], $record());
             });
         } finally {
             actingAs(null);

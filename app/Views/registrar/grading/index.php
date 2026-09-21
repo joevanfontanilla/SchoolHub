@@ -33,7 +33,7 @@ $weightError = error_for('weights');
     </form>
 
     <?php if ($term === null || $periods === []): ?>
-        <section class="card"><?= component('empty-state', ['title' => 'This term has no grading periods', 'message' => 'Run php database/seed.php to give every term Prelim, Midterm, and Finals.']) ?></section>
+        <section class="card"><?= component('empty-state', ['title' => 'This term has no grading periods', 'message' => 'Run php database/seed.php to give every term Prelim, Midterm, Semi-Finals, and Finals.']) ?></section>
     <?php else: ?>
         <section class="card" aria-labelledby="periods-heading">
             <h3 id="periods-heading" class="border-b border-slate-200 px-5 py-4 text-base"><?= e($term['name']) ?> periods</h3>
