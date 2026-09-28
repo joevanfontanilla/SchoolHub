@@ -188,6 +188,12 @@ an **audit log** entry.
   never both. It runs the same `assertGenuineFile()` upload check, stores under `storage/` with a random
   name, supersedes the old file, serves only through `/account/photo` (404 when none), and audits the change
   by fact only, never the path.
+- **School academic calendar (docs/09).** A published, human-readable calendar of dated activities
+  (semester dates, exam periods) and no-class days, grouped by category under an academic year, shown on
+  the public `/calendar` page and the portal `/portal/calendar`, and edited through `SchoolCalendarService`
+  by anyone holding `calendar.manage` (the **registrar and the Super Admin** by default) at `/manage/calendar`.
+  Dates are free text (`date_label`) because printed calendars use irregular ranges; `sort_date` only orders.
+  This is distinct from `AcademicCalendarService`, which sets a term's enrollment window.
 - **Curricula (docs/28).** Subjects belong to a curriculum; **a subject code is unique within its
   curriculum, not school-wide** (`CORE 1` means different subjects in BSA and BPA), so never
   look a subject up by code alone. A subject's curriculum never changes, and prerequisites
@@ -220,6 +226,11 @@ an **audit log** entry.
   the original). Use the **amount due** (`FinanceService::dueCents()`: total + adjustments), never
   `total_amount` alone, and sum payment amounts **with their sign**. Spreadsheet exports go through
   `CsvExport`, which neutralizes formula cells; exports are audited.
+  **Cash disbursements** (money out) are recorded on numbered vouchers through `DisbursementService`
+  (permission `disbursements.manage`, cashier), append-only like payments — a mistake is fixed with a
+  reversing voucher, never an edit. The **Cash Receipts Journal (CRJ)** and **Cash Disbursements Journal
+  (CDJ)** are read-only cashier reports (screen, print, and audited CSV) that present payments and
+  vouchers in accounting-journal form; there is no general ledger / double-entry.
 - **Communication (docs/16).** Notifications are written with `NotificationService` at the moment of
   the event; links are relative in-app paths, and the inbox (`/portal/notifications`) follows a link
   only through `NotificationService::safeLink()`. Who an announcement reaches is defined **once**, in

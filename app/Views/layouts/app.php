@@ -27,6 +27,7 @@ $portalName = match ($user?->role_name) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? 'Dashboard') ?> · <?= e($schoolName) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
+    <script src="<?= e(asset('assets/theme-init.js')) ?>"></script>
     <link rel="icon" type="image/jpeg" href="<?= e(school_logo_url()) ?>">
 </head>
 <body class="min-h-screen bg-brand-canvas font-sans">
@@ -44,7 +45,7 @@ $portalName = match ($user?->role_name) {
                 <?= $content ?>
             </main>
 
-            <footer class="bg-brand-950 px-4 py-5 text-sm text-white/80 sm:px-6 lg:px-8">
+            <footer class="no-print bg-brand-950 px-4 py-5 text-sm text-white/80 sm:px-6 lg:px-8">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p>
                         <span class="font-display font-semibold uppercase tracking-wide text-white"><?= e($schoolName) ?></span>

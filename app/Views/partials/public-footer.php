@@ -10,7 +10,7 @@
 $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
 $linkClass  = 'text-white/80 hover:text-brand-sky hover:underline';
 ?>
-<footer class="bg-brand-navy text-white">
+<footer class="no-print bg-brand-navy text-white">
     <!-- Stripe band on the white-to-navy seam, so every stripe stays visible. -->
     <div class="brand-stripes" aria-hidden="true"></div>
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">

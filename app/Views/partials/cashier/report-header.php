@@ -9,8 +9,10 @@
 echo partial('report-header', [
     'eyebrow'  => 'Cashier reports',
     'tabs'     => [
-        'collections' => ['/cashier/reports/collections', 'Collections', 'banknotes'],
-        'outstanding' => ['/cashier/reports/outstanding', 'Outstanding balances', 'credit-card'],
+        'collections'   => ['/cashier/reports/collections', 'Collections', 'banknotes'],
+        'outstanding'   => ['/cashier/reports/outstanding', 'Outstanding balances', 'credit-card'],
+        'crj'           => ['/cashier/reports/receipts-journal', 'Cash Receipts Journal', 'receipt'],
+        'cdj'           => ['/cashier/reports/disbursements-journal', 'Cash Disbursements Journal', 'banknotes'],
     ],
     'active'   => $active,
     'heading'  => $heading,

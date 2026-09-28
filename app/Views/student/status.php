@@ -12,7 +12,10 @@
             <p class="eyebrow">Student</p>
             <h2 class="mt-1 text-2xl">Enrollment status</h2>
         </div>
-        <a href="<?= e(url('/student/enrollment/' . $application['id'])) ?>" class="btn-secondary">Open application</a>
+        <div class="flex items-center gap-2">
+            <?= partial('print-button') ?>
+            <a href="<?= e(url('/student/enrollment/' . $application['id'])) ?>" class="btn-secondary">Open application</a>
+        </div>
     </div>
 
     <?= partial('enrollment/overview', ['application' => $application]) ?>

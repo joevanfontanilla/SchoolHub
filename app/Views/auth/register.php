@@ -26,7 +26,10 @@ $schoolName = $school['school_name'] ?? 'the school';
             <?= component('field', ['name' => 'last_name', 'label' => 'Last name', 'required' => true, 'autocomplete' => 'family-name']) ?>
         </div>
 
-        <?= component('field', ['name' => 'middle_name', 'label' => 'Middle name', 'autocomplete' => 'additional-name', 'help' => 'Leave blank if you have none.']) ?>
+        <div class="grid gap-5 sm:grid-cols-2">
+            <?= component('field', ['name' => 'middle_name', 'label' => 'Middle name', 'autocomplete' => 'additional-name', 'help' => 'Leave blank if you have none.']) ?>
+            <?= component('field', ['name' => 'suffix', 'label' => 'Suffix', 'autocomplete' => 'honorific-suffix', 'help' => 'Optional — Jr., Sr., III, etc.']) ?>
+        </div>
 
         <?= component('field', ['name' => 'email', 'label' => 'Email address', 'type' => 'email', 'required' => true, 'autocomplete' => 'email']) ?>
 

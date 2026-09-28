@@ -30,6 +30,7 @@ final class User
     public string $first_name;
     public ?string $middle_name;
     public string $last_name;
+    public ?string $suffix;
     public string $status;
     public bool $must_change_password;
     public int $failed_login_attempts;
@@ -48,6 +49,7 @@ final class User
         $user->first_name            = (string) $row['first_name'];
         $user->middle_name           = $row['middle_name'] !== null ? (string) $row['middle_name'] : null;
         $user->last_name             = (string) $row['last_name'];
+        $user->suffix                = isset($row['suffix']) && $row['suffix'] !== null && $row['suffix'] !== '' ? (string) $row['suffix'] : null;
         $user->status                = (string) $row['status'];
         $user->must_change_password  = (bool) $row['must_change_password'];
         $user->failed_login_attempts = (int) ($row['failed_login_attempts'] ?? 0);
@@ -111,7 +113,7 @@ final class User
 
         return [
             'rows' => Database::select(
-                "SELECT u.id, u.username, u.email, u.first_name, u.middle_name, u.last_name, u.status, u.failed_login_attempts,
+                "SELECT u.id, u.username, u.email, u.first_name, u.middle_name, u.last_name, u.suffix, u.status, u.failed_login_attempts,
                         u.locked_until, u.last_login_at, u.created_at, r.name AS role_name
                    FROM users u JOIN roles r ON r.id = u.role_id
                   WHERE {$sqlWhere}
@@ -134,7 +136,8 @@ final class User
         $middle = $this->middle_name !== null && $this->middle_name !== ''
             ? ' ' . mb_substr($this->middle_name, 0, 1) . '.'
             : '';
-        return $this->first_name . $middle . ' ' . $this->last_name;
+        $suffix = $this->suffix !== null && $this->suffix !== '' ? ' ' . $this->suffix : '';
+        return $this->first_name . $middle . ' ' . $this->last_name . $suffix;
     }
 
     public function initials(): string

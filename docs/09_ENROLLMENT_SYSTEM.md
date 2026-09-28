@@ -118,3 +118,22 @@ enrolls at once) and after every payment. It enrolls only when the application i
 has a section, and meets the payment policy, checking everything **before** writing. If the
 section filled up in the meantime, nothing is written and the registrar is notified to
 confirm into another section by hand (Registrar → application → Confirm enrollment).
+
+## School academic calendar (as built)
+
+Separate from the enrollment window above, the school publishes a human-readable
+**academic calendar** — the printed "Collegiate Academic Calendar" of activities
+(class start, enrolment days, examination periods, Foundation Day) and a "Dates of No
+Classes" list of holidays, grouped by section under an academic year (e.g. A.Y. 2026-2027).
+
+- **Data (`calendar_events`).** `academic_year`, `category` (First Semester, Second
+  Semester, Summer, Dates of No Classes, or any custom section), `date_label` (free text,
+  because printed calendars use ranges like "Aug 17,18,20 & 22, 2026"), `sort_date` (the
+  primary date, used only for ordering), and `activity`.
+- **Reading.** `CalendarEvent` orders categories First Semester → Second Semester → Summer →
+  everything else, then by `sort_date`. Shown on the public **`/calendar`** page and the
+  portal **`/portal/calendar`** page, both rendering the shared `partials/calendar-view.php`.
+- **Editing.** `SchoolCalendarService` (permission `calendar.manage`, held by the **registrar
+  and the Super Admin** by default) creates, updates, and deletes entries at
+  **`/manage/calendar`**; every change is audited (`calendar.event_*`). This is not the same
+  as `AcademicCalendarService`, which sets a term's dates and enrollment window.

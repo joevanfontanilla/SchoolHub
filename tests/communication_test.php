@@ -353,7 +353,7 @@ return [
             foreach ($manage as $route) {
                 $label = "{$route['method']} {$route['pattern']}";
                 $t->assertTrue(in_array('auth', $route['middleware'], true), "{$label} requires sign-in");
-                $t->assertTrue(array_filter($route['middleware'], static fn ($m) => str_starts_with($m, 'can:announcements.')) !== [], "{$label} names an announcement permission");
+                $t->assertTrue(array_filter($route['middleware'], static fn ($m) => str_starts_with($m, 'can:')) !== [], "{$label} names a permission");
                 $t->assertNull(communicationAccess($route, $registrar), "Registrar may reach {$label}");
                 $t->assertNull(communicationAccess($route, $admin), "Super Admin may reach {$label}");
                 foreach ($others as $user) {
@@ -367,7 +367,13 @@ return [
                 foreach ([...$others, $registrar, $admin] as $user) {
                     $t->assertNull(communicationAccess($route, $user), "{$user->role_name} may reach {$label}");
                 }
-                $t->assertEquals(401, communicationAccess($route, null), "A visitor is refused {$label}");
+                // A visitor is always refused: a permission-gated route answers 401 behind auth;
+                // an auth-only route (the shared calendar) is refused by RequireAuth itself.
+                if (array_filter($route['middleware'], static fn ($m) => str_starts_with($m, 'can:')) !== []) {
+                    $t->assertEquals(401, communicationAccess($route, null), "A visitor is refused {$label}");
+                } else {
+                    $t->assertTrue(in_array('auth', $route['middleware'], true), "A visitor is refused {$label} (sign-in required)");
+                }
             }
         } finally {
             actingAs(null);

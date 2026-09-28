@@ -55,6 +55,7 @@ const PERMISSIONS = [
     'academic.credit'     => ['academic', 'Credit subjects to a student (transfer credit)'],
     'credentials.manage'  => ['students', 'Process student document requests (TOR, Good Moral, COE)'],
     'grade_periods.manage' => ['academic', 'Open and close grading periods'],
+    'calendar.manage'     => ['academic', 'Manage the school academic calendar'],
     'announcements.manage' => ['communication', 'Create and edit announcements'],
     'announcements.publish' => ['communication', 'Publish announcements'],
     'reports.registrar'   => ['reports', 'Generate registrar reports'],
@@ -62,6 +63,7 @@ const PERMISSIONS = [
     // Cashier
     'fees.manage'         => ['finance', 'Assess and maintain fees'],
     'payments.record'     => ['finance', 'Record payments'],
+    'disbursements.manage' => ['finance', 'Record cash disbursements (vouchers)'],
     'receipts.issue'      => ['finance', 'Issue receipts'],
     'reports.cashier'     => ['reports', 'Generate collection reports'],
 
@@ -89,12 +91,12 @@ const ROLE_PERMISSIONS = [
         'students.view', 'students.manage', 'enrollment.view', 'enrollment.review',
         'enrollment.approve', 'enrollment.confirm', 'requirements.verify',
         'academic.manage', 'academic.assign', 'academic.credit', 'grade_periods.manage',
-        'credentials.manage', 'announcements.view', 'announcements.manage', 'announcements.publish',
+        'calendar.manage', 'credentials.manage', 'announcements.view', 'announcements.manage', 'announcements.publish',
         'reports.registrar', 'notifications.view',
     ],
     User::ROLE_CASHIER => [
         'finance.view_account', 'fees.manage', 'payments.record', 'payments.view',
-        'receipts.issue', 'reports.cashier', 'announcements.view', 'notifications.view',
+        'disbursements.manage', 'receipts.issue', 'reports.cashier', 'announcements.view', 'notifications.view',
     ],
     // Super Admin is intentionally empty — Auth::can() grants it everything.
     User::ROLE_SUPER_ADMIN => [],

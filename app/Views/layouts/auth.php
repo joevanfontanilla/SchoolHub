@@ -16,6 +16,7 @@ $wide ??= false;
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? 'Sign in') ?> · <?= e($schoolName) ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
+    <script src="<?= e(asset('assets/theme-init.js')) ?>"></script>
     <link rel="icon" type="image/jpeg" href="<?= e(school_logo_url()) ?>">
 </head>
 <body class="hero-backdrop min-h-screen font-sans">

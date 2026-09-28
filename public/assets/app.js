@@ -10,6 +10,47 @@
 (function () {
     'use strict';
 
+    /* Colour theme toggle. theme-init.js already set the class before paint;
+       here we wire the buttons and follow the device when nothing is remembered. */
+    (function () {
+        var root = document.documentElement;
+
+        function isDark() { return root.classList.contains('dark'); }
+
+        function reflect() {
+            var dark = isDark();
+            document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+                button.setAttribute('aria-pressed', String(dark));
+                var label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+                button.setAttribute('aria-label', label);
+                button.setAttribute('title', label);
+            });
+        }
+
+        document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var next = !isDark();
+                root.classList.toggle('dark', next);
+                try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch (e) {}
+                reflect();
+            });
+        });
+
+        // Follow the OS setting live, but only while the user hasn't chosen one.
+        if (window.matchMedia) {
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            var onChange = function (e) {
+                var saved;
+                try { saved = localStorage.getItem('theme'); } catch (err) { saved = null; }
+                if (!saved) { root.classList.toggle('dark', e.matches); reflect(); }
+            };
+            if (mq.addEventListener) { mq.addEventListener('change', onChange); }
+            else if (mq.addListener) { mq.addListener(onChange); }
+        }
+
+        reflect();
+    })();
+
     /** Toggle a panel by id, keeping aria-expanded in sync. */
     function bindToggle(button, panel, onToggle) {
         if (!button || !panel) {

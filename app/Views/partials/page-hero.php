@@ -13,7 +13,7 @@
 $tabs = $tabs ?? [];
 $breadcrumbs = $breadcrumbs ?? [];
 ?>
-<section class="relative -mx-4 -mt-6 mb-6 overflow-hidden border-b border-brand-100 bg-gradient-to-r from-white via-white to-brand-50 sm:-mx-6 lg:-mx-8">
+<section class="page-hero relative -mx-4 -mt-6 mb-6 overflow-hidden border-b border-brand-100 bg-gradient-to-r from-white via-white to-brand-50 sm:-mx-6 lg:-mx-8">
     <img src="<?= e(asset('assets/images/campus.jpg')) ?>" alt=""
          class="photo-fade pointer-events-none absolute inset-y-0 right-0 hidden h-full w-[48%] object-cover lg:block">
 
@@ -44,6 +44,10 @@ $breadcrumbs = $breadcrumbs ?? [];
                 <p class="tagline mt-3"><?= e($tagline) ?></p>
             <?php endif; ?>
         </div>
+
+        <?php if (!empty($print)): ?>
+            <div class="no-print -mt-2 pb-5"><?= partial('print-button') ?></div>
+        <?php endif; ?>
 
         <?php if ($tabs !== []): ?>
             <nav aria-label="Sections" class="-mb-px flex overflow-x-auto">

@@ -41,6 +41,113 @@
 @tailwind utilities;
 
 /*
+ * Theme tokens. Every colour in tailwind.config.js resolves to one of these
+ * "R G B" channel variables, so the whole app recolours by flipping the .dark
+ * class on <html> (set before paint by public/assets/theme-init.js). :root is
+ * the lightened light theme; .dark is the navy-tinted dark theme.
+ */
+:root {
+    color-scheme: light;
+
+    --brand-50: 234 246 255;
+    --brand-100: 211 236 250;
+    --brand-200: 179 223 245;
+    --brand-300: 138 205 238;
+    --brand-400: 46 154 214;
+    --brand-500: 38 138 194;
+    --brand-600: 30 123 174;
+    --brand-700: 24 100 144;
+    --brand-800: 19 78 112;
+    --brand-900: 15 76 92;
+    --brand-950: 10 54 66;
+    --brand-primary: 46 154 214;
+    --brand-navy: 15 76 92;
+    --brand-teal: 126 208 138;
+    --brand-mint: 232 246 237;
+    --brand-sky: 179 223 245;
+    --brand-pale: 234 246 255;
+    --brand-gray: 107 114 128;
+    --brand-alert: 230 57 70;
+    --brand-warning: 255 201 71;
+    --brand-canvas: 246 250 253;
+
+    --slate-50: 248 250 252;
+    --slate-100: 241 245 249;
+    --slate-200: 226 232 240;
+    --slate-300: 203 213 225;
+    --slate-400: 148 163 184;
+    --slate-500: 100 116 139;
+    --slate-600: 71 85 105;
+    --slate-700: 51 65 85;
+    --slate-800: 30 41 59;
+    --slate-900: 15 23 42;
+
+    --success-bg: 232 246 237;
+    --success-text: 27 107 54;
+    --success-line: 126 208 138;
+    --warning-bg: 255 246 224;
+    --warning-text: 138 91 0;
+    --warning-line: 255 201 71;
+    --danger-bg: 253 236 238;
+    --danger-text: 176 27 40;
+    --danger-line: 230 57 70;
+
+    /* Semantic surfaces used by component overrides. */
+    --surface: 255 255 255;    /* cards, panels, bg-white */
+    --surface-2: 248 250 252;  /* subtle inset panels */
+}
+
+.dark {
+    color-scheme: dark;
+
+    --brand-50: 21 48 60;
+    --brand-100: 27 58 72;
+    --brand-200: 36 71 90;
+    --brand-300: 74 138 170;
+    --brand-400: 56 168 224;
+    --brand-500: 66 176 232;
+    --brand-600: 96 188 240;   /* links / accents: bright on dark */
+    --brand-700: 30 123 174;   /* primary button fill: white text passes AA */
+    --brand-800: 20 92 132;
+    --brand-900: 214 232 244;  /* was navy heading text: light on dark */
+    --brand-950: 8 40 50;
+    --brand-primary: 56 168 224;
+    --brand-navy: 214 232 244;
+    --brand-teal: 143 217 154;
+    --brand-mint: 22 46 38;
+    --brand-sky: 36 71 90;
+    --brand-pale: 21 48 60;
+    --brand-gray: 154 166 181;
+    --brand-alert: 244 96 107;
+    --brand-warning: 255 210 122;
+    --brand-canvas: 11 23 32;
+
+    --slate-50: 22 42 54;
+    --slate-100: 28 50 62;
+    --slate-200: 42 60 74;
+    --slate-300: 54 74 90;
+    --slate-400: 124 140 158;
+    --slate-500: 148 163 184;
+    --slate-600: 176 189 204;
+    --slate-700: 203 213 225;
+    --slate-800: 226 232 240;
+    --slate-900: 241 245 249;
+
+    --success-bg: 19 41 28;
+    --success-text: 127 209 143;
+    --success-line: 46 125 70;
+    --warning-bg: 42 33 16;
+    --warning-text: 255 210 122;
+    --warning-line: 184 134 11;
+    --danger-bg: 42 20 22;
+    --danger-text: 244 131 140;
+    --danger-line: 230 57 70;
+
+    --surface: 16 33 44;
+    --surface-2: 22 42 54;
+}
+
+/*
  * Lyceum of the East Aurora design tokens.
  *
  * The palette lives in tailwind.config.js; this file turns it into the small
@@ -66,7 +173,8 @@
     }
 
     body {
-        @apply bg-white font-sans text-slate-700 antialiased;
+        @apply font-sans text-slate-700 antialiased;
+        background-color: rgb(var(--surface));
     }
 
     /* A visible focus ring on every interactive element — keyboard users must
@@ -266,7 +374,99 @@
     .swatch-sky     { @apply bg-brand-sky text-brand-navy; }
 }
 
+/*
+ * Dark-theme fixes for the few places a light colour is baked into a component
+ * or a literal utility (everything else recolours through the tokens above).
+ */
+.dark .bg-white,
+.dark .bg-white\/95,
+.dark .bg-white\/85,
+.dark .lg\:bg-white\/85 {
+    background-color: rgb(var(--surface));
+}
+.dark .hover\:bg-white:hover { background-color: rgb(var(--surface-2)); }
+
+.dark .card,
+.dark .preview-dialog,
+.dark .confirm-dialog,
+.dark .preview-frame {
+    background-color: rgb(var(--surface));
+}
+.dark .card { border-color: rgb(var(--slate-200)); }
+
+.dark .btn-secondary {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--brand-navy));
+    border-color: rgb(var(--brand-200));
+}
+.dark .btn-secondary:hover { background-color: rgb(var(--brand-50)); }
+
+.dark .btn-primary { background-color: rgb(var(--brand-700)); }
+.dark .btn-primary:hover { background-color: rgb(var(--brand-800)); }
+
+.dark .field-input {
+    background-color: rgb(var(--surface-2));
+    color: rgb(var(--slate-900));
+    border-color: rgb(var(--slate-300));
+}
+
+/* Navy is a light text colour in dark mode, so keep it a solid dark fill wherever
+   it is used as a background (sidebar, swatches, bands). */
+.dark .bg-brand-navy,
+.dark .bg-brand-900,
+.dark .swatch-navy { background-color: #0F4C5C; }
+.dark .bg-brand-950 { background-color: #082832; }
+.dark .swatch-navy { color: #fff; }
+
+/* Light hero backdrop → dark. */
+.dark .hero-backdrop {
+    background-image:
+        radial-gradient(ellipse at 15% 20%, rgba(46, 154, 214, 0.10) 0%, rgba(0, 0, 0, 0) 55%),
+        linear-gradient(120deg, #0B1720 0%, #10212C 55%, #0B1720 100%);
+}
+
+/* Portal page header (partials/page-hero.php): its light gradient and bright campus
+   photo become a dark wash so the (now light) heading reads. */
+.dark .page-hero {
+    background-image: linear-gradient(to right, rgb(var(--surface)) 0%, rgb(var(--surface)) 42%, rgb(var(--brand-50)) 100%);
+    border-color: rgb(var(--brand-100));
+}
+.dark .page-hero img { opacity: 0.22; }
+
 @media print {
-    .no-print { display: none !important; }
-    body { @apply bg-white; }
+    /* Always print on the light theme, whatever is shown on screen. */
+    :root, .dark {
+        --surface: 255 255 255;
+        --surface-2: 248 250 252;
+        --slate-400: 148 163 184;
+        --slate-500: 100 116 139;
+        --slate-600: 71 85 105;
+        --slate-700: 51 65 85;
+        --slate-800: 30 41 59;
+        --slate-900: 15 23 42;
+        --brand-navy: 15 76 92;
+        --brand-900: 15 76 92;
+        --brand-600: 30 123 174;
+        --brand-50: 234 246 255;
+        --brand-100: 211 236 250;
+        --brand-200: 179 223 245;
+    }
+
+    /* Hide the app shell: sidebar, top bar, footer, and anything marked no-print. */
+    .no-print,
+    #app-sidebar,
+    #sidebar-backdrop { display: none !important; }
+
+    body { background: #fff !important; }
+    #main { padding: 0 !important; }
+
+    .card,
+    .dark .card { box-shadow: none !important; border: 1px solid rgb(203 213 225) !important; }
+
+    /* The portal header hero prints as a plain heading — no photo, no tint. */
+    .page-hero,
+    .dark .page-hero { background: #fff !important; background-image: none !important; }
+    .page-hero img { display: none !important; }
+    .hero-backdrop,
+    .dark .hero-backdrop { background: #fff !important; background-image: none !important; }
 }

@@ -22,6 +22,7 @@ $tabLabels = ['grades' => 'Grades', 'schedule' => 'Class Schedule', 'attendance'
     'tagline'     => $school['school_tagline'] ?? null,
     'breadcrumbs' => [['Home', '/student/dashboard'], ['Academic Records', null], [$tabLabels[$tab], null]],
     'tabs'        => $tabs,
+    'print'       => true,
 ]) ?>
 
 <?php if ($tab !== 'history'): ?>

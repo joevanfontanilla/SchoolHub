@@ -39,6 +39,7 @@ Super Admin implicitly holds every permission and needs no rows here.
 | `email` | VARCHAR(150) | unique |
 | `password_hash` | VARCHAR(255) | `password_hash()` output — **never** plaintext |
 | `first_name`, `middle_name`, `last_name` | VARCHAR(100) | middle nullable |
+| `suffix` | VARCHAR(20) | nullable — optional name suffix (Jr., Sr., III, …); shown after the last name in `User::fullName()` |
 | `status` | VARCHAR(20) | `Pending`, `Active`, `Disabled`, `Locked` |
 | `must_change_password` | TINYINT(1) | default 0 |
 | `avatar_path` | VARCHAR(255) | nullable — a non-student's profile photo, under `storage/`, never web-reachable (a student's photo is on `student_profiles.photo_path`); see `AvatarService`, docs/08 |

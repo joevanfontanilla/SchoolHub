@@ -30,6 +30,9 @@ $action = $editing ? '/admin/users/' . $account->id . '/edit' : '/admin/users/cr
             <?= component('field', ['name' => 'middle_name', 'label' => 'Middle name', 'value' => $val('middle_name'), 'autocomplete' => 'off']) ?>
             <?= component('field', ['name' => 'last_name', 'label' => 'Last name', 'required' => true, 'value' => $val('last_name'), 'autocomplete' => 'off']) ?>
         </div>
+        <div class="sm:max-w-[14rem]">
+            <?= component('field', ['name' => 'suffix', 'label' => 'Suffix', 'value' => $val('suffix'), 'autocomplete' => 'honorific-suffix', 'help' => 'Optional — Jr., Sr., III, etc.']) ?>
+        </div>
         <div class="grid gap-5 sm:grid-cols-2">
             <?= component('field', ['name' => 'username', 'label' => 'Username', 'required' => true, 'value' => $val('username'), 'autocomplete' => 'off', 'help' => 'Letters, numbers, dots, dashes, underscores.']) ?>
             <?= component('field', ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'required' => true, 'value' => $val('email'), 'autocomplete' => 'off']) ?>

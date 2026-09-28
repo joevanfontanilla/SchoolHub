@@ -361,6 +361,7 @@ try {
         '/student/enrollment/apply'            => [302],
         '/registrar/applications/{id}/confirm' => [302],
         '/downloads/{id}'                      => [404],
+        '/cashier/disbursements/{id}/voucher'  => [404],
         '/branding/logo'                       => [302],
         // A student with no application is sent to the application form.
         '/student/requirements'                => [302],

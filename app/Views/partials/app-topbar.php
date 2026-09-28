@@ -24,7 +24,7 @@ $recent = $portal['recent'] ?? [];
 };
 $destinations = portal_destinations($user?->role_name);
 ?>
-<header class="sticky top-0 z-20 border-b border-brand-100 bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+<header class="no-print sticky top-0 z-20 border-b border-brand-100 bg-white/95 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
     <div class="flex items-center gap-3 sm:gap-4">
         <button type="button"
                 class="rounded-lg p-2 text-brand-navy hover:bg-brand-50 lg:hidden"
@@ -70,6 +70,13 @@ $destinations = portal_destinations($user?->role_name);
 
         <?php if ($user !== null): ?>
             <div class="ml-auto flex items-center gap-2 sm:gap-4">
+                <button type="button" data-theme-toggle aria-pressed="false"
+                        aria-label="Switch to dark mode" title="Switch to dark mode"
+                        class="rounded-full p-2 text-brand-600 hover:bg-brand-50">
+                    <span class="sr-only">Toggle dark mode</span>
+                    <svg class="h-7 w-7 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>
+                    <svg class="hidden h-7 w-7 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
+                </button>
                 <details class="relative" data-dropdown>
                     <summary class="relative flex cursor-pointer list-none rounded-full p-2 text-brand-600 hover:bg-brand-50 [&::-webkit-details-marker]:hidden">
                         <?= icon('bell', 'h-7 w-7') ?>

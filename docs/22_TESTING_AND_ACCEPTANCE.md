@@ -25,16 +25,16 @@ A hand-written runner: each `tests/*_test.php` returns `'description' => callabl
 test passes if it throws nothing. Tests use the real database with fixtures that are
 always removed (`__test_` usernames, `ZZT` catalog codes; see `CLAUDE.md`).
 
-**286 tests in 41 files**:
+**295 tests in 43 files**:
 
 | Area | Files (tests) |
 |---|---|
 | Authentication and sessions | `auth` (13), `csrf` (6), `rbac` (7), `registration` (7), `validation` (13) |
 | Enrollment | `enrollment_application` (12), `enrollment_status` (10), `enrollment_flow` (9), `enrollment_confirmation` (8) |
 | Documents | `upload` (11), `document_access` (5), `requirement_review` (8), `documents` (4), `profile_photo` (5), `avatar` (4), `cor` (2) |
-| Registrar | `registrar_access` (5), `registrar_decisions` (6), `academic_catalog` (8), `curriculum` (11), `academic_calendar` (4), `credited_subject` (4), `credential_request` (4) |
+| Registrar | `registrar_access` (5), `registrar_decisions` (6), `academic_catalog` (8), `curriculum` (11), `academic_calendar` (4), `credited_subject` (4), `credential_request` (4), `calendar` (4) |
 | Academic | `class_schedule` (9), `enlistment` (7), `grade_calculator` (11), `grading` (7), `attendance` (3), `academic_record` (2), `teacher_access` (5) |
-| Finance | `finance` (12) |
+| Finance | `finance` (12), `disbursement` (4) |
 | Communication | `communication` (8), `class_announcement` (4) |
 | Administration | `admin` (11) |
 | Reports | `reports` (7), `admin_reports` (6) |

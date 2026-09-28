@@ -59,6 +59,25 @@ return [
         }
     },
 
+    'the name suffix is optional: stored when given, blank becomes null, and shows in the full name' => function (TestRunner $t): void {
+        try {
+            $withSuffix = RegistrationService::register(registrationInput(['middle_name' => 'Dizon', 'suffix' => 'Jr.']), registrationIp(), 'test');
+            $t->assertEquals('Jr.', $withSuffix->suffix);
+            $t->assertEquals('Juan D. Dela Cruz Jr.', $withSuffix->fullName(), 'The suffix follows the last name');
+            actingAs(null);
+
+            $withMiddle = RegistrationService::register(registrationInput(['middle_name' => 'Dizon']), registrationIp(), 'test');
+            $t->assertNull($withMiddle->suffix, 'No suffix given stays null');
+            actingAs(null);
+
+            $blank = RegistrationService::register(registrationInput(['suffix' => '   ']), registrationIp(), 'test');
+            $t->assertNull($blank->suffix, 'A blank suffix is stored as null, not an empty string');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
     'a duplicate email is rejected' => function (TestRunner $t): void {
         try {
             $input = registrationInput();

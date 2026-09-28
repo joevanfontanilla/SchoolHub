@@ -29,12 +29,15 @@ use App\Controllers\Cashier\DashboardController as CashierDashboard;
 use App\Controllers\Cashier\FeeController as CashierFees;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
 use App\Controllers\Cashier\ReportController as CashierReports;
+use App\Controllers\Cashier\DisbursementController as CashierDisbursements;
 use App\Controllers\FinanceDocumentController;
 use App\Controllers\Manage\AnnouncementController as ManageAnnouncements;
 use App\Controllers\Portal\AnnouncementController as PortalAnnouncements;
 use App\Controllers\Portal\NotificationController as PortalNotifications;
 use App\Controllers\Student\AccountController as StudentAccount;
 use App\Controllers\PublicController;
+use App\Controllers\CalendarController;
+use App\Controllers\Manage\CalendarController as ManageCalendar;
 use App\Controllers\Registrar\DashboardController as RegistrarDashboard;
 use App\Controllers\DocumentController;
 use App\Controllers\RegisterController;
@@ -73,6 +76,7 @@ $router->get('/announcements', [PublicController::class, 'announcements'], [], '
 $router->get('/announcements/{slug}', [PublicController::class, 'announcement'], [], 'announcement');
 $router->get('/downloads',     [PublicController::class, 'downloads'],     [], 'downloads');
 $router->get('/contact',       [PublicController::class, 'contact'],       [], 'contact');
+$router->get('/calendar',      [CalendarController::class, 'show'],        [], 'calendar');
 
 // ---------------------------------------------------------------------------
 // Authentication (docs/07)
@@ -85,6 +89,7 @@ $router->get('/password/change',  [AuthController::class, 'showChangePassword'],
 $router->post('/password/change', [AuthController::class, 'changePassword'],     ['auth']);
 
 // My Account: profile photo and password, for every signed-in role.
+$router->get('/portal/calendar', [CalendarController::class, 'portal'],  ['auth'], 'portal.calendar');
 $router->get('/account',        [AccountController::class, 'show'],      ['auth'], 'account');
 $router->post('/account/photo', [AccountController::class, 'savePhoto'], ['auth']);
 $router->get('/account/photo',  [AccountController::class, 'photo'],     ['auth'], 'account.photo');
@@ -239,6 +244,18 @@ $router->get('/cashier/reports/collections/export',  [CashierReports::class, 'co
 $router->get('/cashier/reports/outstanding',         [CashierReports::class, 'outstanding'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/outstanding/print',   [CashierReports::class, 'outstandingPrint'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/outstanding/export',  [CashierReports::class, 'outstandingExport'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/receipts-journal',        [CashierReports::class, 'receiptsJournal'],      $cashier('reports.cashier'), 'cashier.crj');
+$router->get('/cashier/reports/receipts-journal/print',  [CashierReports::class, 'receiptsJournalPrint'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/receipts-journal/export', [CashierReports::class, 'receiptsJournalExport'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/disbursements-journal',        [CashierReports::class, 'disbursementsJournal'],      $cashier('reports.cashier'), 'cashier.cdj');
+$router->get('/cashier/reports/disbursements-journal/print',  [CashierReports::class, 'disbursementsJournalPrint'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/disbursements-journal/export', [CashierReports::class, 'disbursementsJournalExport'], $cashier('reports.cashier'));
+
+// Cash disbursements: the cashier records money paid out on vouchers (docs/14).
+$router->get('/cashier/disbursements',               [CashierDisbursements::class, 'index'],   $cashier('disbursements.manage'), 'cashier.disbursements');
+$router->get('/cashier/disbursements/create',        [CashierDisbursements::class, 'create'],  $cashier('disbursements.manage'));
+$router->post('/cashier/disbursements',              [CashierDisbursements::class, 'store'],   $cashier('disbursements.manage'));
+$router->get('/cashier/disbursements/{id}/voucher',  [CashierDisbursements::class, 'voucher'], $cashier('disbursements.manage'));
 
 $router->get('/cashier/fees',            [CashierFees::class, 'index'],  $cashier('fees.manage'), 'cashier.fees');
 $router->get('/cashier/fees/create',     [CashierFees::class, 'create'], $cashier('fees.manage'));
@@ -279,6 +296,12 @@ $router->post('/manage/announcements/{id}/edit',   [ManageAnnouncements::class, 
 $router->post('/manage/announcements/{id}/archive', [ManageAnnouncements::class, 'archive'], ['auth', 'can:announcements.publish']);
 $router->post('/manage/announcements/{id}/restore', [ManageAnnouncements::class, 'restore'], ['auth', 'can:announcements.manage']);
 $router->post('/manage/announcements/{id}/delete', [ManageAnnouncements::class, 'destroy'], ['auth', 'can:announcements.manage']);
+
+// School academic calendar: maintained by the registrar and the Super Admin (docs/09).
+$router->get('/manage/calendar',             [ManageCalendar::class, 'index'],   ['auth', 'can:calendar.manage'], 'manage.calendar');
+$router->post('/manage/calendar',            [ManageCalendar::class, 'store'],   ['auth', 'can:calendar.manage']);
+$router->post('/manage/calendar/{id}',       [ManageCalendar::class, 'update'],  ['auth', 'can:calendar.manage']);
+$router->post('/manage/calendar/{id}/delete', [ManageCalendar::class, 'destroy'], ['auth', 'can:calendar.manage']);
 
 // ---------------------------------------------------------------------------
 // Teacher (Phase 4)

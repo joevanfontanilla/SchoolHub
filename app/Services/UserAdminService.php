@@ -41,6 +41,7 @@ final class UserAdminService
             'first_name'  => 'required|max:100',
             'middle_name' => 'nullable|max:100',
             'last_name'   => 'required|max:100',
+            'suffix'      => 'nullable|max:20',
             'username'    => 'required|min:3|max:50|alpha_dash|unique:users,username',
             'email'       => 'required|email|max:150|unique:users,email',
             'role'        => 'required|in:' . implode(',', self::STAFF_ROLES),
@@ -59,6 +60,7 @@ final class UserAdminService
                 'first_name'           => $input['first_name'],
                 'middle_name'          => $input['middle_name'] !== '' ? $input['middle_name'] : null,
                 'last_name'            => $input['last_name'],
+                'suffix'               => $input['suffix'] !== '' ? $input['suffix'] : null,
                 'status'               => User::STATUS_PENDING,
                 'must_change_password' => 0,
             ]);
@@ -82,6 +84,7 @@ final class UserAdminService
             'first_name'  => 'required|max:100',
             'middle_name' => 'nullable|max:100',
             'last_name'   => 'required|max:100',
+            'suffix'      => 'nullable|max:20',
             'username'    => 'required|min:3|max:50|alpha_dash',
             'email'       => 'required|email|max:150',
         ]);
@@ -103,8 +106,8 @@ final class UserAdminService
         }
 
         Database::transaction(static function () use ($admin, $user, $input, $newRole): void {
-            $before = ['first_name' => $user->first_name, 'middle_name' => $user->middle_name, 'last_name' => $user->last_name, 'username' => $user->username, 'email' => $user->email];
-            $after = ['first_name' => $input['first_name'], 'middle_name' => $input['middle_name'] !== '' ? $input['middle_name'] : null, 'last_name' => $input['last_name'], 'username' => $input['username'], 'email' => $input['email']];
+            $before = ['first_name' => $user->first_name, 'middle_name' => $user->middle_name, 'last_name' => $user->last_name, 'suffix' => $user->suffix, 'username' => $user->username, 'email' => $user->email];
+            $after = ['first_name' => $input['first_name'], 'middle_name' => $input['middle_name'] !== '' ? $input['middle_name'] : null, 'last_name' => $input['last_name'], 'suffix' => $input['suffix'] !== '' ? $input['suffix'] : null, 'username' => $input['username'], 'email' => $input['email']];
             $changed = array_keys(array_diff_assoc(array_map('strval', $after), array_map('strval', $before)));
 
             if ($changed !== []) {
@@ -247,6 +250,7 @@ final class UserAdminService
             'first_name'  => trim((string) ($input['first_name'] ?? '')),
             'middle_name' => trim((string) ($input['middle_name'] ?? '')),
             'last_name'   => trim((string) ($input['last_name'] ?? '')),
+            'suffix'      => trim((string) ($input['suffix'] ?? '')),
             'username'    => trim((string) ($input['username'] ?? '')),
             'email'       => strtolower(trim((string) ($input['email'] ?? ''))),
             'role'        => trim((string) ($input['role'] ?? '')),

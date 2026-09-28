@@ -10,6 +10,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Core\View;
 use App\Models\Catalog;
+use App\Models\DisbursementVoucher;
 use App\Models\FinanceReport;
 use App\Models\Program;
 use App\Models\SystemSetting;
@@ -151,6 +152,115 @@ final class ReportController extends Controller
                 $row['payment_status'],
                 $row['enrollment_state'],
                 $row['last_payment_at'] ?? '',
+            ], $report['rows'])
+        );
+    }
+
+    // -- Cash Receipts Journal (CRJ) -------------------------------------------
+
+    public function receiptsJournal(Request $request): void
+    {
+        [$from, $to, $error] = $this->range($request);
+        $report = FinanceReport::collections($from, $to);
+        $pages = max(1, (int) ceil(count($report['rows']) / self::PER_PAGE));
+        $page = min($pages, max(1, (int) $request->input('page', 1)));
+        $this->appView('cashier/reports/receipts-journal', [
+            'title'  => 'Cash Receipts Journal',
+            'from'   => $from,
+            'to'     => $to,
+            'error'  => $error,
+            'report' => $report,
+            'rows'   => array_slice($report['rows'], ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            'page'   => $page,
+            'pages'  => $pages,
+        ]);
+    }
+
+    public function receiptsJournalPrint(Request $request): void
+    {
+        [$from, $to] = $this->range($request);
+        $this->printView('print/receipts-journal', [
+            'title'  => 'Cash Receipts Journal ' . $from . ' to ' . $to,
+            'from'   => $from,
+            'to'     => $to,
+            'report' => FinanceReport::collections($from, $to),
+            'back'   => '/cashier/reports/receipts-journal?' . http_build_query(['from' => $from, 'to' => $to]),
+        ]);
+    }
+
+    public function receiptsJournalExport(Request $request): void
+    {
+        [$from, $to] = $this->range($request);
+        $report = FinanceReport::collections($from, $to);
+        AuditService::log('reports.exported', 'reports', null, null, null, [
+            'report' => 'cash-receipts-journal', 'from' => $from, 'to' => $to, 'rows' => count($report['rows']),
+        ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
+
+        CsvExport::send("cash-receipts-journal-{$from}-to-{$to}.csv",
+            ['Date', 'OR No.', 'Payor', 'Student No.', 'Particulars', 'Method', 'Reference', 'Amount'],
+            array_map(static fn (array $row): array => [
+                dt($row['paid_at'], 'Y-m-d'),
+                $row['reversed_payment_id'] !== null ? '(reversal)' : ($row['receipt_number'] ?? ''),
+                $row['last_name'] . ', ' . $row['first_name'],
+                $row['student_number'] ?? '',
+                $row['reversed_payment_id'] !== null ? 'Reversal of ' . $row['reversed_receipt_number'] : ('Payment · ' . $row['assessment_number']),
+                $row['payment_method'],
+                $row['reference_number'] ?? '',
+                FinanceService::signedMoney(FinanceService::signedCents($row['amount'])),
+            ], $report['rows'])
+        );
+    }
+
+    // -- Cash Disbursements Journal (CDJ) --------------------------------------
+
+    public function disbursementsJournal(Request $request): void
+    {
+        [$from, $to, $error] = $this->range($request);
+        $report = DisbursementVoucher::journal($from, $to);
+        $pages = max(1, (int) ceil(count($report['rows']) / self::PER_PAGE));
+        $page = min($pages, max(1, (int) $request->input('page', 1)));
+        $this->appView('cashier/reports/disbursements-journal', [
+            'title'  => 'Cash Disbursements Journal',
+            'from'   => $from,
+            'to'     => $to,
+            'error'  => $error,
+            'report' => $report,
+            'rows'   => array_slice($report['rows'], ($page - 1) * self::PER_PAGE, self::PER_PAGE),
+            'page'   => $page,
+            'pages'  => $pages,
+        ]);
+    }
+
+    public function disbursementsJournalPrint(Request $request): void
+    {
+        [$from, $to] = $this->range($request);
+        $this->printView('print/disbursements-journal', [
+            'title'  => 'Cash Disbursements Journal ' . $from . ' to ' . $to,
+            'from'   => $from,
+            'to'     => $to,
+            'report' => DisbursementVoucher::journal($from, $to),
+            'back'   => '/cashier/reports/disbursements-journal?' . http_build_query(['from' => $from, 'to' => $to]),
+        ]);
+    }
+
+    public function disbursementsJournalExport(Request $request): void
+    {
+        [$from, $to] = $this->range($request);
+        $report = DisbursementVoucher::journal($from, $to);
+        AuditService::log('reports.exported', 'reports', null, null, null, [
+            'report' => 'cash-disbursements-journal', 'from' => $from, 'to' => $to, 'rows' => count($report['rows']),
+        ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
+
+        CsvExport::send("cash-disbursements-journal-{$from}-to-{$to}.csv",
+            ['Date', 'Voucher No.', 'Payee', 'Particulars', 'Method', 'Reference', 'Amount'],
+            array_map(static fn (array $row): array => [
+                dt($row['disbursed_at'], 'Y-m-d'),
+                $row['voucher_number'],
+                $row['payee'],
+                $row['particulars'],
+                $row['payment_method'],
+                $row['reference_number'] ?? '',
+                money($row['amount']),
             ], $report['rows'])
         );
     }

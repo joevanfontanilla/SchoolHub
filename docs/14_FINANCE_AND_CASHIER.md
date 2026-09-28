@@ -125,3 +125,27 @@ page and outstanding-balances report), and every active Registrar and Cashier is
 Refunds (money paid beyond the amount due), installment schedules, a second approval for
 large adjustments, and a real payment gateway (which needs a merchant account and the
 school's authorization to add an external service).
+
+## Cash disbursements and the journals (as built)
+
+The receipts side of the accounting cycle already existed: a student pays, the cashier records
+the payment and an **Official Receipt** is issued. Two additions complete the cashier's books.
+
+- **Cash Receipts Journal (CRJ).** A read-only report (`/cashier/reports/receipts-journal`) that
+  lists official receipts over a date range in journal form — Date, OR No., Payor, Particulars,
+  Method, Amount — with a printable page and an audited CSV export. It reads the same payment data
+  as the Collections report.
+- **Cash disbursements.** Money paid out is recorded on a numbered **voucher** through
+  `DisbursementService::record()` (permission `disbursements.manage`, cashier) at
+  `/cashier/disbursements`: payee, particulars, amount (whole centavos), method, optional reference,
+  and date. A voucher number (`DV-YYYY-NNNNN`) is issued from `SequenceService`, and the action is
+  audited (`disbursement.recorded`). Vouchers are **append-only** — a mistake is corrected with a
+  reversing voucher, never an edit — and each prints on a voucher form with Prepared/Approved/Received
+  signature lines.
+- **Cash Disbursements Journal (CDJ).** A read-only report (`/cashier/reports/disbursements-journal`)
+  listing vouchers over a date range — Date, Voucher No., Payee, Particulars, Method, Amount — printable
+  and exportable.
+
+There is **no general ledger and no double-entry posting**: SchoolHub records the two cash journals
+(CRJ, CDJ), not a full chart of accounts. `DisbursementService` is the only writer of vouchers;
+`DisbursementVoucher` holds the read queries, including `journal()` for the CDJ.

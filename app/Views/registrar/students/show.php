@@ -59,6 +59,7 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <?= partial('print-button') ?>
             <?php if ($enrollment !== null): ?>
                 <?= partial('preview-link', ['path' => '/registrar/students/' . $id . '/cor?term_id=' . $enrollment['term_id'], 'kind' => 'page', 'title' => 'Certificate of Registration', 'label' => 'Certificate of Registration', 'icon' => 'document', 'class' => 'btn-secondary']) ?>
             <?php endif; ?>

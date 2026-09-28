@@ -191,6 +191,7 @@ function deleteTestUsers(): void
     foreach (Database::select("SELECT avatar_path FROM users WHERE id IN ({$in}) AND avatar_path IS NOT NULL", $ids) as $row) {
         @unlink(STORAGE_PATH . '/' . $row['avatar_path']);
     }
+    Database::query("DELETE FROM disbursement_vouchers WHERE recorded_by IN ({$in})", $ids);
     Database::query("DELETE FROM login_logs WHERE user_id IN ({$in})", $ids);
     Database::query("DELETE FROM audit_logs WHERE user_id IN ({$in})", $ids);
     Database::query("DELETE FROM users WHERE id IN ({$in})", $ids);

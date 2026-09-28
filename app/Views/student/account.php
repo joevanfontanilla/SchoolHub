@@ -27,6 +27,7 @@ $failed = errors() !== [];
     'subtitle'    => 'Review your fee assessment, pay online, and keep your official receipts.',
     'tagline'     => $school['school_tagline'] ?? null,
     'breadcrumbs' => [['Home', '/student/dashboard'], ['Payments & Accounts', null]],
+    'print'       => true,
 ]) ?>
 
 <?php if ($assessment === null): ?>
