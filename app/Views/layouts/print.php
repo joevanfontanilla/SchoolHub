@@ -22,7 +22,7 @@ $schoolName = $school['school_name'] ?? 'Lyceum of the East Aurora';
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
     <link rel="icon" type="image/jpeg" href="<?= e(school_logo_url()) ?>">
 </head>
-<body class="print-doc <?= $embedded ? 'bg-white' : 'bg-brand-canvas' ?> font-sans text-slate-800 print:bg-white">
+<body class="print-doc <?= $embedded ? 'bg-white' : 'bg-brand-canvas' ?> font-sans text-slate-800 print:bg-white"<?= !empty($autoPrint) && !$embedded ? ' data-auto-print' : '' ?>>
     <?php if (!$embedded): ?>
     <div class="no-print sticky top-0 z-10 border-b border-brand-100 bg-white/95 px-4 py-3 backdrop-blur">
         <div class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3">

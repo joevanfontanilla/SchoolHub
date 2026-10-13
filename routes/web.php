@@ -26,6 +26,8 @@ use App\Controllers\AccountController;
 use App\Controllers\AuthController;
 use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
+use App\Controllers\Cashier\DayCloseController as CashierDayClose;
+use App\Controllers\Admin\DayCloseController as AdminDayClose;
 use App\Controllers\Cashier\FeeController as CashierFees;
 use App\Controllers\Cashier\LedgerController as CashierLedger;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
@@ -153,6 +155,8 @@ $router->post('/admin/settings/{group}', [AdminSettings::class, 'update'], $admi
 $router->get('/admin/audit-logs',        [AdminAudit::class, 'index'],  $admin('audit.view'), 'admin.audit');
 $router->get('/admin/audit-logs/export', [AdminAudit::class, 'export'], $admin('audit.view'));
 $router->get('/admin/audit-logs/{id}',   [AdminAudit::class, 'show'],   $admin('audit.view'));
+$router->get('/admin/day-closes',         [AdminDayClose::class, 'index'],  $admin('audit.view'), 'admin.day-closes');
+$router->post('/admin/day-closes/{id}/reopen', [AdminDayClose::class, 'reopen'], $admin('audit.view'));
 $router->get('/admin/login-activity',    [AdminAudit::class, 'logins'], $admin('audit.view'), 'admin.logins');
 
 $router->get('/admin/backups',                [AdminBackups::class, 'index'],    $admin('backups.manage'), 'admin.backups');
@@ -240,6 +244,10 @@ $router->post('/cashier/payments/{id}/reject',  [CashierPayments::class, 'reject
 $router->get('/cashier/walk-in-payments',        [CashierWalkInPayments::class, 'index'], $cashier('payments.record'), 'cashier.walkin-payments');
 $router->post('/cashier/walk-in-payments/{id}',  [CashierWalkInPayments::class, 'store'], $cashier('payments.record'));
 
+$router->get('/cashier/day-close',               [CashierDayClose::class, 'index'], $cashier('payments.record'), 'cashier.day-close');
+$router->post('/cashier/day-close',              [CashierDayClose::class, 'close'], $cashier('payments.record'));
+$router->get('/cashier/day-close/print',         [CashierDayClose::class, 'print'], $cashier('payments.record'));
+
 $router->get('/cashier/accounts',                [CashierAccounts::class, 'index'],         $cashier('finance.view_account'), 'cashier.accounts');
 $router->get('/cashier/accounts/{id}',           [CashierAccounts::class, 'show'],          $cashier('finance.view_account'));
 $router->post('/cashier/accounts/{id}/payments', [CashierAccounts::class, 'recordPayment'], $cashier('payments.record'));
@@ -254,6 +262,7 @@ $router->get('/cashier/reports/collections',         [CashierReports::class, 'co
 $router->get('/cashier/reports/collections/print',   [CashierReports::class, 'collectionsPrint'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/collections/export',  [CashierReports::class, 'collectionsExport'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/outstanding',         [CashierReports::class, 'outstanding'], $cashier('reports.cashier'));
+$router->post('/cashier/reports/outstanding/remind', [CashierReports::class, 'remind'], $cashier('payments.record'));
 $router->get('/cashier/reports/outstanding/print',   [CashierReports::class, 'outstandingPrint'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/outstanding/export',  [CashierReports::class, 'outstandingExport'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/receipts-journal',        [CashierReports::class, 'receiptsJournal'],      $cashier('reports.cashier'), 'cashier.crj');

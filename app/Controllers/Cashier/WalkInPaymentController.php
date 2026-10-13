@@ -28,6 +28,7 @@ final class WalkInPaymentController extends Controller
         $q = trim((string) $request->input('q', ''));
         $account = null;
         $suggested = '';
+        $quick = [];
 
         $accountId = (int) $request->input('account', 0);
         if ($accountId > 0) {
@@ -40,6 +41,7 @@ final class WalkInPaymentController extends Controller
                 $needed = PaymentPolicy::requiredCents($account) - FinanceService::cents($account['total_paid']);
                 $suggested = $needed > 0 ? FinanceService::money($needed) : '';
             }
+            $quick = FinanceService::quickAmounts($account, $suggested, Finance::installmentPlan($account));
         }
 
         $paid = (int) $request->input('paid', 0);
@@ -50,6 +52,7 @@ final class WalkInPaymentController extends Controller
             'results'   => $q !== '' ? Finance::accounts($q, 'open', self::RESULTS) : [],
             'account'   => $account,
             'suggested' => $suggested,
+            'quick'     => $quick,
             'methods'   => FinanceService::METHODS_CASHIER,
             'received'  => $paid > 0 ? Finance::payment($paid) : null,
             'today'     => Finance::counterPaymentsOn(date('Y-m-d')),

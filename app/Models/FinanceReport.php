@@ -152,7 +152,7 @@ final class FinanceReport
      *
      * @return array{groups:array<int,array<string,mixed>>,totals:array<string,int>,count:int}
      */
-    public static function accountList(?int $termId, ?int $programId, ?int $yearLevelId): array
+    public static function accountList(?int $termId, ?int $programId, ?int $yearLevelId, bool $dueOnly = false): array
     {
         $where = ["fa.status = 'ACTIVE'"];
         $bindings = [];
@@ -165,7 +165,7 @@ final class FinanceReport
 
         $rows = Database::select(
             "SELECT fa.*, ea.application_number, ea.enrollment_state, ea.payment_status, ea.program_id, ea.year_level_id,
-                    st.student_number, u.first_name, u.middle_name, u.last_name,
+                    st.student_number, u.id AS user_id, u.first_name, u.middle_name, u.last_name,
                     p.code AS program_code, yl.name AS year_level_name, yl.sequence AS year_sequence, sec.code AS section_code,
                     t.name AS term_name, ay.code AS academic_year_code
                FROM fee_assessments fa
@@ -216,6 +216,7 @@ final class FinanceReport
 
         $groups = [];
         $totals = $empty;
+        $count = 0;
         foreach ($rows as $row) {
             $id = (int) $row['id'];
             $adjs = $adjustments[$id] ?? [];
@@ -239,8 +240,14 @@ final class FinanceReport
                 'plan'     => FinanceService::installments($row, $adjs, $opened[(int) $row['term_id']] ?? []),
             ]);
 
+            $account['due_now'] = array_sum(array_column(FinanceService::dueRows($account['plan']), 'balance'));
+            if ($dueOnly && $account['due_now'] === 0) {
+                continue;
+            }
+
             $key = $row['program_id'] . '-' . $row['year_level_id'];
             $groups[$key] ??= ['program' => $row['program_code'], 'year' => $row['year_level_name'], 'rows' => [], 'totals' => $empty];
+            $count++;
             $groups[$key]['rows'][] = $account;
             foreach ($empty as $field => $zero) {
                 $groups[$key]['totals'][$field] += $account[$field];
@@ -248,6 +255,6 @@ final class FinanceReport
             }
         }
 
-        return ['groups' => array_values($groups), 'totals' => $totals, 'count' => count($rows)];
+        return ['groups' => array_values($groups), 'totals' => $totals, 'count' => $count];
     }
 }

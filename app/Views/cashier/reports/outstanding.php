@@ -43,9 +43,17 @@ $collectedPercent = $report['due'] > 0 ? $report['paid'] / $report['due'] * 100 
         </div>
         <button type="submit" class="btn-secondary"><?= icon('search', 'h-5 w-5') ?> Show</button>
         <div class="ml-auto flex flex-wrap gap-2">
+            <?php if ($reminders > 0): ?>
+                <button type="submit" form="remind-form" data-keep class="btn-secondary"><?= icon('bell', 'h-5 w-5') ?> Send <?= e((string) $reminders) ?> reminder<?= $reminders === 1 ? '' : 's' ?></button>
+            <?php endif; ?>
             <a href="<?= e(url('/cashier/reports/outstanding/print' . ($query !== '' ? '?' . $query : ''))) ?>" class="btn-secondary"><?= icon('document', 'h-5 w-5') ?> Print</a>
             <a href="<?= e(url('/cashier/reports/outstanding/export' . ($query !== '' ? '?' . $query : ''))) ?>" class="btn-primary"><?= icon('download', 'h-5 w-5') ?> Export CSV</a>
         </div>
+    </form>
+
+    <form id="remind-form" method="POST" action="<?= e(url('/cashier/reports/outstanding/remind' . ($query !== '' ? '?' . $query : ''))) ?>"
+          data-confirm="Each student with a due installment gets one notification for it. They are not reminded of the same installment twice." data-confirm-title="Send payment reminders?" data-confirm-tone="primary" data-confirm-label="Send reminders">
+        <?= csrf_field() ?>
     </form>
 
     <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">

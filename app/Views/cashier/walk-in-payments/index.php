@@ -6,6 +6,7 @@
  * @var array       $results   accounts matching the search, with a balance
  * @var ?array      $account   the chosen account
  * @var string      $suggested amount still needed to meet the payment policy, in pesos, or ''
+ * @var array       $quick     buttons that fill the amount: label and amount in pesos
  * @var array       $methods
  * @var ?array      $received  the payment just recorded
  * @var array       $today     counter payments recorded today
@@ -30,7 +31,7 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
                     · balance now <?= e(money($received['balance'])) ?>
                 </p>
             </div>
-            <a href="<?= e(url('/receipts/' . $received['id'])) ?>" target="_blank" rel="noopener" class="btn-primary"><?= icon('receipt', 'h-5 w-5') ?> Print receipt<span class="sr-only"> <?= e($received['receipt_number']) ?></span></a>
+            <a href="<?= e(url('/receipts/' . $received['id'] . '?print=1')) ?>" target="_blank" rel="noopener" class="btn-primary"><?= icon('receipt', 'h-5 w-5') ?> Print receipt<span class="sr-only"> <?= e($received['receipt_number']) ?></span></a>
         </section>
     <?php endif; ?>
 
@@ -94,6 +95,13 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
                 <form method="POST" action="<?= e(url('/cashier/walk-in-payments/' . $account['id'])) ?>" class="mt-4 grid gap-4 sm:grid-cols-2" novalidate
                       data-confirm="Record this payment and issue an official receipt? Payments cannot be edited or deleted afterwards." data-confirm-title="Record this payment?" data-confirm-tone="primary" data-confirm-label="Record and issue receipt">
                     <?= csrf_field() ?>
+                    <?php if ($quick !== []): ?>
+                        <div class="flex flex-wrap items-center gap-2 sm:col-span-2" role="group" aria-label="Quick amounts">
+                            <?php foreach ($quick as $button): ?>
+                                <button type="button" class="btn-secondary" data-fill-amount="<?= e($button['amount']) ?>" data-fill-target="#field-amount"><?= e($button['label']) ?> · <?= e(money($button['amount'])) ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                     <?= component('field', ['name' => 'amount', 'label' => 'Amount received (₱)', 'type' => 'number', 'required' => true, 'value' => old('amount', $suggested), 'help' => 'Up to the balance of ' . money($account['balance']) . '.']) ?>
                     <div>
                         <label for="field-payment_method" class="field-label">Method <span class="text-danger-text" aria-hidden="true">*</span><span class="sr-only">(required)</span></label>

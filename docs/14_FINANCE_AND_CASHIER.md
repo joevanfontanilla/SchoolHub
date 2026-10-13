@@ -314,3 +314,55 @@ A new voucher must choose an **expense account**. Vouchers recorded before this 
 ### Not yet built
 Manual journal entries, period closing, and a posting for voiding an assessment (nothing voids one
 today; if that is ever added it must post the reversal).
+
+## Daily operations at the window (as built)
+
+Four pieces that make the cashier's day easier. None changes how money is computed.
+
+### Closing the day (`/cashier/day-close`)
+At the end of the day the cashier counts the drawer and closes the day.
+
+- **What the system expects.** For a date, from what was *recorded* that day: money received by
+  each method (reversals count as negative), the cash paid out on vouchers, and from those the
+  **expected cash** = cash received − cash paid out. Cheque, GCash, and the other non-cash methods
+  show as totals only; they are not counted.
+- **The count.** The cashier types the **counted cash** as one total (no bill-by-bill breakdown). The
+  **difference** (counted − expected) is stored. If it is not zero, a short **explanation** of at
+  least 5 characters is required. The difference is *not* posted to the general ledger (over and
+  short is settled outside the system).
+- **The lock.** Once a day is closed, nothing new is recorded on it: a payment, an online
+  verification, a reversal, or a voucher is refused with "Today has been closed. Ask the
+  administrator to reopen it." A mistake found later is reversed *today*, on the open day, with its
+  reason; the audit entry notes that the payment came from a closed day.
+- **Reopening.** Only the Super Admin can reopen a closed day (`/admin/day-closes`), with a reason.
+  Reopening is audited; the cashier then closes the day again with a new count. The cashier cannot
+  reopen their own close.
+- **Turnover slip.** A closed day prints as a turnover slip: the totals, the count, the difference,
+  and signature lines.
+- A day can be closed once it is today or earlier; the date picker lets the cashier catch up a missed day.
+
+### Dashboard
+Besides the existing cards, the dashboard shows today's collections **by method** (cash and
+non-cash), whether today is **closed**, and the accounts with an **installment due**.
+
+### Due installments
+An installment is **due** when its exam period has been opened by the registrar (the grading
+period's `opened_at`) and it is not fully paid. This is the same rule the installment table already
+uses ("Due" vs "Upcoming"); there are no per-installment calendar dates, so "due within 3 days"
+does not exist. Due never blocks anything.
+
+- The **account list** has a "Due now only" filter, and its CSV has a **Due now** column.
+- **Reminders.** On Outstanding Balances the cashier presses **Send reminders**: every student
+  with a due installment gets one in-app notification *per installment*, once (`installment_reminders`
+  remembers it). Nothing is sent automatically (no scheduler on the current host); the button is the trigger.
+
+### Quick amounts on the walk-in payment form
+Buttons fill the Amount field and change nothing else: **Required to enroll** (before enrollment),
+**Pay <next unpaid installment>** (old account, initial payment, or the next exam period), and
+**Full balance**. The cashier can still edit the amount before recording.
+
+### Receipt copies
+The first time staff open a receipt it is the original. Every later opening by staff, and any
+opening by the student after that, shows **DUPLICATE COPY**, and each staff reprint is audited
+(`finance.receipt_reprinted`). The **Print receipt** button after a payment opens the receipt with
+the browser's print dialog already open.

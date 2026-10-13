@@ -5,11 +5,15 @@
  * @var array  $payment
  * @var string $balanceAfter
  * @var int    $adjustedThrough centavos of adjustments made before this payment
+ * @var bool   $duplicate      the original was already printed, so this is a copy
  */
 $name = trim($payment['last_name'] . ', ' . $payment['first_name'] . ($payment['middle_name'] ? ' ' . mb_substr($payment['middle_name'], 0, 1) . '.' : ''));
 $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
 ?>
 <section class="mt-6">
+    <?php if (!empty($duplicate)): ?>
+        <p class="mb-4 inline-block rounded border-2 border-slate-500 px-3 py-1 font-display text-sm font-extrabold uppercase tracking-widest text-slate-600">Duplicate copy</p>
+    <?php endif; ?>
     <?php if ($payment['reversal_id'] !== null): ?>
         <div class="mb-6 rounded-lg border-2 border-danger-line bg-danger-bg px-4 py-3 text-sm text-danger-text" role="status">
             <p class="font-display text-lg font-extrabold uppercase tracking-wide">Reversed</p>

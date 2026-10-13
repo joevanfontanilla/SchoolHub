@@ -13,6 +13,9 @@ A receipt should contain:
 - Cashier
 - Remarks if applicable
 
+**Copies.** The first opening by staff is the original; later openings are marked **DUPLICATE COPY**
+and reprints are audited (docs/14, Daily operations at the window).
+
 ## Registrar Reports
 - Enrollment list
 - Applicants by status

@@ -59,6 +59,7 @@ final class DisbursementService
         }
 
         return Database::transaction(static function () use ($cashier, $input, $cents, $disbursedOn, $account): array {
+            DayCloseService::assertOpen();
             $reference = trim((string) ($input['reference_number'] ?? ''));
             $id = Database::insert('disbursement_vouchers', [
                 'voucher_number'   => SequenceService::next('voucher', 'DV'),

@@ -35,9 +35,22 @@ final class FinanceDocumentController extends Controller
         // A reversal entry issues no receipt, so there is nothing to print for it.
         $this->authorize(isset($payment['user_id']) ? (int) $payment['user_id'] : null, $payment !== null && $payment['receipt_number'] !== null, 'receipt', [User::ROLE_CASHIER, User::ROLE_REGISTRAR]);
 
+        $viewer = Auth::user();
+        $duplicate = $payment['first_printed_at'] !== null;
+        if ($viewer !== null && ($viewer->isCashier() || $viewer->isRegistrar())) {
+            // Atomic: only the first opening by staff finds the column empty, and it is the original.
+            $first = Finance::markReceiptPrinted((int) $payment['id']);
+            $duplicate = !$first;
+            if ($duplicate) {
+                AuditService::log('finance.receipt_reprinted', 'finance', 'Payment', (int) $payment['id'], null, ['receipt' => $payment['receipt_number']]);
+            }
+        }
+
         $this->printView('print/receipt', [
             'title'        => 'Official Receipt ' . $payment['receipt_number'],
             'payment'      => $payment,
+            'duplicate'    => $duplicate,
+            'autoPrint'    => (string) $request->input('print', '') === '1',
             'balanceAfter' => Finance::balanceAfter($payment),
             'adjustedThrough' => Finance::adjustedThrough($payment),
             'back'         => $this->accountBack((int) $payment['fee_assessment_id']),

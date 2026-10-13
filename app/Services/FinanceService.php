@@ -426,6 +426,49 @@ final class FinanceService
         return ['rows' => $rows, 'oldAccount' => $old, 'initial' => $initial, 'remaining' => $remaining];
     }
 
+    /**
+     * The installments that are due now: unpaid and past their opening (docs/14). Display and
+     * reminders only; nothing is blocked by them.
+     *
+     * @param array<string,mixed>|null $plan installments()
+     * @return array<int,array<string,mixed>>
+     */
+    public static function dueRows(?array $plan): array
+    {
+        return $plan === null ? [] : array_values(array_filter($plan['rows'], static fn (array $row): bool => $row['status'] === 'DUE'));
+    }
+
+    /**
+     * The amounts the walk-in payment buttons fill in (docs/14): what is still needed to enroll,
+     * the next unpaid installment, and the full balance. They only fill the field.
+     *
+     * @param array<string,mixed>      $account   the assessment (balance)
+     * @param string                   $suggested pesos still needed to meet the payment policy, or ''
+     * @param array<string,mixed>|null $plan      installments(), or null before enrollment
+     * @return array<int,array{label:string,amount:string}>
+     */
+    public static function quickAmounts(array $account, string $suggested, ?array $plan): array
+    {
+        $balance = self::cents($account['balance']);
+        if ($balance <= 0) {
+            return [];
+        }
+
+        $quick = [];
+        if ($suggested !== '') {
+            $quick[] = ['label' => 'Required to enroll', 'amount' => $suggested];
+        }
+        foreach ($plan['rows'] ?? [] as $row) {
+            if ($row['balance'] > 0) {
+                $quick[] = ['label' => 'Pay ' . strtolower($row['label']), 'amount' => self::money(min($row['balance'], $balance))];
+                break;
+            }
+        }
+        $quick[] = ['label' => 'Full balance', 'amount' => self::money($balance)];
+
+        return $quick;
+    }
+
     // -- The ledger card -------------------------------------------------------------------
 
     /**
@@ -658,6 +701,7 @@ final class FinanceService
         }
 
         return Database::transaction(static function () use ($cashier, $paymentId, $reason): int {
+            DayCloseService::assertOpen();
             $payment = Database::selectOne(
                 'SELECT pay.*, fa.application_id, fa.assessment_number, s.user_id
                    FROM payments pay
@@ -697,6 +741,7 @@ final class FinanceService
 
             AuditService::log('finance.payment_reversed', 'finance', 'Payment', $paymentId, ['amount' => $payment['amount'], 'receipt' => $payment['receipt_number']], [
                 'reversal_id' => $reversalId, 'assessment' => $payment['assessment_number'],
+                'from_closed_day' => DayCloseService::isClosed(substr((string) $payment['created_at'], 0, 10)),
             ], 'SUCCESS', $reason, $cashier->id, $cashier->role_name);
 
             NotificationService::notify((int) $payment['user_id'], 'finance.payment_reversed',
@@ -735,6 +780,7 @@ final class FinanceService
     /** @return array{payment_id:int,receipt_number:string,enrolled:bool} */
     private static function createPayment(User $cashier, int $assessmentId, string $amount, string $method, ?string $reference, string $paidAt, ?int $submissionId, ?string $remarks): array
     {
+        DayCloseService::assertOpen();
         $assessment = Database::selectOne(
             'SELECT fa.*, s.user_id FROM fee_assessments fa JOIN students s ON s.id = fa.student_id WHERE fa.id = ? FOR UPDATE',
             [$assessmentId]

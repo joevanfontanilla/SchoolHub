@@ -17,6 +17,7 @@ use App\Models\SystemSetting;
 use App\Services\AuditService;
 use App\Services\CsvExport;
 use App\Services\FinanceService;
+use App\Services\InstallmentReminderService;
 use App\Services\ReportRange;
 
 /**
@@ -109,10 +110,22 @@ final class ReportController extends Controller
             'terms'     => Catalog::allTerms(),
             'programs'  => Program::active(),
             'report'    => $report,
+            'reminders' => count(InstallmentReminderService::pending($termId, $programId)),
             'rows'      => array_slice($report['rows'], ($page - 1) * self::PER_PAGE, self::PER_PAGE),
             'page'      => $page,
             'pages'     => $pages,
         ]);
+    }
+
+    /** Send one reminder for each due installment that has not had one (docs/14, Due installments). */
+    public function remind(Request $request): void
+    {
+        [$termId, $programId] = $this->filters($request);
+        $sent = InstallmentReminderService::send(Auth::user(), $termId, $programId);
+        $this->success(
+            $sent === 0 ? 'No reminders to send: every due installment already had one.' : "Sent {$sent} reminder" . ($sent === 1 ? '' : 's') . '.',
+            '/cashier/reports/outstanding' . ($termId || $programId ? '?' . http_build_query(array_filter(['term_id' => $termId, 'program_id' => $programId])) : '')
+        );
     }
 
     public function outstandingPrint(Request $request): void
@@ -161,36 +174,40 @@ final class ReportController extends Controller
     public function accountList(Request $request): void
     {
         [$termId, $programId, $yearLevelId] = $this->accountFilters($request);
+        $dueOnly = $this->dueOnly($request);
         $this->appView('cashier/reports/account-list', [
             'title'       => 'Account List',
             'termId'      => $termId,
             'programId'   => $programId,
             'yearLevelId' => $yearLevelId,
+            'dueOnly'     => $dueOnly,
             'terms'       => Catalog::allTerms(),
             'programs'    => Program::active(),
             'yearLevels'  => Catalog::yearLevels(),
-            'report'      => FinanceReport::accountList($termId, $programId, $yearLevelId),
+            'report'      => FinanceReport::accountList($termId, $programId, $yearLevelId, $dueOnly),
         ]);
     }
 
     public function accountListPrint(Request $request): void
     {
         [$termId, $programId, $yearLevelId] = $this->accountFilters($request);
+        $dueOnly = $this->dueOnly($request);
         $this->printView('print/account-list', [
             'title'  => 'Account List',
-            'scope'  => $this->scopeLabel($termId, $programId, $yearLevelId),
-            'report' => FinanceReport::accountList($termId, $programId, $yearLevelId),
-            'back'   => '/cashier/reports/account-list?' . http_build_query(array_filter(['term_id' => $termId, 'program_id' => $programId, 'year_level_id' => $yearLevelId])),
+            'scope'  => $this->scopeLabel($termId, $programId, $yearLevelId) . ($dueOnly ? ' · Due now only' : ''),
+            'report' => FinanceReport::accountList($termId, $programId, $yearLevelId, $dueOnly),
+            'back'   => '/cashier/reports/account-list?' . http_build_query(array_filter(['term_id' => $termId, 'program_id' => $programId, 'year_level_id' => $yearLevelId, 'due' => $dueOnly ? 1 : 0])),
         ]);
     }
 
     public function accountListExport(Request $request): void
     {
         [$termId, $programId, $yearLevelId] = $this->accountFilters($request);
-        $report = FinanceReport::accountList($termId, $programId, $yearLevelId);
+        $dueOnly = $this->dueOnly($request);
+        $report = FinanceReport::accountList($termId, $programId, $yearLevelId, $dueOnly);
 
         AuditService::log('reports.exported', 'reports', null, null, null, [
-            'report' => 'account-list', 'term_id' => $termId, 'program_id' => $programId, 'year_level_id' => $yearLevelId, 'rows' => $report['count'],
+            'report' => 'account-list', 'term_id' => $termId, 'program_id' => $programId, 'year_level_id' => $yearLevelId, 'due_only' => $dueOnly, 'rows' => $report['count'],
         ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
 
         $money = static fn (int $cents): string => FinanceService::money($cents);
@@ -212,6 +229,7 @@ final class ReportController extends Controller
                     $money($row['due']),
                     $money($row['paid']),
                     $money($row['balance']),
+                    $money($row['due_now']),
                     isset($plan['OLD']) ? $money($plan['OLD']['balance']) : '',
                     isset($plan['P1']) ? $money($plan['P1']['balance']) : '',
                     isset($plan['P2']) ? $money($plan['P2']['balance']) : '',
@@ -224,7 +242,7 @@ final class ReportController extends Controller
         }
 
         CsvExport::send('account-list-' . date('Y-m-d') . '.csv',
-            ['SL No.', 'ID No.', 'Account name', 'Program', 'Year level', 'Section', 'Units', 'Tuition', 'Miscellaneous', 'Discount', 'Amount due', 'Paid', 'Balance', 'Old account', 'Prelims', 'Midterm', 'Semi-Final', 'Finals', 'Payment status', 'Enrollment'],
+            ['SL No.', 'ID No.', 'Account name', 'Program', 'Year level', 'Section', 'Units', 'Tuition', 'Miscellaneous', 'Discount', 'Amount due', 'Paid', 'Balance', 'Due now', 'Old account', 'Prelims', 'Midterm', 'Semi-Final', 'Finals', 'Payment status', 'Enrollment'],
             $rows
         );
     }
@@ -238,6 +256,11 @@ final class ReportController extends Controller
         $year = (int) $request->input('year_level_id', 0);
 
         return [$termId, $program > 0 ? $program : null, $year > 0 ? $year : null];
+    }
+
+    private function dueOnly(Request $request): bool
+    {
+        return (string) $request->input('due', '') === '1';
     }
 
     // -- Cash Receipts Journal (CRJ) -------------------------------------------

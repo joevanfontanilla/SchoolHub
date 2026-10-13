@@ -12,7 +12,7 @@
  */
 use App\Services\FinanceService;
 
-$query = http_build_query(array_filter(['term_id' => $termId ?? 0, 'program_id' => $programId, 'year_level_id' => $yearLevelId]));
+$query = http_build_query(array_filter(['term_id' => $termId ?? 0, 'program_id' => $programId, 'year_level_id' => $yearLevelId, 'due' => !empty($dueOnly) ? 1 : 0]));
 $money = static fn (int $cents): string => money(FinanceService::money($cents));
 $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 2, '.', ''), '0'), '.');
 $th = 'px-3 py-3 font-semibold';
@@ -48,6 +48,7 @@ $th = 'px-3 py-3 font-semibold';
                 <?php endforeach; ?>
             </select>
         </div>
+        <label class="flex items-center gap-2 pb-2.5 text-sm font-medium text-slate-700"><input type="checkbox" name="due" value="1" <?= !empty($dueOnly) ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300 text-brand-600"> Due now only</label>
         <button type="submit" class="btn-secondary"><?= icon('search', 'h-5 w-5') ?> Show</button>
         <div class="ml-auto flex flex-wrap gap-2">
             <a href="<?= e(url('/cashier/reports/account-list/print' . ($query !== '' ? '?' . $query : ''))) ?>" class="btn-secondary"><?= icon('document', 'h-5 w-5') ?> Print</a>

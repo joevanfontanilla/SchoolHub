@@ -145,6 +145,7 @@ return [
             'Finance.php'               => ['$limit', '$offset'],
             // accountList(): "?, ?, ?" placeholder lists from array_fill, and a column name from a fixed array in code.
             'FinanceReport.php'         => ['$in', '$appIn', '$termIn', '$column'],
+            'InstallmentReminderService.php' => ['$in'],
             'Notification.php'          => ['$limit', '$offset', '$where'],
             'RegistrarQueue.php'        => ['$where', '$whereSql'],
             'RegistrarReport.php'       => ['$programFilter', '$whereSql'],

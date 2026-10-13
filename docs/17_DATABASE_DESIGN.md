@@ -447,6 +447,20 @@ Indexes `(user_id, created_at)`, `(module, created_at)`, `(target_type, target_i
 > `filename` is unique. `password_reset_tokens` gained `purpose` (`SETUP` or `RESET`) and
 > `created_by` (the administrator who issued the link); `token_hash` is a SHA-256 hex digest.
 
+### `day_closes` (migration 034)
+`close_date` DATE unique, `status` (`CLOSED`, `REOPENED`), `received_cash`, `paid_out_cash`,
+`expected_cash`, `counted_cash`, `difference` (signed) DECIMAL(12,2), `other_received` DECIMAL(12,2),
+`payment_count` INT, `explanation` VARCHAR(500) nullable, `closed_by` FK, `closed_at`,
+`reopened_by` FK nullable, `reopened_at`, `reopen_reason`. One row per day; a reopened day is closed
+again by updating its row (the audit log keeps every close and reopening).
+
+### `installment_reminders` (migration 034)
+`fee_assessment_id` FK, `installment_key` (`OLD`, `INITIAL`, `P1` to `P4`), `sent_at`; unique on the
+assessment and key, so a student is reminded of each installment once.
+
+> `payments.first_printed_at` DATETIME nullable (migration 034): when staff first opened the
+> receipt. Anything after that is a duplicate copy.
+
 ### `migrations`
 `filename` VARCHAR(255) unique, `batch` INT, `applied_at` DATETIME.
 Used by `database/migrate.php`. No `updated_at`.

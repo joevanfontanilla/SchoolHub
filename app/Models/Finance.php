@@ -105,6 +105,14 @@ final class Finance
         return FinanceService::installments($assessment, self::adjustments((int) $assessment['id']), $opened);
     }
 
+    /**
+     * Note that staff opened a receipt. Atomic: true only for the first opening, which is the original.
+     */
+    public static function markReceiptPrinted(int $paymentId): bool
+    {
+        return Database::query('UPDATE payments SET first_printed_at = ? WHERE id = ? AND first_printed_at IS NULL', [date('Y-m-d H:i:s'), $paymentId])->rowCount() === 1;
+    }
+
     /** @return array<int,array<string,mixed>> */
     public static function items(int $assessmentId): array
     {

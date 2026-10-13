@@ -127,6 +127,23 @@
         });
     });
 
+    // Quick amounts: a button fills the amount field and leaves everything else to the cashier.
+    document.querySelectorAll('[data-fill-amount]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var field = document.querySelector(button.getAttribute('data-fill-target') || '');
+            if (field) {
+                field.value = button.getAttribute('data-fill-amount');
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+                field.focus();
+            }
+        });
+    });
+
+    // A receipt opened with ?print=1 offers the print dialog straight away.
+    if (document.body.hasAttribute('data-auto-print')) {
+        window.print();
+    }
+
     // Dropdown menus built on <details>: close on an outside click or Escape.
     var dropdowns = document.querySelectorAll('details[data-dropdown]');
     if (dropdowns.length > 0) {
@@ -449,7 +466,7 @@
         document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {
             var timers = [];
 
-            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
+            form.querySelectorAll('button[type="submit"]:not([data-keep]), input[type="submit"]:not([data-keep])').forEach(function (button) {
                 button.hidden = true;
             });
 
