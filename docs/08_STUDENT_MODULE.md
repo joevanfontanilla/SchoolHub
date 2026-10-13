@@ -67,6 +67,16 @@ is served only through `/account/photo` (the signed-in user's own, 404 when none
 preview before saving; it replaces the user's initials in the top-bar account menu for every role.
 The account page also links to Change password.
 
+### Editing your own name — `/account` and `AccountNameService`
+Every role can change their own first, middle, and last name and suffix on **My Account**. The email
+and username are not editable there: they are the sign-in identifier and where password links go, so the
+Super Admin keeps control of them (docs/07). A student's legal name stays **locked once an application is
+with the registrar** (docs/09), the same rule as the student Profile page; the page then shows the name
+with "Ask the registrar's office to correct it". A change needs no password, but it is audited
+(`account.name_changed`, with the old and the new name), because names appear on receipts, statements,
+and the audit log itself. Extra spaces are collapsed, a blank middle name or suffix is stored as empty,
+and saving an unchanged name writes nothing.
+
 ## My Documents (as built, `/student/documents`)
 Everything the student uploaded or was issued, in one place, each opening in the preview
 window (docs/10): the files uploaded for each application (drafts included) with their review

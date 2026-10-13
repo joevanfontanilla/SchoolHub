@@ -94,6 +94,7 @@ $router->post('/password/change', [AuthController::class, 'changePassword'],    
 // My Account: profile photo and password, for every signed-in role.
 $router->get('/portal/calendar', [CalendarController::class, 'portal'],  ['auth'], 'portal.calendar');
 $router->get('/account',        [AccountController::class, 'show'],      ['auth'], 'account');
+$router->post('/account/name',  [AccountController::class, 'saveName'],  ['auth']);
 $router->post('/account/photo', [AccountController::class, 'savePhoto'], ['auth']);
 $router->get('/account/photo',  [AccountController::class, 'photo'],     ['auth'], 'account.photo');
 

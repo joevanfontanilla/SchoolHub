@@ -9,11 +9,12 @@ use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\UploadedFile;
 use App\Core\ValidationException;
+use App\Services\AccountNameService;
 use App\Services\AvatarService;
 
 /**
- * "My Account", shared by every role (docs/08): a profile photo and a link to change the
- * password. Any signed-in user can set their own photo here.
+ * "My Account", shared by every role (docs/08): the user's own name, a profile photo, and a
+ * link to change the password.
  */
 final class AccountController extends Controller
 {
@@ -25,7 +26,19 @@ final class AccountController extends Controller
             'user'     => $user,
             'photoUrl' => AvatarService::currentUrl($user),
             'maxBytes' => AvatarService::MAX_BYTES,
+            'nameLocked' => AccountNameService::lockedReason($user),
         ]);
+    }
+
+    public function saveName(Request $request): void
+    {
+        try {
+            $changed = AccountNameService::update(Auth::user(), $request->all());
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), '/account#name');
+            return;
+        }
+        $this->success($changed ? 'Your name was updated.' : 'Your name is already saved that way.', '/account');
     }
 
     public function savePhoto(Request $request): void
