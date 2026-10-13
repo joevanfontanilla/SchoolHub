@@ -9,7 +9,9 @@ use App\Core\Auth;
 use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\ValidationException;
+use App\Models\Catalog;
 use App\Models\Finance;
+use App\Models\Program;
 use App\Services\FeeScheduleService;
 
 /**
@@ -28,7 +30,7 @@ final class FeeController extends Controller
 
     public function create(Request $request): void
     {
-        $this->appView('cashier/fees/form', ['title' => 'New fee', 'fee' => null, 'bases' => FeeScheduleService::BASES]);
+        $this->appView('cashier/fees/form', ['title' => 'New fee', 'fee' => null] + $this->formData());
     }
 
     public function edit(Request $request): void
@@ -42,7 +44,19 @@ final class FeeController extends Controller
         if ($fee === null) {
             throw HttpException::notFound('That fee was not found.');
         }
-        $this->appView('cashier/fees/form', ['title' => 'Edit ' . $fee['name'], 'fee' => $fee, 'bases' => FeeScheduleService::BASES]);
+        $this->appView('cashier/fees/form', ['title' => 'Edit ' . $fee['name'], 'fee' => $fee] + $this->formData());
+    }
+
+    /** @return array<string,mixed> */
+    private function formData(): array
+    {
+        return [
+            'bases'      => FeeScheduleService::BASES,
+            'programs'   => Program::active(),
+            'yearLevels' => Catalog::yearLevels(),
+            // The fees a scoped line can replace: one entry per fee key, named after its general line.
+            'keys'       => array_column(array_filter(Finance::feeTypes(), static fn (array $f) => $f['program_id'] === null && $f['year_level_id'] === null && (int) $f['is_active'] === 1), 'name', 'fee_key'),
+        ];
     }
 
     public function save(Request $request): void

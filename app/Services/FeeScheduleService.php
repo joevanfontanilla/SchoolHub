@@ -31,6 +31,9 @@ final class FeeScheduleService
         }
         $input['code'] = strtoupper(trim((string) ($input['code'] ?? '')));
         $amount = trim((string) ($input['amount'] ?? ''));
+        $programId = (int) ($input['program_id'] ?? 0) ?: null;
+        $yearLevelId = (int) ($input['year_level_id'] ?? 0) ?: null;
+        $replaces = strtoupper(trim((string) ($input['replaces'] ?? '')));
 
         $validator = Validator::make($input, [
             'code'        => 'required|max:30|alpha_dash',
@@ -48,12 +51,44 @@ final class FeeScheduleService
         if ($taken) {
             $validator->addError('code', "The code {$input['code']} is already in use.");
         }
+        if ($programId !== null && (int) Database::scalar('SELECT COUNT(*) FROM programs WHERE id = ?', [$programId]) === 0) {
+            $validator->addError('program_id', 'Choose a program from the list.');
+        }
+        if ($yearLevelId !== null && (int) Database::scalar('SELECT COUNT(*) FROM year_levels WHERE id = ?', [$yearLevelId]) === 0) {
+            $validator->addError('year_level_id', 'Choose a year level from the list.');
+        }
+        $scoped = $programId !== null || $yearLevelId !== null;
+        if ($replaces !== '' && !$scoped) {
+            $validator->addError('replaces', 'A fee that applies to everyone cannot replace another one. Choose a program or year level, or leave this blank.');
+        }
+        if ($replaces !== '' && (int) Database::scalar('SELECT COUNT(*) FROM fee_types WHERE fee_key = ?', [$replaces]) === 0) {
+            $validator->addError('replaces', 'Choose a fee from the list.');
+        }
+
+        // The fee this line belongs to. A scoped line replaces the one it names (or stands alone);
+        // a line for everyone keeps its key when edited, so lines that replace it stay attached.
+        $existing = $id !== null ? Database::selectOne('SELECT * FROM fee_types WHERE id = ?', [$id]) : null;
+        $feeKey = match (true) {
+            $scoped && $replaces !== '' => $replaces,
+            !$scoped && $existing !== null && $existing['program_id'] === null && $existing['year_level_id'] === null => (string) $existing['fee_key'],
+            default => $input['code'],
+        };
+        $duplicate = (int) Database::scalar(
+            'SELECT COUNT(*) FROM fee_types WHERE fee_key = ? AND program_id <=> ? AND year_level_id <=> ? AND id <> ?',
+            [$feeKey, $programId, $yearLevelId, $id ?? 0]
+        ) > 0;
+        if ($duplicate) {
+            $validator->addError('replaces', 'There is already a line for that fee in the same program and year level. Edit it instead.');
+        }
         if ($validator->fails()) {
             throw ValidationException::withErrors($validator->errors());
         }
 
         $data = [
             'code'        => $input['code'],
+            'fee_key'     => $feeKey,
+            'program_id'  => $programId,
+            'year_level_id' => $yearLevelId,
             'name'        => trim((string) $input['name']),
             'description' => trim((string) ($input['description'] ?? '')) ?: null,
             'basis'       => (string) $input['basis'],

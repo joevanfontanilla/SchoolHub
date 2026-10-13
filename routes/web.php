@@ -274,6 +274,7 @@ $router->post('/cashier/fees/{id}/edit', [CashierFees::class, 'save'],   $cashie
 // open which is decided in FinanceDocumentController (owner student, cashier, registrar).
 $router->get('/receipts/{id}',       [FinanceDocumentController::class, 'receipt'],   ['auth'], 'receipts.show');
 $router->get('/statements/{id}',     [FinanceDocumentController::class, 'statement'], ['auth'], 'statements.show');
+$router->get('/statements/{id}/ledger', [FinanceDocumentController::class, 'ledger'],   ['auth'], 'statements.ledger');
 $router->get('/payment-proofs/{id}', [FinanceDocumentController::class, 'proof'],     ['auth'], 'payment-proofs.show');
 
 // ---------------------------------------------------------------------------

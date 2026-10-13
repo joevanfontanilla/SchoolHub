@@ -38,17 +38,20 @@ final class FinanceService
     /**
      * The fee lines for a set of subjects under the current fee schedule.
      *
+     * Lines are limited to the application's program and year level when the schedule says so:
+     * for each fee key the most specific applicable line wins (docs/14).
+     *
      * @param array<int,array<string,mixed>> $subjects rows with units and lab_units
      * @return array{items:array<int,array<string,mixed>>,total:string}
      */
-    public static function computeFees(array $subjects): array
+    public static function computeFees(array $subjects, ?int $programId = null, ?int $yearLevelId = null): array
     {
         $units = array_sum(array_map(static fn ($s) => (float) $s['units'], $subjects));
         $labUnits = array_sum(array_map(static fn ($s) => (float) $s['lab_units'], $subjects));
 
         $items = [];
         $totalCents = 0;
-        foreach (Database::select('SELECT * FROM fee_types WHERE is_active = 1 ORDER BY sort_order, id') as $fee) {
+        foreach (self::applicableFees($programId, $yearLevelId) as $fee) {
             $quantity = match ($fee['basis']) {
                 'PER_UNIT'     => $units,
                 'PER_LAB_UNIT' => $labUnits,
@@ -77,6 +80,32 @@ final class FinanceService
     }
 
     /**
+     * The fee lines that apply to a program and year level: per fee key, the most specific one
+     * (program and year, then program, then year, then general); the lowest id breaks a tie.
+     *
+     * @return array<int,array<string,mixed>> ordered for the statement
+     */
+    public static function applicableFees(?int $programId, ?int $yearLevelId): array
+    {
+        $chosen = [];
+        foreach (Database::select('SELECT * FROM fee_types WHERE is_active = 1 ORDER BY id') as $fee) {
+            $forProgram = $fee['program_id'] !== null;
+            $forYear = $fee['year_level_id'] !== null;
+            if (($forProgram && (int) $fee['program_id'] !== (int) $programId) || ($forYear && (int) $fee['year_level_id'] !== (int) $yearLevelId)) {
+                continue;
+            }
+            $score = ($forProgram ? 2 : 0) + ($forYear ? 1 : 0);
+            if (!isset($chosen[$fee['fee_key']]) || $score > $chosen[$fee['fee_key']]['score']) {
+                $chosen[$fee['fee_key']] = ['score' => $score, 'fee' => $fee];
+            }
+        }
+        $fees = array_column($chosen, 'fee');
+        usort($fees, static fn (array $a, array $b) => [(int) $a['sort_order'], (int) $a['id']] <=> [(int) $b['sort_order'], (int) $b['id']]);
+
+        return $fees;
+    }
+
+    /**
      * Generate the assessment of an approved application. Called from the
      * approval transition, inside its transaction.
      *
@@ -90,7 +119,7 @@ final class FinanceService
             return (int) $existing;
         }
 
-        $fees = self::computeFees(SubjectSelectionService::chosen($applicationId));
+        $fees = self::computeFees(SubjectSelectionService::chosen($applicationId), (int) $application['program_id'], (int) $application['year_level_id']);
 
         $assessmentId = Database::insert('fee_assessments', [
             'assessment_number' => SequenceService::next('assessment', 'ASM'),
@@ -331,6 +360,95 @@ final class FinanceService
         ));
     }
 
+    // -- The ledger card -------------------------------------------------------------------
+
+    /**
+     * A student's ledger in the school's own layout (docs/14): the assessment block and the
+     * Date / Ref / Particulars / Debit / Credit / Balance rows. Money in whole centavos.
+     *
+     * Rows, oldest first after the opening ACCOUNT row: adjustments (a credit when they lower what
+     * is owed, a debit when they raise it) and payments (a credit, Ref = the official receipt; a
+     * reversal is a debit that points at the receipt it cancels).
+     *
+     * @param array<string,mixed>            $assessment
+     * @param array<int,array<string,mixed>> $items       fee_items rows
+     * @param array<int,array<string,mixed>> $payments    Finance::payments() rows
+     * @param array<int,array<string,mixed>> $adjustments Finance::adjustments() rows
+     * @param array<int,array<string,mixed>> $subjects    rows with units
+     * @return array{units:float,rate:?string,tuition:int,misc:int,miscItems:array<int,array<string,mixed>>,discount:int,discountPercent:?float,rows:array<int,array<string,mixed>>,balance:int}
+     */
+    public static function ledger(array $assessment, array $items, array $payments, array $adjustments, array $subjects): array
+    {
+        $tuition = $misc = 0;
+        $rate = null;
+        $miscItems = [];
+        foreach ($items as $item) {
+            if ($item['basis'] === 'PER_UNIT') {
+                $tuition += self::cents($item['amount']);
+                $rate ??= $item['unit_amount'];
+            } else {
+                $misc += self::cents($item['amount']);
+                $miscItems[] = $item;
+            }
+        }
+
+        $discount = 0;
+        $entries = [];
+        foreach ($adjustments as $adjustment) {
+            $signed = self::signedCents($adjustment['amount']);
+            if ($signed < 0 && in_array($adjustment['type'], ['DISCOUNT', 'SCHOLARSHIP'], true)) {
+                $discount += -$signed;
+            }
+            $entries[] = [
+                'date'        => (string) $adjustment['created_at'],
+                'order'       => 1,
+                'ref'         => (string) $adjustment['adjustment_number'],
+                'particulars' => (self::ADJUSTMENT_TYPES[$adjustment['type']] ?? (string) $adjustment['type']) . ': ' . $adjustment['reason'],
+                'amount'      => $signed,
+            ];
+        }
+        foreach ($payments as $payment) {
+            $signed = self::signedCents($payment['amount']);
+            $reversal = $payment['reversed_payment_id'] !== null;
+            $entries[] = [
+                'date'        => (string) $payment['paid_at'],
+                'order'       => 2,
+                'ref'         => $reversal ? 'Rev. ' . $payment['reversed_receipt_number'] : (string) $payment['receipt_number'],
+                'particulars' => $reversal
+                    ? 'Reversal: ' . $payment['remarks']
+                    : 'Payment, ' . $payment['payment_method'] . ($payment['reference_number'] ? ' (ref. ' . $payment['reference_number'] . ')' : ''),
+                // A payment lowers the balance (a credit); a reversal puts it back (a debit).
+                'amount'      => -$signed,
+            ];
+        }
+        usort($entries, static fn (array $a, array $b) => [$a['date'], $a['order']] <=> [$b['date'], $b['order']]);
+
+        $balance = self::cents($assessment['total_amount']);
+        $rows = [[
+            'date' => (string) $assessment['assessed_at'], 'ref' => (string) $assessment['assessment_number'],
+            'particulars' => 'Account (tuition and miscellaneous fees)', 'debit' => $balance, 'credit' => 0, 'balance' => $balance,
+        ]];
+        foreach ($entries as $entry) {
+            $balance += $entry['amount'];
+            $rows[] = [
+                'date' => $entry['date'], 'ref' => $entry['ref'], 'particulars' => $entry['particulars'],
+                'debit' => max(0, $entry['amount']), 'credit' => max(0, -$entry['amount']), 'balance' => $balance,
+            ];
+        }
+
+        return [
+            'units'           => (float) array_sum(array_map(static fn ($s) => (float) $s['units'], $subjects)),
+            'rate'            => $rate,
+            'tuition'         => $tuition,
+            'misc'            => $misc,
+            'miscItems'       => $miscItems,
+            'discount'        => $discount,
+            'discountPercent' => $tuition > 0 && $discount > 0 ? round($discount / $tuition * 100, 2) : null,
+            'rows'            => $rows,
+            'balance'         => $balance,
+        ];
+    }
+
     // -- Corrections (cashier) ------------------------------------------------------------
 
     public const ADJUSTMENT_TYPES = [
@@ -347,22 +465,37 @@ final class FinanceService
      * bring the amount due below what has already been paid (refunds are not built)
      * nor below zero. A reduction can meet the payment policy and enroll the student.
      *
-     * @param array<string,mixed> $input type, amount (positive pesos), reason, direction (CORRECTION only: increase|decrease)
+     * A discount or scholarship may instead be given as a percentage of the tuition (the assessment's
+     * per-unit lines only; miscellaneous fees are not discounted). The peso amount is that share,
+     * rounded to the centavo, and the stored reason carries the percentage (docs/14).
+     *
+     * @param array<string,mixed> $input type, amount (positive pesos) or percent, reason, direction (CORRECTION only: increase|decrease)
      * @return int the adjustment id
      */
     public static function adjust(User $cashier, int $assessmentId, array $input): int
     {
         self::assertCashier($cashier);
 
+        $percentText = trim((string) ($input['percent'] ?? ''));
+        $byPercent = $percentText !== '';
+
         $validator = Validator::make($input, [
             'type'   => 'required|in:' . implode(',', array_keys(self::ADJUSTMENT_TYPES)),
-            'amount' => 'required',
-            'reason' => 'required|min:5|max:500',
+            'amount' => $byPercent ? 'nullable' : 'required',
+            'reason' => 'required|min:5|max:480',
         ], ['reason' => 'Reason']);
 
         $type = (string) ($input['type'] ?? '');
         $amountText = trim((string) ($input['amount'] ?? ''));
-        if ($amountText !== '' && (!preg_match('/^\d{1,9}(\.\d{1,2})?$/', $amountText) || self::cents($amountText) <= 0)) {
+        if ($byPercent) {
+            if ($amountText !== '') {
+                $validator->addError('percent', 'Give either a percentage or an amount in pesos, not both.');
+            } elseif (!in_array($type, ['DISCOUNT', 'SCHOLARSHIP'], true)) {
+                $validator->addError('percent', 'A percentage can be used for a discount or a scholarship.');
+            } elseif (!preg_match('/^\d{1,3}(\.\d{1,2})?$/', $percentText) || (float) $percentText <= 0 || (float) $percentText > 100) {
+                $validator->addError('percent', 'Enter a percentage from 0.01 to 100, with at most two decimal places.');
+            }
+        } elseif ($amountText !== '' && (!preg_match('/^\d{1,9}(\.\d{1,2})?$/', $amountText) || self::cents($amountText) <= 0)) {
             $validator->addError('amount', 'Enter an amount in pesos greater than zero, with at most two decimal places.');
         }
         $direction = (string) ($input['direction'] ?? '');
@@ -374,9 +507,9 @@ final class FinanceService
         }
 
         $increase = $type === 'ADDITIONAL_CHARGE' || ($type === 'CORRECTION' && $direction === 'increase');
-        $signed = ($increase ? 1 : -1) * self::cents($amountText);
+        $reason = trim((string) $input['reason']);
 
-        return Database::transaction(static function () use ($cashier, $assessmentId, $type, $signed, $input): int {
+        return Database::transaction(static function () use ($cashier, $assessmentId, $type, $increase, $amountText, $percentText, $byPercent, $reason): int {
             $assessment = Database::selectOne(
                 'SELECT fa.*, s.user_id FROM fee_assessments fa JOIN students s ON s.id = fa.student_id WHERE fa.id = ? FOR UPDATE',
                 [$assessmentId]
@@ -387,6 +520,21 @@ final class FinanceService
             if ($assessment['status'] !== 'ACTIVE') {
                 throw ValidationException::withMessage('This assessment is no longer active.');
             }
+
+            if ($byPercent) {
+                $tuition = self::cents((string) Database::scalar(
+                    "SELECT COALESCE(SUM(amount), 0) FROM fee_items WHERE fee_assessment_id = ? AND basis = 'PER_UNIT'",
+                    [$assessmentId]
+                ));
+                $cents = intdiv($tuition * (int) round((float) $percentText * 100) + 5000, 10000);
+                if ($cents <= 0) {
+                    throw ValidationException::withErrors(['percent' => ['This account has no tuition to take a percentage of.']], 'There is no tuition to discount.');
+                }
+                $reason = rtrim(rtrim(number_format((float) $percentText, 2, '.', ''), '0'), '.') . '% of tuition. ' . $reason;
+            } else {
+                $cents = self::cents($amountText);
+            }
+            $signed = ($increase ? 1 : -1) * $cents;
 
             $dueAfter = self::cents($assessment['total_amount']) + self::signedCents($assessment['total_adjustments']) + $signed;
             $paid = self::cents($assessment['total_paid']);
@@ -402,7 +550,7 @@ final class FinanceService
                 'fee_assessment_id' => $assessmentId,
                 'type'              => $type,
                 'amount'            => self::signedMoney($signed),
-                'reason'            => trim((string) $input['reason']),
+                'reason'            => $reason,
                 'created_by'        => $cashier->id,
                 'created_at'        => date('Y-m-d H:i:s'),
             ]);
@@ -410,10 +558,10 @@ final class FinanceService
 
             AuditService::log('finance.adjusted', 'finance', 'FinancialAdjustment', $id, ['balance' => $assessment['balance']], [
                 'assessment' => $assessment['assessment_number'], 'type' => $type, 'amount' => self::signedMoney($signed),
-            ], 'SUCCESS', trim((string) $input['reason']), $cashier->id, $cashier->role_name);
+            ], 'SUCCESS', $reason, $cashier->id, $cashier->role_name);
 
             NotificationService::notify((int) $assessment['user_id'], 'finance.adjusted',
-                self::ADJUSTMENT_TYPES[$type] . ' of ' . money(self::money(abs($signed))) . ' applied to your account', trim((string) $input['reason']), '/student/account?assessment=' . $assessmentId);
+                self::ADJUSTMENT_TYPES[$type] . ' of ' . money(self::money(abs($signed))) . ' applied to your account', $reason, '/student/account?assessment=' . $assessmentId);
 
             EnrollmentConfirmationService::confirmIfReady((int) $assessment['application_id'], $cashier);
 

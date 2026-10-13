@@ -2,6 +2,9 @@
 /**
  * @var ?array $fee
  * @var array  $bases
+ * @var array  $programs
+ * @var array  $yearLevels
+ * @var array  $keys  fee key => name of the general line a scoped fee can replace
  */
 $editing = $fee !== null;
 $action = $editing ? '/cashier/fees/' . $fee['id'] . '/edit' : '/cashier/fees/create';
@@ -32,6 +35,43 @@ $basisError = error_for('basis');
             </div>
             <?= component('field', ['name' => 'amount', 'label' => 'Amount (₱)', 'type' => 'number', 'required' => true, 'value' => $val('amount')]) ?>
         </div>
+        <fieldset class="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <legend class="px-1 text-sm font-semibold text-brand-navy">Applies to</legend>
+            <p class="text-sm text-slate-600">Leave both blank for every student. Choose a program and/or a year level to limit this fee, for example a different tuition rate for one program.</p>
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="field-program_id" class="field-label">Program</label>
+                    <select id="field-program_id" name="program_id" class="field-input">
+                        <option value="">All programs</option>
+                        <?php foreach ($programs as $program): ?>
+                            <option value="<?= e($program['id']) ?>" <?= $val('program_id') === (string) $program['id'] ? 'selected' : '' ?>><?= e($program['code']) ?> · <?= e($program['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (($e = error_for('program_id')) !== null): ?><p class="field-error"><span><?= e($e) ?></span></p><?php endif; ?>
+                </div>
+                <div>
+                    <label for="field-year_level_id" class="field-label">Year level</label>
+                    <select id="field-year_level_id" name="year_level_id" class="field-input">
+                        <option value="">All year levels</option>
+                        <?php foreach ($yearLevels as $yearLevel): ?>
+                            <option value="<?= e($yearLevel['id']) ?>" <?= $val('year_level_id') === (string) $yearLevel['id'] ? 'selected' : '' ?>><?= e($yearLevel['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (($e = error_for('year_level_id')) !== null): ?><p class="field-error"><span><?= e($e) ?></span></p><?php endif; ?>
+                </div>
+            </div>
+            <div>
+                <label for="field-replaces" class="field-label">Replaces the general fee</label>
+                <select id="field-replaces" name="replaces" class="field-input">
+                    <option value="">None, an extra charge for this program or year</option>
+                    <?php foreach ($keys as $key => $name): ?>
+                        <option value="<?= e($key) ?>" <?= old('replaces', $fee !== null && ($fee['program_id'] !== null || $fee['year_level_id'] !== null) ? (string) $fee['fee_key'] : '') === $key ? 'selected' : '' ?>><?= e($name) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="mt-1.5 text-xs text-brand-gray">For students it applies to, this line is charged instead of the general one.</p>
+                <?php if (($e = error_for('replaces')) !== null): ?><p class="field-error"><span><?= e($e) ?></span></p><?php endif; ?>
+            </div>
+        </fieldset>
         <div class="grid gap-5 sm:grid-cols-3">
             <div class="sm:col-span-2"><?= component('field', ['name' => 'description', 'label' => 'Description', 'value' => $val('description')]) ?></div>
             <?= component('field', ['name' => 'sort_order', 'label' => 'Order on statement', 'type' => 'number', 'value' => $val('sort_order', '100')]) ?>

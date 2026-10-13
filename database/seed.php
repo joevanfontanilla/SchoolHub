@@ -353,27 +353,51 @@ function seedGradePeriods(): void
 }
 
 /**
- * A starter fee schedule (docs/14). The amounts are SAMPLES, marked as such, for
- * the cashier to replace with the school's real fees on the Fee Schedule page.
- * Insert-only: a fee the cashier has already set is never overwritten.
+ * The school's fee schedule (docs/14), from its A.Y. 2026-2027 1st Semester ledger (Public
+ * Administration, 3rd year). These are school-wide DEFAULTS to verify: Laboratory, Computer Lab,
+ * and NSTP in particular probably vary by program or year, and the cashier scopes them on the Fee
+ * Schedule page. Re-runnable: a fee the cashier has changed is never overwritten, and the
+ * starter samples are only replaced while they are still untouched.
  */
 function seedFeeTypes(): void
 {
+    $source = 'From the A.Y. 2026-2027 1st Sem ledger (PUB AD 3). Verify against the school\'s fee schedule.';
     $fees = [
         // code, name, basis, amount, sort
-        ['TUITION', 'Tuition fee', 'PER_UNIT', '450.00', 10],
-        ['LAB', 'Laboratory fee', 'PER_LAB_UNIT', '800.00', 20],
-        ['REGISTRATION', 'Registration fee', 'FIXED', '500.00', 30],
-        ['LIBRARY', 'Library fee', 'FIXED', '400.00', 40],
-        ['TECHNOLOGY', 'Technology fee', 'FIXED', '600.00', 50],
-        ['MISC', 'Miscellaneous fee', 'FIXED', '1500.00', 60],
+        ['TUITION', 'Tuition fee', 'PER_UNIT', '319.98', 10],
+        ['REGISTRATION', 'Registration fee', 'FIXED', '1027.13', 20],
+        ['GUIDANCE', 'Guidance counseling', 'FIXED', '213.17', 30],
+        ['MEDICAL', 'Medical/Dental', 'FIXED', '319.81', 40],
+        ['LAB', 'Laboratory', 'FIXED', '835.38', 50],
+        ['STUDENT_ID', 'Student ID', 'FIXED', '157.96', 60],
+        ['LIBRARY', 'Library fee', 'FIXED', '520.75', 70],
+        ['AUDIO_VISUAL', 'Audio visual', 'FIXED', '208.85', 80],
+        ['STUDENT_ORG', 'Student org. & RLA', 'FIXED', '746.30', 90],
+        ['INSURANCE', 'Insurance', 'FIXED', '106.61', 100],
+        ['COMPUTER_LAB', 'Computer lab fee/internet/LMS', 'FIXED', '1705.84', 110],
+        ['PUBLICATION', 'School publication', 'FIXED', '154.07', 120],
+        ['CULTURAL', 'Cultural fee', 'FIXED', '104.42', 130],
+        ['ATHLETIC', 'Athletic fee', 'FIXED', '313.27', 140],
     ];
-    $added = 0;
+
+    $added = $updated = $retired = 0;
     foreach ($fees as [$code, $name, $basis, $amount, $sort]) {
-        $added += Database::query(
-            'INSERT IGNORE INTO fee_types (code, name, description, basis, amount, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)',
-            [$code, $name, 'Sample amount. Set the school\'s actual fee.', $basis, $amount, $sort]
-        )->rowCount();
+        $existing = Database::selectOne('SELECT id, description FROM fee_types WHERE code = ?', [$code]);
+        if ($existing === null) {
+            $added += Database::query(
+                'INSERT INTO fee_types (code, fee_key, name, description, basis, amount, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+                [$code, $code, $name, $source, $basis, $amount, $sort]
+            )->rowCount();
+        } elseif (str_starts_with((string) $existing['description'], 'Sample amount')) {
+            $updated += Database::query(
+                'UPDATE fee_types SET name = ?, description = ?, basis = ?, amount = ?, sort_order = ? WHERE id = ?',
+                [$name, $source, $basis, $amount, $sort, $existing['id']]
+            )->rowCount();
+        }
     }
-    echo "  fee types ............ {$added} added\n";
+    // The old starter lines the school's ledger does not have, while still untouched samples.
+    $retired += Database::query(
+        "UPDATE fee_types SET is_active = 0 WHERE code IN ('TECHNOLOGY', 'MISC') AND is_active = 1 AND description LIKE 'Sample amount%'"
+    )->rowCount();
+    echo "  fee types ............ {$added} added, {$updated} sample(s) replaced, {$retired} retired\n";
 }

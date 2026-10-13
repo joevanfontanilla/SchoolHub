@@ -86,6 +86,7 @@ final class AccountController extends Controller
         $input = [
             'type'      => $request->input('adjustment_type'),
             'amount'    => $request->input('adjustment_amount'),
+            'percent'   => $request->input('adjustment_percent'),
             'direction' => $request->input('adjustment_direction'),
             'reason'    => $request->input('adjustment_reason'),
         ];

@@ -292,6 +292,12 @@ final class Finance
     /** @return array<int,array<string,mixed>> */
     public static function feeTypes(bool $activeOnly = false): array
     {
-        return Database::select('SELECT * FROM fee_types ' . ($activeOnly ? 'WHERE is_active = 1 ' : '') . 'ORDER BY is_active DESC, sort_order, id');
+        return Database::select(
+            'SELECT ft.*, p.code AS program_code, yl.name AS year_level_name
+               FROM fee_types ft
+          LEFT JOIN programs p     ON p.id  = ft.program_id
+          LEFT JOIN year_levels yl ON yl.id = ft.year_level_id '
+            . ($activeOnly ? 'WHERE ft.is_active = 1 ' : '') . 'ORDER BY ft.is_active DESC, ft.sort_order, ft.id'
+        );
     }
 }

@@ -55,6 +55,7 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h3 id="items-heading" class="text-base">Fees</h3>
                     <?= partial('preview-link', ['path' => '/statements/' . $assessment['id'], 'kind' => 'page', 'title' => 'Statement of account · ' . $assessment['assessment_number'], 'label' => 'View statement', 'icon' => 'document', 'class' => 'inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline']) ?>
+                    <?= partial('preview-link', ['path' => '/statements/' . $assessment['id'] . '/ledger', 'kind' => 'page', 'title' => 'Student ledger · ' . $assessment['assessment_number'], 'label' => 'Ledger card', 'icon' => 'document', 'class' => 'inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline']) ?>
                 </div>
                 <ul class="divide-y divide-brand-50 text-sm">
                     <?php foreach ($items as $item): ?>
@@ -202,7 +203,10 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                     </select>
                     <?php if (($typeError = error_for('adjustment_type')) !== null): ?><p class="field-error"><?= e($typeError) ?></p><?php endif; ?>
                 </div>
-                <?= component('field', ['name' => 'adjustment_amount', 'label' => 'Amount (₱)', 'type' => 'number', 'required' => true, 'value' => old('adjustment_amount')]) ?>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <?= component('field', ['name' => 'adjustment_amount', 'label' => 'Amount (₱)', 'type' => 'number', 'value' => old('adjustment_amount'), 'help' => 'Or a percentage →']) ?>
+                    <?= component('field', ['name' => 'adjustment_percent', 'label' => 'Percent of tuition (%)', 'type' => 'number', 'value' => old('adjustment_percent'), 'help' => 'Discounts and scholarships only. Fill in one of the two.']) ?>
+                </div>
                 <fieldset>
                     <legend class="field-label">Direction (corrections only)</legend>
                     <div class="flex flex-wrap gap-4 text-sm">

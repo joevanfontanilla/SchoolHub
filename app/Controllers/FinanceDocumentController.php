@@ -60,6 +60,27 @@ final class FinanceDocumentController extends Controller
         ]);
     }
 
+    /** The student ledger card, in the school's own layout (docs/14). Same access as the statement. */
+    public function ledger(Request $request): void
+    {
+        $assessment = Finance::assessment((int) $request->param('id'));
+        $this->authorize(isset($assessment['user_id']) ? (int) $assessment['user_id'] : null, $assessment !== null, 'ledger card', [User::ROLE_CASHIER, User::ROLE_REGISTRAR]);
+
+        $id = (int) $assessment['id'];
+        $this->printView('print/ledger', [
+            'title'      => 'Student Ledger ' . $assessment['assessment_number'],
+            'assessment' => $assessment,
+            'ledger'     => \App\Services\FinanceService::ledger(
+                $assessment,
+                Finance::items($id),
+                Finance::payments($id),
+                Finance::adjustments($id),
+                \App\Services\SubjectSelectionService::chosen((int) $assessment['application_id'])
+            ),
+            'back'       => $this->accountBack($id),
+        ]);
+    }
+
     /** The signed-in student's Certificate of Registration for an enrolled term (docs/08). */
     public function cor(Request $request): void
     {

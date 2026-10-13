@@ -170,3 +170,47 @@ A counter workspace for payments received in person, at **Cashier → Walk-in Pa
 - **Today's counter payments.** A list of the payments recorded at the window today (not online
   verifications, not reversals), with the receipt, payor, method, and amount, and the day's total.
 - **Unchanged.** The payment form on `/cashier/accounts/{id}`, reversals, and adjustments.
+
+## Fee structure, percentage discounts, and the ledger card (as built)
+
+Modeled on the cashier's own spreadsheet ledger (one card per student: an assessment block
+and a Date / Ref / Particulars / Debit / Credit / Balance ledger).
+
+### Fee lines by program and year level
+- The fee schedule (`/cashier/fees`) lists the school's real lines: **Tuition per unit** and the
+  miscellaneous lines (Registration, Guidance Counseling, Medical/Dental, Laboratory, Student ID,
+  Library, Audio Visual, Student Org. & RLA, Insurance, Computer Lab/Internet/LMS, School
+  Publication, Cultural, Athletic; NSTP is added by the cashier where it applies).
+- A fee line may be limited to a **program** and/or a **year level** (`fee_types.program_id`,
+  `year_level_id`; blank means everyone). A scoped line can **replace** a general line for that
+  program or year (for example a different tuition rate per unit): lines share a `fee_key`, and
+  for each key the **most specific applicable line wins** (program + year, then program, then
+  year, then general). A scoped line that replaces nothing is simply an extra charge for that
+  program or year.
+- `FinanceService::computeFees()` receives the application's program and year level and applies
+  that rule. An issued assessment keeps the lines it was issued with, as before.
+- **The seeded amounts come from the A.Y. 2026-2027 1st Semester ledger (Public Administration,
+  3rd year) and are school-wide defaults to verify.** Laboratory, Computer Lab, and NSTP in
+  particular probably vary by program or year: scope them on the fee schedule.
+
+### Percentage discounts
+A discount or scholarship can be entered as a **percentage of tuition** instead of pesos. The
+tuition is the assessment's per-unit lines only (miscellaneous fees are not discounted), the
+peso amount is rounded to the centavo, and the stored adjustment carries the percentage in its
+reason. Everything else about adjustments is unchanged (docs/14 "Adjustments").
+
+### The ledger card (`/statements/{id}/ledger`)
+A printable card in the school's layout: name, student number, course, year, school year, the
+assessment block (units, tuition per unit, discount, miscellaneous total, and the itemized
+breakdown), then the ledger. Rows, oldest first:
+- **ACCOUNT**: debit of the assessment total (tuition plus miscellaneous);
+- each **adjustment**: a credit for a discount, scholarship, waiver, or decreasing correction, a
+  debit for a charge or increasing correction, with its date and number;
+- each **payment**: a credit, dated, with the official receipt number as its Ref;
+- each **reversal**: a debit pointing at the receipt it cancels.
+The balance column runs down the rows. Open it from the cashier's account page. The student,
+cashier, and registrar may open it, with the same access rules as the statement of account.
+
+### Not yet built
+Exam-period installments (Prelims, Midterm, Semi-Final, Finals), Bridging / OJT / Old Account
+charges, and a per-program and year account list.
