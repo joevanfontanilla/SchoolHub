@@ -21,6 +21,8 @@ function voucherInput(array $overrides = []): array
         'payment_method' => 'Cash',
         'reference_number' => '',
         'disbursed_on'   => date('Y-m-d'),
+        // Any expense account will do for these tests; the ledger tests check the posting itself.
+        'expense_account_id' => (int) App\Core\Database::scalar("SELECT id FROM ledger_accounts WHERE code = '5900'"),
     ], $overrides);
 }
 

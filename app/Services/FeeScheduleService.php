@@ -100,6 +100,10 @@ final class FeeScheduleService
         return Database::transaction(static function () use ($user, $id, $data): int {
             if ($id === null) {
                 $newId = Database::insert('fee_types', $data);
+                // Every fee line has a revenue account in the general ledger (docs/14).
+                if ($data['program_id'] === null && $data['year_level_id'] === null) {
+                    LedgerAccountService::ensureFeeAccount($data['fee_key'], $data['name']);
+                }
                 AuditService::log('finance.fee_created', 'finance', 'FeeType', $newId, null, $data, 'SUCCESS', null, $user->id, $user->role_name);
                 return $newId;
             }

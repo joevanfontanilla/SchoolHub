@@ -4,6 +4,7 @@
  * Cash Disbursements Journal.
  *
  * @var array<int,array<string,mixed>> $vouchers
+ * @var array<int,array<string,mixed>> $accounts the expense accounts a voucher can use
  */
 ?>
 <div class="space-y-6">
@@ -32,6 +33,7 @@
                             <th scope="col" class="px-4 py-3 font-semibold">Voucher No.</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Payee</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Particulars</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Expense account</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Method</th>
                             <th scope="col" class="px-4 py-3 text-right font-semibold">Amount</th>
                             <th scope="col" class="px-4 py-3 font-semibold"><span class="sr-only">Voucher</span></th>
@@ -44,6 +46,24 @@
                                 <td class="whitespace-nowrap px-4 py-3 font-medium text-brand-navy"><?= e($row['voucher_number']) ?></td>
                                 <td class="px-4 py-3"><?= e($row['payee']) ?></td>
                                 <td class="px-4 py-3"><?= e($row['particulars']) ?></td>
+                                <td class="px-4 py-3">
+                                    <?php if ($row['expense_account_id'] !== null): ?>
+                                        <?= e($row['expense_code'] . ' · ' . $row['expense_name']) ?>
+                                    <?php else: ?>
+                                        <form method="POST" action="<?= e(url('/cashier/disbursements/' . $row['id'] . '/category')) ?>" class="flex flex-wrap items-center gap-2"
+                                              data-confirm="The voucher is charged to this account in the general ledger. It can be set only once." data-confirm-title="Categorize this voucher?" data-confirm-tone="primary" data-confirm-label="Categorize">
+                                            <?= csrf_field() ?>
+                                            <label for="category-<?= e($row['id']) ?>" class="sr-only">Expense account for voucher <?= e($row['voucher_number']) ?></label>
+                                            <select id="category-<?= e($row['id']) ?>" name="expense_account_id" class="field-input !w-auto !py-1 text-xs" required>
+                                                <option value="">Uncategorized</option>
+                                                <?php foreach ($accounts as $account): ?>
+                                                    <option value="<?= e($account['id']) ?>"><?= e($account['code'] . ' · ' . $account['name']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" class="text-xs font-semibold text-brand-600 hover:underline">Set</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e($row['payment_method']) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-brand-navy"><?= e(money($row['amount'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">

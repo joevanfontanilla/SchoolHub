@@ -254,3 +254,63 @@ is audited like the other reports.
 
 ### Not yet built
 Automatic carry-over of an unpaid balance into the next term (the old account is typed in).
+
+## General ledger (as built)
+
+The third step of the cashier's accounting cycle: the Cash Receipts and Cash Disbursements Journals
+feed a **general ledger** and a **trial balance**, at **Cashier → General Ledger**
+(`/cashier/ledger`, permission `reports.cashier`).
+
+### Computed, not stored
+The ledger is **computed from the records that already exist**: fee assessments, adjustments,
+payments and their reversals, and disbursement vouchers (`LedgerService`). It stores nothing of
+its own except the chart of accounts, so it cannot drift from the books and it covers past records
+at once. There are no manual journal entries and no period closing; a correction stays a reversal
+(a reversing payment, an adjustment), as before. Every posting is a balanced pair, so debits always
+equal credits.
+
+### Accrual basis: what posts where
+| Event | Debit | Credit | Dated by |
+|---|---|---|---|
+| Assessment, each fee line | Student Receivables | that fee line's revenue account | when assessed |
+| Discount, scholarship, waiver | Scholarships and Discounts | Student Receivables | when applied |
+| Bridging fee / OJT fee | Student Receivables | Bridging Fees / OJT Fees | when applied |
+| Additional charge, correction up | Student Receivables | Other Charges and Fees | when applied |
+| Correction down | Other Charges and Fees | Student Receivables | when applied |
+| Old account (carried over) | Student Receivables | Opening Balances (Old Accounts), not revenue | when entered |
+| Payment | Cash on Hand (Cash) or Cash in Bank and E-wallets (GCash, Maya, bank, check) | Student Receivables | when recorded |
+| Payment reversal | Student Receivables | the same cash account | when reversed |
+| Disbursement voucher | its expense account | Cash on Hand (Cash) or Cash in Bank and E-wallets | disbursement date |
+
+A payment is dated by when the cashier recorded it, the same as the Collections report and the
+Cash Receipts Journal, so the three always agree. A disbursement is dated by its disbursement date.
+
+### The chart of accounts (`ledger_accounts`, `/cashier/ledger/chart`)
+- **Assets:** 1010 Cash on Hand, 1020 Cash in Bank and E-wallets, 1100 Student Receivables.
+- **Equity:** 3010 Opening Balances (Old Accounts).
+- **Revenue:** one account per fee line of the fee schedule (created automatically with the fee, by
+  `fee_key`), plus 4800 Bridging Fees, 4810 OJT Fees, 4890 Other Charges and Fees.
+- **Contra-revenue:** 4950 Scholarships and Discounts.
+- **Expenses:** 5010 Salaries and Wages, 5020 Utilities, 5030 Office Supplies, 5040 Repairs and
+  Maintenance, 5050 Communication, 5060 Transportation, 5070 Student Activities, 5900 Miscellaneous
+  Expense, and 5990 Uncategorized Expense.
+- The cashier (`disbursements.manage`) may **add expense accounts** (code 5000 to 5899) and switch
+  them off; system accounts and fee-line revenue accounts cannot be switched off or renamed here.
+  An account that has postings is never deleted.
+
+### Expense category on vouchers
+A new voucher must choose an **expense account**. Vouchers recorded before this existed post to
+5990 Uncategorized Expense; the cashier can **categorize each one once** from the Disbursements page
+(audited). After that it is permanent, like the rest of the voucher.
+
+### The pages
+- **General Ledger / Trial balance** (`/cashier/ledger`): for a date range (default: this year to
+  date), every account's opening balance, debits, credits, and closing balance, with totals that
+  must balance. Each account links to its ledger.
+- **Account ledger** (`/cashier/ledger/accounts/{id}`): Date / Ref / Particulars / Debit / Credit /
+  Balance for one account, with the opening balance first, like the student ledger.
+- Both print, and export as CSV (audited, like every report).
+
+### Not yet built
+Manual journal entries, period closing, and a posting for voiding an assessment (nothing voids one
+today; if that is ever added it must post the reversal).

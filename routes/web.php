@@ -27,6 +27,7 @@ use App\Controllers\AuthController;
 use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
 use App\Controllers\Cashier\FeeController as CashierFees;
+use App\Controllers\Cashier\LedgerController as CashierLedger;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
 use App\Controllers\Cashier\WalkInPaymentController as CashierWalkInPayments;
 use App\Controllers\Cashier\ReportController as CashierReports;
@@ -261,11 +262,23 @@ $router->get('/cashier/reports/disbursements-journal',        [CashierReports::c
 $router->get('/cashier/reports/disbursements-journal/print',  [CashierReports::class, 'disbursementsJournalPrint'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/disbursements-journal/export', [CashierReports::class, 'disbursementsJournalExport'], $cashier('reports.cashier'));
 
+// The general ledger, computed from the books (docs/14). Chart changes need disbursements.manage.
+$router->get('/cashier/ledger',                  [CashierLedger::class, 'index'],         $cashier('reports.cashier'), 'cashier.ledger');
+$router->get('/cashier/ledger/print',            [CashierLedger::class, 'print'],         $cashier('reports.cashier'));
+$router->get('/cashier/ledger/export',           [CashierLedger::class, 'export'],        $cashier('reports.cashier'));
+$router->get('/cashier/ledger/chart',            [CashierLedger::class, 'chart'],         $cashier('reports.cashier'));
+$router->post('/cashier/ledger/chart',           [CashierLedger::class, 'addAccount'],    $cashier('disbursements.manage'));
+$router->post('/cashier/ledger/chart/{id}/toggle', [CashierLedger::class, 'toggle'],      $cashier('disbursements.manage'));
+$router->get('/cashier/ledger/accounts/{id}',        [CashierLedger::class, 'account'],       $cashier('reports.cashier'));
+$router->get('/cashier/ledger/accounts/{id}/print',  [CashierLedger::class, 'accountPrint'],  $cashier('reports.cashier'));
+$router->get('/cashier/ledger/accounts/{id}/export', [CashierLedger::class, 'accountExport'], $cashier('reports.cashier'));
+
 // Cash disbursements: the cashier records money paid out on vouchers (docs/14).
 $router->get('/cashier/disbursements',               [CashierDisbursements::class, 'index'],   $cashier('disbursements.manage'), 'cashier.disbursements');
 $router->get('/cashier/disbursements/create',        [CashierDisbursements::class, 'create'],  $cashier('disbursements.manage'));
 $router->post('/cashier/disbursements',              [CashierDisbursements::class, 'store'],   $cashier('disbursements.manage'));
 $router->get('/cashier/disbursements/{id}/voucher',  [CashierDisbursements::class, 'voucher'], $cashier('disbursements.manage'));
+$router->post('/cashier/disbursements/{id}/category', [CashierDisbursements::class, 'categorize'], $cashier('disbursements.manage'));
 
 $router->get('/cashier/fees',            [CashierFees::class, 'index'],  $cashier('fees.manage'), 'cashier.fees');
 $router->get('/cashier/fees/create',     [CashierFees::class, 'create'], $cashier('fees.manage'));

@@ -24,7 +24,7 @@ final class DisbursementService
     /**
      * Record a disbursement and return the created voucher row.
      *
-     * @param array<string,mixed> $input payee, particulars, amount, payment_method, reference_number, disbursed_on
+     * @param array<string,mixed> $input payee, particulars, expense_account_id, amount, payment_method, reference_number, disbursed_on
      * @return array<string,mixed>
      */
     public static function record(User $cashier, array $input): array
@@ -34,11 +34,17 @@ final class DisbursementService
         $validator = Validator::make($input, [
             'payee'          => 'required|max:150',
             'particulars'    => 'required|max:255',
+            'expense_account_id' => 'required|integer',
             'amount'         => 'required|numeric',
             'payment_method' => 'required|in:' . implode(',', self::METHODS),
             'reference_number' => 'nullable|max:100',
             'disbursed_on'   => 'required|date',
-        ], ['reference_number' => 'Reference number', 'disbursed_on' => 'Date disbursed', 'payment_method' => 'Payment method']);
+        ], ['reference_number' => 'Reference number', 'disbursed_on' => 'Date disbursed', 'payment_method' => 'Payment method', 'expense_account_id' => 'Expense account']);
+
+        $account = isset($input['expense_account_id']) ? LedgerAccountService::find((int) $input['expense_account_id']) : null;
+        if (!LedgerAccountService::isVoucherAccount($account)) {
+            $validator->addError('expense_account_id', 'Choose what the money was spent on.');
+        }
 
         $cents = FinanceService::cents((string) ($input['amount'] ?? '0'));
         if (!preg_match('/^\d+(\.\d{1,2})?$/', trim((string) ($input['amount'] ?? ''))) || $cents <= 0) {
@@ -52,12 +58,13 @@ final class DisbursementService
             throw ValidationException::withErrors($validator->errors());
         }
 
-        return Database::transaction(static function () use ($cashier, $input, $cents, $disbursedOn): array {
+        return Database::transaction(static function () use ($cashier, $input, $cents, $disbursedOn, $account): array {
             $reference = trim((string) ($input['reference_number'] ?? ''));
             $id = Database::insert('disbursement_vouchers', [
                 'voucher_number'   => SequenceService::next('voucher', 'DV'),
                 'payee'            => trim((string) $input['payee']),
                 'particulars'      => trim((string) $input['particulars']),
+                'expense_account_id' => (int) $input['expense_account_id'],
                 'amount'           => FinanceService::money($cents),
                 'payment_method'   => (string) $input['payment_method'],
                 'reference_number' => $reference !== '' ? $reference : null,
@@ -68,7 +75,7 @@ final class DisbursementService
             $voucher = DisbursementVoucher::find($id) ?? [];
             AuditService::log('disbursement.recorded', 'finance', 'DisbursementVoucher', $id, null, [
                 'voucher' => $voucher['voucher_number'] ?? '', 'payee' => $voucher['payee'] ?? '',
-                'amount' => $voucher['amount'] ?? '', 'method' => $voucher['payment_method'] ?? '',
+                'amount' => $voucher['amount'] ?? '', 'method' => $voucher['payment_method'] ?? '', 'account' => $account['code'],
             ], 'SUCCESS', null, $cashier->id, $cashier->role_name);
 
             return $voucher;

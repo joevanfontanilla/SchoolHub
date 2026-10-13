@@ -12,9 +12,10 @@ use App\Core\Database;
  */
 final class DisbursementVoucher
 {
-    private const SELECT = 'SELECT dv.*, u.first_name, u.last_name
+    private const SELECT = 'SELECT dv.*, u.first_name, u.last_name, la.code AS expense_code, la.name AS expense_name
                               FROM disbursement_vouchers dv
-                              JOIN users u ON u.id = dv.recorded_by';
+                              JOIN users u ON u.id = dv.recorded_by
+                         LEFT JOIN ledger_accounts la ON la.id = dv.expense_account_id';
 
     /** @return array<int,array<string,mixed>> the most recent vouchers, newest first */
     public static function recent(): array

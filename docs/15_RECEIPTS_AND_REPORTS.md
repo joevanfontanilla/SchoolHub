@@ -70,6 +70,7 @@ its days, times, room, section, and **teacher**, and the week at a glance.
 |---|---|---|---|
 | **Collections**: a date range (default: this month so far; at most one year) | `/cashier/reports/collections` | `…/collections/print` | `…/collections/export` |
 | **Outstanding balances**: active assessments that still owe, optionally by term and program | `/cashier/reports/outstanding` | `…/outstanding/print` | `…/outstanding/export` |
+| **General ledger and trial balance**: the accounts and their balances for a date range; each account's ledger (docs/14) | `/cashier/ledger` | `…/ledger/print` | `…/ledger/export` |
 | **Account list**: every active account in a term, grouped by program and year level like the spreadsheet tabs | `/cashier/reports/account-list` | `…/account-list/print` | `…/account-list/export` |
 
 - **Collections** are dated by when the cashier recorded or verified the payment

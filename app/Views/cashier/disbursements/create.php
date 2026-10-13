@@ -3,6 +3,7 @@
  * Record a disbursement (docs/14): the cashier fills a voucher for money paid out.
  *
  * @var array<int,string> $methods
+ * @var array<int,array<string,mixed>> $accounts the expense accounts a voucher can use
  */
 $selectedMethod = (string) old('payment_method', 'Cash');
 ?>
@@ -29,6 +30,18 @@ $selectedMethod = (string) old('payment_method', 'Cash');
             <label for="particulars" class="field-label">Particulars (what it is for)</label>
             <input id="particulars" name="particulars" class="field-input <?= error_for('particulars') ? 'field-input-error' : '' ?>" value="<?= e((string) old('particulars', '')) ?>" autocomplete="off" required>
             <?php if (error_for('particulars')): ?><p class="field-error" role="alert"><span><?= e(error_for('particulars')) ?></span></p><?php endif; ?>
+        </div>
+
+        <div>
+            <label for="expense_account_id" class="field-label">Spent on (expense account)</label>
+            <select id="expense_account_id" name="expense_account_id" class="field-input <?= error_for('expense_account_id') ? 'field-input-error' : '' ?>" required>
+                <option value="">Choose…</option>
+                <?php foreach ($accounts as $account): ?>
+                    <option value="<?= e($account['id']) ?>" <?= (string) old('expense_account_id', '') === (string) $account['id'] ? 'selected' : '' ?>><?= e($account['code'] . ' · ' . $account['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (error_for('expense_account_id')): ?><p class="field-error" role="alert"><span><?= e(error_for('expense_account_id')) ?></span></p><?php endif; ?>
+            <p class="mt-1.5 text-xs text-brand-gray">Decides which account the general ledger charges. <a href="<?= e(url('/cashier/ledger/chart')) ?>" class="font-semibold text-brand-600 hover:underline">Add an account</a> if the one you need is missing.</p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">

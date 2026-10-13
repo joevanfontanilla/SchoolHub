@@ -11,6 +11,7 @@ use App\Core\Request;
 use App\Core\ValidationException;
 use App\Models\DisbursementVoucher;
 use App\Services\DisbursementService;
+use App\Services\LedgerAccountService;
 
 /**
  * Cash disbursements (docs/14): the cashier records money paid out on a numbered voucher.
@@ -23,6 +24,7 @@ final class DisbursementController extends Controller
         $this->appView('cashier/disbursements/index', [
             'title'    => 'Disbursements',
             'vouchers' => DisbursementVoucher::recent(),
+            'accounts' => LedgerAccountService::expenseAccounts(),
         ]);
     }
 
@@ -31,6 +33,7 @@ final class DisbursementController extends Controller
         $this->appView('cashier/disbursements/create', [
             'title'   => 'Record a disbursement',
             'methods' => DisbursementService::METHODS,
+            'accounts' => LedgerAccountService::expenseAccounts(),
         ]);
     }
 
@@ -43,6 +46,18 @@ final class DisbursementController extends Controller
             return;
         }
         $this->success('Voucher ' . $voucher['voucher_number'] . ' recorded.', '/cashier/disbursements');
+    }
+
+    /** Give a voucher recorded before categories existed its expense account, once (docs/14). */
+    public function categorize(Request $request): void
+    {
+        try {
+            LedgerAccountService::categorizeVoucher(Auth::user(), (int) $request->param('id'), (int) $request->input('expense_account_id', 0));
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], '/cashier/disbursements');
+            return;
+        }
+        $this->success('The voucher was categorized.', '/cashier/disbursements');
     }
 
     public function voucher(Request $request): void

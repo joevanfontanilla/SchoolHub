@@ -177,6 +177,7 @@ try {
         seedEnrollmentWindows();
         seedGradePeriods();
         seedFeeTypes();
+        echo "  ledger accounts ...... " . App\Services\LedgerAccountService::ensureAccounts() . " added\n";
     });
 
     echo "\n  Seeding complete.\n";
