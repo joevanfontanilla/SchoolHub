@@ -167,7 +167,7 @@ return [
             if (count($required) > 1) {
                 $t->assertThrows(
                     fn () => WalkInService::submit($registrar, $id, [$required[0]]),
-                    'required documents',
+                    'received in person first',
                     'A missing required document refuses the submission'
                 );
                 $t->assertEquals(Application::DRAFT, Database::scalar('SELECT application_status FROM enrollment_applications WHERE id = ?', [$id]));

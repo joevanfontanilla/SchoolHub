@@ -134,6 +134,20 @@ final class WalkInService
     public static function submit(User $registrar, int $applicationId, array $receivedIds): void
     {
         self::recordDocuments($registrar, $applicationId, $receivedIds);
+
+        // The status service's own message talks about uploading; at the counter it is a tick.
+        $missing = Database::select(
+            "SELECT rt.name
+               FROM enrollment_requirements er
+               JOIN requirement_types rt ON rt.id = er.requirement_type_id
+              WHERE er.application_id = ? AND er.is_required = 1 AND er.status <> 'VERIFIED'
+              ORDER BY rt.sort_order",
+            [$applicationId]
+        );
+        if ($missing !== []) {
+            throw ValidationException::withMessage('Tick the required documents received in person first: ' . implode(', ', array_column($missing, 'name')) . '.');
+        }
+
         EnrollmentStatusService::transition($applicationId, Application::SUBMITTED, $registrar);
     }
 
