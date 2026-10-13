@@ -3,15 +3,17 @@
  *
  *   ./tailwindcss.exe -i src/input.css -o public/assets/app.css --watch
  *
- * Palette: Lyceum of the East Aurora official website colors.
+ * Palette: refined blue, from the Lyceum of the East Aurora website blue (docs/21).
  *
- *   Primary Blue  #2E9AD6  headers, buttons, key elements
- *   Navy Blue     #0F4C5C  text, headings, important content
- *   Teal Green    #7ED08A  accents, highlights, success states
- *   Light Mint    #E8F6ED  backgrounds, cards, sections
- *   Sky Blue      #B3DFF5  hover states, borders, subtle accents
- *   Gray          #6B7280  secondary text, icons, disabled states
- *   Red  #E63946 (alert) · Yellow #FFC947 (warning) · Pale Blue #EAF6FF
+ *   Primary Blue  #1F6FA8  buttons, links, key elements (5.4:1 with white text)
+ *   Navy Blue     #173F63  headings, sidebar, important content
+ *   Gold          #E3A72F  the accent (token name brand-teal, kept for the existing markup)
+ *   Quiet tint    #EBF2F8  soft sections and backgrounds (brand-mint)
+ *   Sky Blue      #C4D9EC  borders and subtle accents
+ *   Gray          #5B6B7A  secondary text, icons, disabled states
+ *   Red  #D64550 (alert) · Gold  #E3A72F (warning) · Pale Blue #F1F6FB
+ *
+ * Type: Plus Jakarta Sans for headings, Inter for text. Sentence case, no all-caps headings.
  *
  * THEMING (light + dark). Every colour below resolves to a CSS variable holding
  * "R G B" channels, wrapped as rgb(var(--x) / <alpha-value>) so Tailwind opacity
@@ -92,7 +94,7 @@ module.exports = {
       },
       fontFamily: {
         sans:    ['Inter', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Montserrat', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
       },
       letterSpacing: {
         brand: '0.22em',

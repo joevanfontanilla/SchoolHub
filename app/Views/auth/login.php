@@ -23,7 +23,7 @@ $features = [
                 <img src="<?= e(school_logo_url()) ?>" alt="" width="64" height="64" class="school-seal h-14 w-14 ring-4 ring-white/20">
                 <span>
                     <span class="block font-display text-lg font-extrabold uppercase leading-tight tracking-tight"><?= e($schoolName) ?></span>
-                    <span class="block text-xs font-semibold uppercase tracking-[0.14em] text-white/75"><?= e($school['school_tagline'] ?? '') ?></span>
+                    <span class="block text-sm font-medium text-white/80"><?= e($school['school_tagline'] ?? '') ?></span>
                 </span>
             </a>
 

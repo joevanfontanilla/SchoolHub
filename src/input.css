@@ -20,19 +20,19 @@
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-    font-family: 'Montserrat';
+    font-family: 'Plus Jakarta Sans';
     font-style: normal;
-    font-weight: 100 900;
+    font-weight: 400 800;
     font-display: swap;
-    src: url('fonts/montserrat-latin.woff2') format('woff2');
+    src: url('fonts/plus-jakarta-sans-latin.woff2') format('woff2');
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-    font-family: 'Montserrat';
+    font-family: 'Plus Jakarta Sans';
     font-style: normal;
-    font-weight: 100 900;
+    font-weight: 400 800;
     font-display: swap;
-    src: url('fonts/montserrat-latin-ext.woff2') format('woff2');
+    src: url('fonts/plus-jakarta-sans-latin-ext.woff2') format('woff2');
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
@@ -49,102 +49,103 @@
 :root {
     color-scheme: light;
 
-    --brand-50: 234 246 255;
-    --brand-100: 211 236 250;
-    --brand-200: 179 223 245;
-    --brand-300: 138 205 238;
-    --brand-400: 46 154 214;
-    --brand-500: 38 138 194;
-    --brand-600: 30 123 174;
-    --brand-700: 24 100 144;
-    --brand-800: 19 78 112;
-    --brand-900: 15 76 92;
-    --brand-950: 10 54 66;
-    --brand-primary: 46 154 214;
-    --brand-navy: 15 76 92;
-    --brand-teal: 126 208 138;
-    --brand-mint: 232 246 237;
-    --brand-sky: 179 223 245;
-    --brand-pale: 234 246 255;
-    --brand-gray: 107 114 128;
-    --brand-alert: 230 57 70;
-    --brand-warning: 255 201 71;
-    --brand-canvas: 246 250 253;
+    /* Refined blue: brand-600 #1F6FA8 (5.4:1 with white text), navy #173F63, gold accent #E3A72F. */
+    --brand-50: 241 246 251;
+    --brand-100: 222 234 245;
+    --brand-200: 196 217 236;
+    --brand-300: 150 188 220;
+    --brand-400: 84 144 193;
+    --brand-500: 40 125 184;
+    --brand-600: 31 111 168;
+    --brand-700: 24 90 137;
+    --brand-800: 22 70 108;
+    --brand-900: 23 63 99;
+    --brand-950: 14 41 66;
+    --brand-primary: 31 111 168;
+    --brand-navy: 23 63 99;
+    --brand-teal: 227 167 47;      /* the gold accent (kept under its old token name) */
+    --brand-mint: 235 242 248;     /* a quiet blue-gray tint for soft sections */
+    --brand-sky: 196 217 236;
+    --brand-pale: 241 246 251;
+    --brand-gray: 91 107 122;
+    --brand-alert: 214 69 80;
+    --brand-warning: 227 167 47;
+    --brand-canvas: 245 248 251;
 
-    --slate-50: 248 250 252;
-    --slate-100: 241 245 249;
-    --slate-200: 226 232 240;
-    --slate-300: 203 213 225;
-    --slate-400: 148 163 184;
-    --slate-500: 100 116 139;
-    --slate-600: 71 85 105;
-    --slate-700: 51 65 85;
-    --slate-800: 30 41 59;
-    --slate-900: 15 23 42;
+    --slate-50: 247 249 251;
+    --slate-100: 240 244 248;
+    --slate-200: 225 232 238;
+    --slate-300: 203 214 224;
+    --slate-400: 150 164 178;
+    --slate-500: 105 120 135;
+    --slate-600: 74 91 107;
+    --slate-700: 52 68 84;
+    --slate-800: 33 47 62;
+    --slate-900: 18 30 44;
 
-    --success-bg: 232 246 237;
-    --success-text: 27 107 54;
-    --success-line: 126 208 138;
-    --warning-bg: 255 246 224;
-    --warning-text: 138 91 0;
-    --warning-line: 255 201 71;
+    --success-bg: 221 243 230;
+    --success-text: 20 104 58;
+    --success-line: 126 200 150;
+    --warning-bg: 255 243 214;
+    --warning-text: 122 82 0;
+    --warning-line: 227 167 47;
     --danger-bg: 253 236 238;
-    --danger-text: 176 27 40;
-    --danger-line: 230 57 70;
+    --danger-text: 168 36 48;
+    --danger-line: 214 69 80;
 
     /* Semantic surfaces used by component overrides. */
     --surface: 255 255 255;    /* cards, panels, bg-white */
-    --surface-2: 248 250 252;  /* subtle inset panels */
+    --surface-2: 247 249 251;  /* subtle inset panels */
 }
 
 .dark {
     color-scheme: dark;
 
-    --brand-50: 21 48 60;
-    --brand-100: 27 58 72;
-    --brand-200: 36 71 90;
-    --brand-300: 74 138 170;
-    --brand-400: 56 168 224;
-    --brand-500: 66 176 232;
-    --brand-600: 96 188 240;   /* links / accents: bright on dark */
-    --brand-700: 30 123 174;   /* primary button fill: white text passes AA */
-    --brand-800: 20 92 132;
-    --brand-900: 214 232 244;  /* was navy heading text: light on dark */
-    --brand-950: 8 40 50;
-    --brand-primary: 56 168 224;
-    --brand-navy: 214 232 244;
-    --brand-teal: 143 217 154;
-    --brand-mint: 22 46 38;
-    --brand-sky: 36 71 90;
-    --brand-pale: 21 48 60;
-    --brand-gray: 154 166 181;
-    --brand-alert: 244 96 107;
-    --brand-warning: 255 210 122;
-    --brand-canvas: 11 23 32;
+    --brand-50: 19 38 56;
+    --brand-100: 25 49 72;
+    --brand-200: 34 63 90;
+    --brand-300: 66 112 150;
+    --brand-400: 80 150 205;
+    --brand-500: 95 165 220;
+    --brand-600: 120 180 228;   /* links / accents: bright on dark */
+    --brand-700: 31 111 168;    /* primary button fill: white text passes AA */
+    --brand-800: 24 88 134;
+    --brand-900: 214 228 242;   /* navy heading text: light on dark */
+    --brand-950: 10 30 48;
+    --brand-primary: 80 150 205;
+    --brand-navy: 214 228 242;
+    --brand-teal: 232 183 80;
+    --brand-mint: 18 36 52;
+    --brand-sky: 34 63 90;
+    --brand-pale: 19 38 56;
+    --brand-gray: 150 165 180;
+    --brand-alert: 240 100 110;
+    --brand-warning: 240 190 90;
+    --brand-canvas: 11 20 30;
 
-    --slate-50: 22 42 54;
-    --slate-100: 28 50 62;
-    --slate-200: 42 60 74;
-    --slate-300: 54 74 90;
-    --slate-400: 124 140 158;
-    --slate-500: 148 163 184;
-    --slate-600: 176 189 204;
-    --slate-700: 203 213 225;
-    --slate-800: 226 232 240;
+    --slate-50: 20 36 52;
+    --slate-100: 26 45 64;
+    --slate-200: 40 60 80;
+    --slate-300: 54 76 98;
+    --slate-400: 120 138 158;
+    --slate-500: 148 164 184;
+    --slate-600: 176 190 206;
+    --slate-700: 203 214 226;
+    --slate-800: 226 233 241;
     --slate-900: 241 245 249;
 
     --success-bg: 19 41 28;
     --success-text: 127 209 143;
     --success-line: 46 125 70;
     --warning-bg: 42 33 16;
-    --warning-text: 255 210 122;
+    --warning-text: 240 190 90;
     --warning-line: 184 134 11;
     --danger-bg: 42 20 22;
     --danger-text: 244 131 140;
-    --danger-line: 230 57 70;
+    --danger-line: 214 69 80;
 
-    --surface: 16 33 44;
-    --surface-2: 22 42 54;
+    --surface: 15 29 43;
+    --surface-2: 21 38 55;
 }
 
 /*
@@ -184,7 +185,7 @@
     }
 
     h1, h2, h3, h4 {
-        @apply font-display font-bold text-brand-navy;
+        @apply font-display font-semibold tracking-tight text-brand-navy;
     }
 }
 
@@ -208,7 +209,7 @@
     }
 
     .card {
-        @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+        @apply rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgb(23_63_99_/_0.05)];
     }
 
     .field-label {
@@ -254,16 +255,16 @@
 
     /* -- Template elements --------------------------------------------------- */
 
-    /* Small spaced uppercase section label: "GRADIENT USAGE (FROM WEBSITE)". */
+    /* The small label above a heading ("Cashier", "Enrollment"): plain sentence case in the brand blue. */
     .eyebrow {
-        @apply font-display text-xs font-bold uppercase tracking-brand text-brand-navy;
+        @apply font-display text-sm font-semibold text-brand-600;
     }
 
     /* Spaced uppercase tagline: "DISCIPLINE • INTEGRITY • SERVICE".
        brand-600, not the brand blue: at this size the brand blue is below the
        4.5:1 contrast minimum on a light background (see tailwind.config.js). */
     .tagline {
-        @apply font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-600 sm:text-sm sm:tracking-brand;
+        @apply font-display text-xs font-medium uppercase tracking-[0.16em] text-brand-600 sm:text-sm;
     }
 
     /* The short blue rule under the school name. */
@@ -274,8 +275,8 @@
     /* Two-tone display headline: navy with the key word in brand blue. The
        brand blue is safe here because the text is large and bold (3:1 applies). */
     .display-heading {
-        @apply font-display text-4xl font-extrabold uppercase leading-[1.05] tracking-tight text-brand-navy
-               sm:text-5xl lg:text-6xl;
+        @apply font-display text-4xl font-bold leading-[1.1] tracking-tight text-brand-navy
+               sm:text-5xl lg:text-[3.5rem];
     }
 
     /* The seal. The image has white corners, so it is always cropped round. */
@@ -287,7 +288,7 @@
     .hero-backdrop {
         background-image:
             radial-gradient(ellipse at 15% 20%, #FFFFFF 0%, rgba(255, 255, 255, 0) 55%),
-            linear-gradient(120deg, #EAF6FF 0%, #D3ECFA 45%, #FFFFFF 100%);
+            linear-gradient(120deg, #F1F6FB 0%, #E3EDF6 45%, #FFFFFF 100%);
     }
 
     /* The campus photo fades into the backdrop on its left edge (desktop) or
@@ -308,27 +309,18 @@
        white, so both ends keep their contrast. Vertical on small screens so the
        text never lands on the dark end. */
     .brand-gradient-band {
-        background-image: linear-gradient(180deg, #EAF6FF 0%, #B3DFF5 45%, #2E9AD6 75%, #0F4C5C 100%);
+        background-image: linear-gradient(180deg, #F1F6FB 0%, #C4D9EC 45%, #1F6FA8 75%, #173F63 100%);
     }
     @media (min-width: 1024px) {
         .brand-gradient-band {
-            background-image: linear-gradient(100deg, #EAF6FF 0%, #B3DFF5 50%, #2E9AD6 78%, #0F4C5C 100%);
+            background-image: linear-gradient(100deg, #F1F6FB 0%, #C4D9EC 50%, #1F6FA8 78%, #173F63 100%);
         }
     }
 
-    /* The template's diagonal stripe band along the bottom edge. */
+    /* A thin three-tone line along the bottom edge: navy, blue, gold. */
     .brand-stripes {
-        height: 0.75rem;
-        background-image: linear-gradient(
-            115deg,
-            #0F4C5C 0 16%,
-            #1E7BAE 16% 34%,
-            #2E9AD6 34% 48%,
-            #B3DFF5 48% 60%,
-            #E8F6ED 60% 68%,
-            #2E9AD6 68% 84%,
-            #0F4C5C 84% 100%
-        );
+        height: 0.25rem;
+        background-image: linear-gradient(90deg, #173F63 0 60%, #1F6FA8 60% 86%, #E3A72F 86% 100%);
     }
 
     /* Document preview window (partials/preview-dialog.php). Nearly full screen, so a
@@ -337,7 +329,7 @@
         @apply m-auto h-[92vh] w-[96vw] max-w-6xl overflow-hidden rounded-2xl border border-brand-100 bg-white p-0 shadow-2xl;
     }
     .preview-dialog::backdrop {
-        background: rgb(15 76 92 / 0.65);
+        background: rgb(14 41 66 / 0.65);
     }
     /* Confirmation window (partials/confirm-dialog.php): the same rounded card and dimmed
        backdrop as the preview window, sized for a question. */
@@ -345,7 +337,7 @@
         @apply m-auto w-[calc(100vw-2rem)] max-w-md overflow-hidden rounded-2xl border border-brand-100 bg-white p-0 shadow-2xl;
     }
     .confirm-dialog::backdrop {
-        background: rgb(15 76 92 / 0.65);
+        background: rgb(14 41 66 / 0.65);
     }
     .confirm-dialog[open] {
         animation: dialog-in 140ms ease-out;
@@ -372,6 +364,28 @@
     .swatch-navy    { @apply bg-brand-navy text-white; }
     .swatch-teal    { @apply bg-brand-teal text-brand-navy; }
     .swatch-sky     { @apply bg-brand-sky text-brand-navy; }
+}
+
+/*
+ * Calmer type on screen. Small spaced uppercase labels and extra-bold headings become plain
+ * sentence case and a normal bold. Printed documents (receipts, statements, ledgers) keep their
+ * conventional capitals: their layout marks the body with .print-doc.
+ */
+body:not(.print-doc) .uppercase {
+    text-transform: none;
+}
+body:not(.print-doc) .tracking-wider,
+body:not(.print-doc) .tracking-wide,
+body:not(.print-doc) .tracking-widest,
+body:not(.print-doc) .tracking-brand {
+    letter-spacing: normal;
+}
+body:not(.print-doc) .font-extrabold {
+    font-weight: 700;
+}
+/* The seal's school name in the sidebar and footer keeps its spacing: it is a wordmark. */
+.tagline {
+    letter-spacing: 0.16em;
 }
 
 /*
@@ -414,15 +428,15 @@
    it is used as a background (sidebar, swatches, bands). */
 .dark .bg-brand-navy,
 .dark .bg-brand-900,
-.dark .swatch-navy { background-color: #0F4C5C; }
-.dark .bg-brand-950 { background-color: #082832; }
+.dark .swatch-navy { background-color: #173F63; }
+.dark .bg-brand-950 { background-color: #0E2942; }
 .dark .swatch-navy { color: #fff; }
 
 /* Light hero backdrop → dark. */
 .dark .hero-backdrop {
     background-image:
-        radial-gradient(ellipse at 15% 20%, rgba(46, 154, 214, 0.10) 0%, rgba(0, 0, 0, 0) 55%),
-        linear-gradient(120deg, #0B1720 0%, #10212C 55%, #0B1720 100%);
+        radial-gradient(ellipse at 15% 20%, rgba(80, 150, 205, 0.10) 0%, rgba(0, 0, 0, 0) 55%),
+        linear-gradient(120deg, #0B141E 0%, #102030 55%, #0B141E 100%);
 }
 
 /* Portal page header (partials/page-hero.php): its light gradient and bright campus
@@ -437,19 +451,19 @@
     /* Always print on the light theme, whatever is shown on screen. */
     :root, .dark {
         --surface: 255 255 255;
-        --surface-2: 248 250 252;
-        --slate-400: 148 163 184;
-        --slate-500: 100 116 139;
-        --slate-600: 71 85 105;
-        --slate-700: 51 65 85;
-        --slate-800: 30 41 59;
-        --slate-900: 15 23 42;
-        --brand-navy: 15 76 92;
-        --brand-900: 15 76 92;
-        --brand-600: 30 123 174;
-        --brand-50: 234 246 255;
-        --brand-100: 211 236 250;
-        --brand-200: 179 223 245;
+        --surface-2: 247 249 251;
+        --slate-400: 150 164 178;
+        --slate-500: 105 120 135;
+        --slate-600: 74 91 107;
+        --slate-700: 52 68 84;
+        --slate-800: 33 47 62;
+        --slate-900: 18 30 44;
+        --brand-navy: 23 63 99;
+        --brand-900: 23 63 99;
+        --brand-600: 31 111 168;
+        --brand-50: 241 246 251;
+        --brand-100: 222 234 245;
+        --brand-200: 196 217 236;
     }
 
     /* Hide the app shell: sidebar, top bar, footer, and anything marked no-print. */

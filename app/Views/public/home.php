@@ -34,7 +34,7 @@ $swatches   = ['swatch-primary', 'swatch-navy', 'swatch-teal', 'swatch-sky'];
             <p class="display-heading mt-8">
                 Enrollment made <span class="text-brand-primary">simple</span>
             </p>
-            <p class="mt-4 font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand-navy sm:text-sm sm:tracking-brand">
+            <p class="mt-4 font-display text-base font-medium text-brand-gray sm:text-lg">
                 Inspired by our school. Built for your future.
             </p>
 
@@ -64,9 +64,9 @@ $swatches   = ['swatch-primary', 'swatch-navy', 'swatch-teal', 'swatch-sky'];
          viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden="true" focusable="false">
         <defs>
             <linearGradient id="hero-swoosh" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#B3DFF5"/>
-                <stop offset="0.55" stop-color="#2E9AD6"/>
-                <stop offset="1" stop-color="#0F4C5C"/>
+                <stop offset="0" stop-color="#C4D9EC"/>
+                <stop offset="0.55" stop-color="#1F6FA8"/>
+                <stop offset="1" stop-color="#173F63"/>
             </linearGradient>
         </defs>
         <path d="M0 200 V150 C 380 196 920 172 1440 30 V200 Z" fill="url(#hero-swoosh)" opacity="0.35"/>

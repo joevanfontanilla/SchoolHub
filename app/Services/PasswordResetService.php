@@ -203,13 +203,13 @@ final class PasswordResetService
             . ($setup ? '' : "If you did not ask for this, ignore this email. Your password stays the same.\n\n")
             . "{$school}\nThis message was sent automatically. Replies are not read.";
 
-        $html = '<!doctype html><html><body style="margin:0;padding:24px;background:#EAF6FF;font-family:Segoe UI,Arial,sans-serif;color:#1f2937">'
-            . '<table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #B3DFF5"><tr><td style="padding:28px">'
-            . '<p style="margin:0 0 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#1E7BAE;font-weight:700">' . e($school) . '</p>'
-            . '<h1 style="margin:0 0 16px;font-size:22px;color:#0F4C5C">' . e($setup ? 'Set up your account' : 'Reset your password') . '</h1>'
+        $html = '<!doctype html><html><body style="margin:0;padding:24px;background:#F1F6FB;font-family:Segoe UI,Arial,sans-serif;color:#1f2937">'
+            . '<table role="presentation" width="100%" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #C4D9EC"><tr><td style="padding:28px">'
+            . '<p style="margin:0 0 4px;font-size:12px;letter-spacing:.12em;color:#1F6FA8;font-weight:600">' . e($school) . '</p>'
+            . '<h1 style="margin:0 0 16px;font-size:22px;color:#173F63">' . e($setup ? 'Set up your account' : 'Reset your password') . '</h1>'
             . '<p style="margin:0 0 12px;font-size:15px;line-height:1.55">Hello ' . e($user->first_name) . ',</p>'
             . '<p style="margin:0 0 20px;font-size:15px;line-height:1.55">' . e($intro) . '</p>'
-            . '<p style="margin:0 0 20px"><a href="' . e($link) . '" style="display:inline-block;background:#1E7BAE;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">'
+            . '<p style="margin:0 0 20px"><a href="' . e($link) . '" style="display:inline-block;background:#1F6FA8;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">'
             . e($setup ? 'Set your password' : 'Choose a new password') . '</a></p>'
             . '<p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#4b5563">The link works once, until ' . e($until) . '. Do not forward it: anyone with the link can set the password.</p>'
             . ($setup ? '' : '<p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#4b5563">If you did not ask for this, ignore this email. Your password stays the same.</p>')

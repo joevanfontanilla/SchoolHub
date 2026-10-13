@@ -60,7 +60,7 @@ $itemClass = 'group relative flex items-center gap-3 whitespace-nowrap rounded-x
                 ?>
                 <?php if ($available): ?>
                     <a href="<?= e(url($path)) ?>"
-                       class="<?= $itemClass ?> <?= $active ? 'bg-brand-600 text-white shadow-lg shadow-black/20' : 'text-white/85 hover:bg-white/10 hover:text-white' ?>"
+                       class="<?= $itemClass ?> <?= $active ? 'bg-white/15 font-semibold text-white' : 'text-white/85 hover:bg-white/10 hover:text-white' ?>"
                        <?= $active ? 'aria-current="page"' : '' ?>>
                         <?= $iconHtml ?>
                         <span><?= e($label) ?></span>
@@ -84,16 +84,12 @@ $itemClass = 'group relative flex items-center gap-3 whitespace-nowrap rounded-x
                     <span>Logout</span>
                 </button>
             </form>
-            <p class="relative z-10 mt-4 px-4 pr-24 text-[11px] font-semibold uppercase leading-relaxed tracking-[0.16em] text-white/70">
+            <p class="relative z-10 mt-4 px-4 pr-24 text-xs font-medium leading-relaxed text-white/70">
                 <?= e($school['school_tagline'] ?? '') ?>
             </p>
         </div>
 
-        <!-- The template's diagonal brand stripes, tucked into the corner. -->
-        <svg class="pointer-events-none absolute -bottom-1 -right-1 h-20 w-28" viewBox="0 0 160 112" aria-hidden="true">
-            <polygon points="160,20 160,52 60,112 20,112" class="fill-brand-teal"/>
-            <polygon points="160,56 160,112 72,112" class="fill-brand-primary"/>
-        </svg>
+        <div class="brand-stripes" aria-hidden="true"></div>
     </div>
 </aside>
 
