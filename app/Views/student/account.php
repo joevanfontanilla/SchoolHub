@@ -134,6 +134,11 @@ $failed = errors() !== [];
                 </div>
             </section>
 
+            <section class="card p-5 sm:p-6" aria-labelledby="installments-heading">
+                <h2 id="installments-heading" class="<?= $cardTitle ?>"><span class="text-brand-600"><?= icon('calendar-check', 'h-7 w-7') ?></span> Installments</h2>
+                <div class="mt-4"><?= partial('installments', ['plan' => $plan]) ?></div>
+            </section>
+
             <section class="card p-5 sm:p-6" aria-labelledby="history-heading">
                 <h2 id="history-heading" class="<?= $cardTitle ?> mb-4"><span class="text-brand-600"><?= icon('history', 'h-7 w-7') ?></span> Payments and Receipts</h2>
                 <?php if ($submissions === [] && $payments === []): ?>

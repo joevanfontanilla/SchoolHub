@@ -82,4 +82,9 @@ $cell = 'border border-slate-300 px-2 py-1.5';
             </tfoot>
         </table>
     </div>
+
+    <div>
+        <h2 class="mb-2 font-display text-base font-bold text-brand-navy">Installments</h2>
+        <?= partial('installments', ['plan' => $plan]) ?>
+    </div>
 </section>

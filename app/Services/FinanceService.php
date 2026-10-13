@@ -360,6 +360,72 @@ final class FinanceService
         ));
     }
 
+    // -- Installments ----------------------------------------------------------------------
+
+    public const INSTALLMENT_LABELS = [1 => 'Prelims', 2 => 'Midterm', 3 => 'Semi-Final', 4 => 'Finals'];
+
+    /**
+     * The exam-period installment plan (docs/14), or null before the student is enrolled.
+     *
+     * Obligations, in the order payments fill them: old account, initial payment, then Prelims,
+     * Midterm, Semi-Final, and Finals. What remains after the old account and the initial payment
+     * is split into four equal parts, the earliest taking any odd centavo. Money in centavos.
+     *
+     * @param array<string,mixed>            $assessment      with initial_paid, total_amount, total_adjustments, total_paid
+     * @param array<int,array<string,mixed>> $adjustments     Finance::adjustments() rows
+     * @param array<int,int>                 $openedSequences sequence numbers of the term's grading periods that have opened
+     * @return array{rows:array<int,array<string,mixed>>,oldAccount:int,initial:int,remaining:int}|null
+     */
+    public static function installments(array $assessment, array $adjustments, array $openedSequences = []): ?array
+    {
+        if ($assessment['initial_paid'] === null) {
+            return null;
+        }
+
+        $due = max(0, self::dueCents($assessment));
+        $old = 0;
+        foreach ($adjustments as $adjustment) {
+            if ($adjustment['type'] === 'OLD_ACCOUNT' && self::signedCents($adjustment['amount']) > 0) {
+                $old += self::signedCents($adjustment['amount']);
+            }
+        }
+        $old = min($old, $due);
+
+        $initial = self::cents($assessment['initial_paid']);
+        $current = $due - $old;                              // tuition, fees, bridging, OJT, other charges
+        $initialOnCurrent = min(max(0, $initial - $old), $current);
+        $remaining = $current - $initialOnCurrent;
+
+        $base = intdiv($remaining, 4);
+        $extra = $remaining % 4;
+
+        $obligations = [];
+        if ($old > 0) {
+            $obligations[] = ['key' => 'OLD', 'label' => 'Old account', 'sequence' => null, 'due' => $old];
+        }
+        $obligations[] = ['key' => 'INITIAL', 'label' => 'Initial payment', 'sequence' => null, 'due' => $initialOnCurrent];
+        foreach (self::INSTALLMENT_LABELS as $sequence => $label) {
+            $obligations[] = ['key' => 'P' . $sequence, 'label' => $label, 'sequence' => $sequence, 'due' => $base + ($sequence <= $extra ? 1 : 0)];
+        }
+
+        $pool = max(0, self::cents($assessment['total_paid']));
+        $rows = [];
+        foreach ($obligations as $obligation) {
+            $paid = min($obligation['due'], $pool);
+            $pool -= $paid;
+            $balance = $obligation['due'] - $paid;
+            $rows[] = $obligation + [
+                'paid'    => $paid,
+                'balance' => $balance,
+                // Unpaid money is Due once its exam period has opened (the old account and the
+                // initial payment are due from the start); it never blocks anything.
+                'status'  => $balance === 0 ? 'PAID' : ($obligation['sequence'] === null || in_array($obligation['sequence'], $openedSequences, true) ? 'DUE' : 'UPCOMING'),
+            ];
+        }
+
+        return ['rows' => $rows, 'oldAccount' => $old, 'initial' => $initial, 'remaining' => $remaining];
+    }
+
     // -- The ledger card -------------------------------------------------------------------
 
     /**
@@ -456,8 +522,14 @@ final class FinanceService
         'SCHOLARSHIP'       => 'Scholarship',
         'WAIVER'            => 'Fee waiver',
         'ADDITIONAL_CHARGE' => 'Additional charge',
+        'BRIDGING'          => 'Bridging fee',
+        'OJT_FEE'           => 'OJT fee',
+        'OLD_ACCOUNT'       => 'Old account',
         'CORRECTION'        => 'Correction',
     ];
+
+    /** Types that raise what the student owes. A correction goes either way. */
+    public const INCREASING_TYPES = ['ADDITIONAL_CHARGE', 'BRIDGING', 'OJT_FEE', 'OLD_ACCOUNT'];
 
     /**
      * A discount, scholarship, waiver, extra charge, or correction to what a student
@@ -506,7 +578,7 @@ final class FinanceService
             throw ValidationException::withErrors($validator->errors());
         }
 
-        $increase = $type === 'ADDITIONAL_CHARGE' || ($type === 'CORRECTION' && $direction === 'increase');
+        $increase = in_array($type, self::INCREASING_TYPES, true) || ($type === 'CORRECTION' && $direction === 'increase');
         $reason = trim((string) $input['reason']);
 
         return Database::transaction(static function () use ($cashier, $assessmentId, $type, $increase, $amountText, $percentText, $byPercent, $reason): int {

@@ -70,6 +70,7 @@ final class FinanceDocumentController extends Controller
         $this->printView('print/ledger', [
             'title'      => 'Student Ledger ' . $assessment['assessment_number'],
             'assessment' => $assessment,
+            'plan'       => Finance::installmentPlan($assessment),
             'ledger'     => \App\Services\FinanceService::ledger(
                 $assessment,
                 Finance::items($id),

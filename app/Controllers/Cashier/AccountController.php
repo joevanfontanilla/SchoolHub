@@ -49,6 +49,7 @@ final class AccountController extends Controller
             'adjustments' => Finance::adjustments($id),
             'submissions' => Finance::submissions($id),
             'belowPolicy' => Finance::belowPolicy($assessment),
+            'plan'        => Finance::installmentPlan($assessment),
             'adjustmentTypes' => FinanceService::ADJUSTMENT_TYPES,
             'required'    => PaymentPolicy::requiredCents($assessment),
             'policy'      => PaymentPolicy::current(),

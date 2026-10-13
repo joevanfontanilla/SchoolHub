@@ -89,6 +89,22 @@ final class Finance
         return [implode(' AND ', $where), $bindings];
     }
 
+    /**
+     * The installment plan of an assessment, with the grading periods that have opened (docs/14).
+     *
+     * @param array<string,mixed> $assessment
+     * @return array<string,mixed>|null null before the student is enrolled
+     */
+    public static function installmentPlan(array $assessment): ?array
+    {
+        $opened = array_map('intval', array_column(Database::select(
+            'SELECT sequence FROM grade_periods WHERE term_id = ? AND opened_at IS NOT NULL',
+            [$assessment['term_id']]
+        ), 'sequence'));
+
+        return FinanceService::installments($assessment, self::adjustments((int) $assessment['id']), $opened);
+    }
+
     /** @return array<int,array<string,mixed>> */
     public static function items(int $assessmentId): array
     {

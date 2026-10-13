@@ -122,7 +122,7 @@ page and outstanding-balances report), and every active Registrar and Cashier is
   proof view, and report export is audited.
 
 ### Not yet built
-Refunds (money paid beyond the amount due), installment schedules, a second approval for
+Refunds (money paid beyond the amount due), a second approval for
 large adjustments, and a real payment gateway (which needs a merchant account and the
 school's authorization to add an external service).
 
@@ -212,5 +212,40 @@ The balance column runs down the rows. Open it from the cashier's account page. 
 cashier, and registrar may open it, with the same access rules as the statement of account.
 
 ### Not yet built
-Exam-period installments (Prelims, Midterm, Semi-Final, Finals), Bridging / OJT / Old Account
-charges, and a per-program and year account list.
+A per-program and year account list.
+
+## Exam-period installments and carried-over charges (as built)
+
+Modeled on the cashier's spreadsheet: after the initial payment, the rest of what a student owes is
+paid in four installments, one per exam period.
+
+### The plan (`FinanceService::installments`)
+- **Initial payment.** The money paid by the moment the student was enrolled, frozen on the
+  assessment (`fee_assessments.initial_paid`) when enrollment is confirmed. Nothing is shown before
+  enrollment, only a note that the installments are set after the down payment.
+- **Four installments.** The amount due, less the old account and the initial payment, is split
+  into four equal parts: **Prelims, Midterm, Semi-Final, Finals**. A centavo that does not divide
+  evenly goes to the earliest installments, so the four always add up exactly. The split is
+  computed from the live amount due, so a later scholarship, discount, or charge changes all four.
+- **Payments fill obligations in order**, never by the cashier's choice: old account, initial
+  payment, then Prelims, Midterm, Semi-Final, Finals, each to the centavo. A payment that covers
+  more than one carries forward. A reversal takes money back from the latest obligation first.
+- **Shown, never enforced.** An unpaid installment is flagged **Due** once its grading period has
+  opened (docs/27, `grade_periods.opened_at`), so the cashier can see who is not cleared for an
+  exam. It does not block grades, enrollment, or exams. A term with fewer than four grading periods
+  never flags the installments that have no period.
+- **Where it shows.** An "Installments" block on the cashier's account page, on the student's own
+  account page, and under the ledger card.
+
+### Bridging, OJT, and Old Account
+Three more charge types in the cashier's adjustment form, alongside Additional charge. Each raises
+the amount due and needs a reason, like any adjustment.
+- **Bridging fee** and **OJT fee** are part of the amount due, so they are split into the
+  installments with everything else.
+- **Old account** is a balance carried over from a previous term, entered by hand. It is **due
+  right away**, is not split, and is the first thing payments go to. It shows as its own line.
+- All three count toward the payment policy, since the policy is a share of the amount due.
+
+### Not yet built
+The per-program and year account list, and automatic carry-over of an unpaid balance into the next
+term (the old account is typed in).

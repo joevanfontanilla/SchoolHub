@@ -150,6 +150,9 @@ final class EnrollmentConfirmationService
 
             EnrollmentStatusService::transitionEnrollment($applicationId, 'ENROLLED', $user);
 
+            // The initial payment of the installment plan: what has been paid at this moment (docs/14).
+            Database::query('UPDATE fee_assessments SET initial_paid = total_paid WHERE application_id = ? AND initial_paid IS NULL', [$applicationId]);
+
             // Block section: enlist in the section's classes now. Anything that
             // can't be taken yet is skipped and reported, not forced.
             $enlistment = EnlistmentService::enlistBlock($enrollmentId, $user);

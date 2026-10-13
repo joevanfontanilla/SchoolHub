@@ -94,6 +94,11 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                 <?php endif; ?>
             </section>
 
+            <section class="card p-5" aria-labelledby="installments-heading">
+                <h3 id="installments-heading" class="mb-3 text-base">Installments</h3>
+                <?= partial('installments', ['plan' => $plan]) ?>
+            </section>
+
             <section class="card p-5" aria-labelledby="payments-heading">
                 <h3 id="payments-heading" class="mb-3 text-base">Payments</h3>
                 <?php if ($payments === []): ?>
@@ -198,7 +203,8 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                     <label for="field-adjustment_type" class="field-label">Type <span class="text-danger-text" aria-hidden="true">*</span></label>
                     <select id="field-adjustment_type" name="adjustment_type" class="field-input">
                         <?php foreach ($adjustmentTypes as $value => $label): ?>
-                            <option value="<?= e($value) ?>" <?= old('adjustment_type') === $value ? 'selected' : '' ?>><?= e($label) ?><?= match ($value) { 'ADDITIONAL_CHARGE' => ' (adds to the amount due)', 'CORRECTION' => ' (either way)', default => ' (lowers the amount due)' } ?></option>
+                            <?php $effect = match (true) { in_array($value, FinanceService::INCREASING_TYPES, true) => ' (adds to the amount due)', $value === 'CORRECTION' => ' (either way)', default => ' (lowers the amount due)' }; ?>
+                            <option value="<?= e($value) ?>" <?= old('adjustment_type') === $value ? 'selected' : '' ?>><?= e($label . $effect) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <?php if (($typeError = error_for('adjustment_type')) !== null): ?><p class="field-error"><?= e($typeError) ?></p><?php endif; ?>
