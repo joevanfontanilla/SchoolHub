@@ -125,6 +125,7 @@ return [
         User::ROLE_CASHIER => [
             ['/cashier/reports/collections', 'Collections Report', 'banknotes'],
             ['/cashier/reports/outstanding', 'Outstanding Balances', 'credit-card'],
+            ['/cashier/reports/account-list', 'Account List by Program and Year', 'users'],
             ['/cashier/reports/receipts-journal', 'Cash Receipts Journal', 'receipt'],
             ['/cashier/reports/disbursements-journal', 'Cash Disbursements Journal', 'banknotes'],
             ['/password/change', 'Password & Security', 'key'],
@@ -171,6 +172,7 @@ return [
         '/cashier/fees'             => 'tuition fee types amounts',
         '/cashier/disbursements'    => 'disbursement voucher pay out expense cdj cash paid',
         '/cashier/reports'          => 'collections outstanding daily monthly export journal crj cdj',
+        '/cashier/reports/account-list'           => 'account list program year tab class ledger balances installments prelims midterm finals',
         '/cashier/reports/receipts-journal'       => 'cash receipts journal crj official receipt or collections',
         '/cashier/reports/disbursements-journal'  => 'cash disbursements journal cdj voucher expenses paid out',
         '/admin/users'              => 'accounts staff create disable unlock',

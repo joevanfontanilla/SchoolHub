@@ -70,6 +70,7 @@ its days, times, room, section, and **teacher**, and the week at a glance.
 |---|---|---|---|
 | **Collections**: a date range (default: this month so far; at most one year) | `/cashier/reports/collections` | `…/collections/print` | `…/collections/export` |
 | **Outstanding balances**: active assessments that still owe, optionally by term and program | `/cashier/reports/outstanding` | `…/outstanding/print` | `…/outstanding/export` |
+| **Account list**: every active account in a term, grouped by program and year level like the spreadsheet tabs | `/cashier/reports/account-list` | `…/account-list/print` | `…/account-list/export` |
 
 - **Collections** are dated by when the cashier recorded or verified the payment
   (`payments.created_at`). A reversal is a negative line on the day it was made, so a
@@ -78,6 +79,13 @@ its days, times, room, section, and **teacher**, and the week at a glance.
   method, and every entry. This covers daily and monthly collections and payment history.
 - **Outstanding balances** lists the amount due, paid, balance, payment status, last payment,
   and whether an enrolled student is below the payment policy, largest balance first.
+- **Account list** is the spreadsheet tab as a report (docs/14, Account list): filter by term
+  (default: the term most recently assessed), program, and year level. Each program and year
+  level is its own table, numbered from 1, with its totals; a grand total closes the report. Per
+  account: units, tuition, miscellaneous, discount, amount due, paid, balance, and the balance of
+  each installment (Prelims, Midterm, Semi-Final, Finals), with a note when an old account is
+  unpaid. Students who are not yet enrolled show no installments. Paid-up accounts are included,
+  unlike Outstanding balances. The screen, printout, and CSV all include every row.
 - On screen, the entry lists show 100 rows per page; totals, the chart, the printout, and the
   CSV export always cover every row.
 - The cashier dashboard shows net collections for each of the last 7 days.

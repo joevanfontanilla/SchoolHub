@@ -211,9 +211,6 @@ breakdown), then the ledger. Rows, oldest first:
 The balance column runs down the rows. Open it from the cashier's account page. The student,
 cashier, and registrar may open it, with the same access rules as the statement of account.
 
-### Not yet built
-A per-program and year account list.
-
 ## Exam-period installments and carried-over charges (as built)
 
 Modeled on the cashier's spreadsheet: after the initial payment, the rest of what a student owes is
@@ -246,6 +243,14 @@ the amount due and needs a reason, like any adjustment.
   right away**, is not split, and is the first thing payments go to. It shows as its own line.
 - All three count toward the payment policy, since the policy is a share of the amount due.
 
+## Account list by program and year (as built)
+
+The spreadsheet keeps one tab per program and year (PUB AD 3, CRIM 1, …). The cashier's **Account
+list** report (`/cashier/reports/account-list`, docs/15) is that view: all active accounts of a term
+grouped by program and year level, each group numbered from 1 with its totals, showing units,
+tuition, miscellaneous, discount, amount due, paid, balance, and the four installment balances. It
+reads the same figures as the ledger card, so the two always agree. It is read-only; the CSV export
+is audited like the other reports.
+
 ### Not yet built
-The per-program and year account list, and automatic carry-over of an unpaid balance into the next
-term (the old account is typed in).
+Automatic carry-over of an unpaid balance into the next term (the old account is typed in).

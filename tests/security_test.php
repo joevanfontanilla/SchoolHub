@@ -143,7 +143,8 @@ return [
             'CredentialRequest.php'     => ['$in', '$where'],
             'EnrollmentApplication.php' => ['$placeholders'],
             'Finance.php'               => ['$limit', '$offset'],
-            'FinanceReport.php'         => [],
+            // accountList(): "?, ?, ?" placeholder lists from array_fill, and a column name from a fixed array in code.
+            'FinanceReport.php'         => ['$in', '$appIn', '$termIn', '$column'],
             'Notification.php'          => ['$limit', '$offset', '$where'],
             'RegistrarQueue.php'        => ['$where', '$whereSql'],
             'RegistrarReport.php'       => ['$programFilter', '$whereSql'],

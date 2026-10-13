@@ -245,6 +245,9 @@ $router->post('/cashier/accounts/{id}/payments/{payment}/reverse', [CashierAccou
 $router->post('/cashier/accounts/{id}/adjustments', [CashierAccounts::class, 'adjust'], $cashier('fees.manage'));
 
 $router->get('/cashier/reports',                     [CashierReports::class, 'index'],       $cashier('reports.cashier'), 'cashier.reports');
+$router->get('/cashier/reports/account-list',         [CashierReports::class, 'accountList'],       $cashier('reports.cashier'), 'cashier.account-list');
+$router->get('/cashier/reports/account-list/print',   [CashierReports::class, 'accountListPrint'],  $cashier('reports.cashier'));
+$router->get('/cashier/reports/account-list/export',  [CashierReports::class, 'accountListExport'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/collections',         [CashierReports::class, 'collections'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/collections/print',   [CashierReports::class, 'collectionsPrint'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/collections/export',  [CashierReports::class, 'collectionsExport'], $cashier('reports.cashier'));

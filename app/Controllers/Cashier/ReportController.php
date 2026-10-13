@@ -156,6 +156,90 @@ final class ReportController extends Controller
         );
     }
 
+    // -- Account list by program and year (docs/14, docs/15) -------------------
+
+    public function accountList(Request $request): void
+    {
+        [$termId, $programId, $yearLevelId] = $this->accountFilters($request);
+        $this->appView('cashier/reports/account-list', [
+            'title'       => 'Account List',
+            'termId'      => $termId,
+            'programId'   => $programId,
+            'yearLevelId' => $yearLevelId,
+            'terms'       => Catalog::allTerms(),
+            'programs'    => Program::active(),
+            'yearLevels'  => Catalog::yearLevels(),
+            'report'      => FinanceReport::accountList($termId, $programId, $yearLevelId),
+        ]);
+    }
+
+    public function accountListPrint(Request $request): void
+    {
+        [$termId, $programId, $yearLevelId] = $this->accountFilters($request);
+        $this->printView('print/account-list', [
+            'title'  => 'Account List',
+            'scope'  => $this->scopeLabel($termId, $programId, $yearLevelId),
+            'report' => FinanceReport::accountList($termId, $programId, $yearLevelId),
+            'back'   => '/cashier/reports/account-list?' . http_build_query(array_filter(['term_id' => $termId, 'program_id' => $programId, 'year_level_id' => $yearLevelId])),
+        ]);
+    }
+
+    public function accountListExport(Request $request): void
+    {
+        [$termId, $programId, $yearLevelId] = $this->accountFilters($request);
+        $report = FinanceReport::accountList($termId, $programId, $yearLevelId);
+
+        AuditService::log('reports.exported', 'reports', null, null, null, [
+            'report' => 'account-list', 'term_id' => $termId, 'program_id' => $programId, 'year_level_id' => $yearLevelId, 'rows' => $report['count'],
+        ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
+
+        $money = static fn (int $cents): string => FinanceService::money($cents);
+        $rows = [];
+        foreach ($report['groups'] as $group) {
+            foreach ($group['rows'] as $number => $row) {
+                $plan = $row['plan'] === null ? [] : array_column($row['plan']['rows'], null, 'key');
+                $rows[] = [
+                    $number + 1,
+                    $row['student_number'] ?? '',
+                    $row['last_name'] . ', ' . $row['first_name'],
+                    $row['program_code'],
+                    $row['year_level_name'],
+                    $row['section_code'] ?? '',
+                    $row['units'],
+                    $money($row['tuition']),
+                    $money($row['misc']),
+                    $money($row['discount']),
+                    $money($row['due']),
+                    $money($row['paid']),
+                    $money($row['balance']),
+                    isset($plan['OLD']) ? $money($plan['OLD']['balance']) : '',
+                    isset($plan['P1']) ? $money($plan['P1']['balance']) : '',
+                    isset($plan['P2']) ? $money($plan['P2']['balance']) : '',
+                    isset($plan['P3']) ? $money($plan['P3']['balance']) : '',
+                    isset($plan['P4']) ? $money($plan['P4']['balance']) : '',
+                    $row['payment_status'],
+                    $row['enrollment_state'],
+                ];
+            }
+        }
+
+        CsvExport::send('account-list-' . date('Y-m-d') . '.csv',
+            ['SL No.', 'ID No.', 'Account name', 'Program', 'Year level', 'Section', 'Units', 'Tuition', 'Miscellaneous', 'Discount', 'Amount due', 'Paid', 'Balance', 'Old account', 'Prelims', 'Midterm', 'Semi-Final', 'Finals', 'Payment status', 'Enrollment'],
+            $rows
+        );
+    }
+
+    /** @return array{0:?int,1:?int,2:?int} term (default: the latest assessed), program, year level */
+    private function accountFilters(Request $request): array
+    {
+        $term = $request->input('term_id');
+        $termId = $term === null ? FinanceReport::latestAssessedTermId() : ((int) $term > 0 ? (int) $term : null);
+        $program = (int) $request->input('program_id', 0);
+        $year = (int) $request->input('year_level_id', 0);
+
+        return [$termId, $program > 0 ? $program : null, $year > 0 ? $year : null];
+    }
+
     // -- Cash Receipts Journal (CRJ) -------------------------------------------
 
     public function receiptsJournal(Request $request): void
@@ -284,7 +368,7 @@ final class ReportController extends Controller
         return [$term > 0 ? $term : null, $program > 0 ? $program : null];
     }
 
-    private function scopeLabel(?int $termId, ?int $programId): string
+    private function scopeLabel(?int $termId, ?int $programId, ?int $yearLevelId = null): string
     {
         $parts = [];
         foreach (Catalog::allTerms() as $term) {
@@ -295,6 +379,11 @@ final class ReportController extends Controller
         foreach (Program::active() as $program) {
             if ((int) $program['id'] === $programId) {
                 $parts[] = $program['code'];
+            }
+        }
+        foreach (Catalog::yearLevels() as $yearLevel) {
+            if ((int) $yearLevel['id'] === $yearLevelId) {
+                $parts[] = $yearLevel['name'];
             }
         }
         return $parts === [] ? 'All terms and programs' : implode(' · ', $parts);

@@ -136,4 +136,118 @@ final class FinanceReport
 
         return ['rows' => $rows, 'due' => $due, 'paid' => $paid, 'balance' => $balance];
     }
+
+    /** The term most recently assessed, the account list's default (null when nothing is assessed yet). */
+    public static function latestAssessedTermId(): ?int
+    {
+        $id = Database::scalar('SELECT term_id FROM fee_assessments ORDER BY assessed_at DESC, id DESC LIMIT 1');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    /**
+     * Every active account of a term, grouped by program and year level like the spreadsheet tabs
+     * (docs/14, Account list). Read-only. Money in centavos. The installment figures come from
+     * FinanceService::installments(), the same code as the ledger card, so the two agree.
+     *
+     * @return array{groups:array<int,array<string,mixed>>,totals:array<string,int>,count:int}
+     */
+    public static function accountList(?int $termId, ?int $programId, ?int $yearLevelId): array
+    {
+        $where = ["fa.status = 'ACTIVE'"];
+        $bindings = [];
+        foreach (['fa.term_id' => $termId, 'ea.program_id' => $programId, 'ea.year_level_id' => $yearLevelId] as $column => $value) {
+            if ($value !== null) {
+                $where[] = "{$column} = ?";
+                $bindings[] = $value;
+            }
+        }
+
+        $rows = Database::select(
+            "SELECT fa.*, ea.application_number, ea.enrollment_state, ea.payment_status, ea.program_id, ea.year_level_id,
+                    st.student_number, u.first_name, u.middle_name, u.last_name,
+                    p.code AS program_code, yl.name AS year_level_name, yl.sequence AS year_sequence, sec.code AS section_code,
+                    t.name AS term_name, ay.code AS academic_year_code
+               FROM fee_assessments fa
+               JOIN enrollment_applications ea ON ea.id = fa.application_id
+               JOIN students st ON st.id = fa.student_id
+               JOIN users u ON u.id = st.user_id
+               JOIN programs p ON p.id = ea.program_id
+               JOIN year_levels yl ON yl.id = ea.year_level_id
+          LEFT JOIN sections sec ON sec.id = ea.section_id
+               JOIN terms t ON t.id = fa.term_id
+               JOIN academic_years ay ON ay.id = t.academic_year_id
+              WHERE " . implode(' AND ', $where) . '
+              ORDER BY p.code, yl.sequence, u.last_name, u.first_name, fa.id',
+            $bindings
+        );
+
+        $empty = ['tuition' => 0, 'misc' => 0, 'discount' => 0, 'due' => 0, 'paid' => 0, 'balance' => 0];
+        if ($rows === []) {
+            return ['groups' => [], 'totals' => $empty, 'count' => 0];
+        }
+
+        // One query each for everything the rows need, rather than several per account.
+        $ids = array_map('intval', array_column($rows, 'id'));
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $applicationIds = array_map('intval', array_column($rows, 'application_id'));
+        $appIn = implode(',', array_fill(0, count($applicationIds), '?'));
+        $termIds = array_values(array_unique(array_map('intval', array_column($rows, 'term_id'))));
+        $termIn = implode(',', array_fill(0, count($termIds), '?'));
+
+        $tuition = $misc = $adjustments = $units = $opened = [];
+        foreach (Database::select("SELECT fee_assessment_id, basis, SUM(amount) AS amount FROM fee_items WHERE fee_assessment_id IN ({$in}) GROUP BY fee_assessment_id, basis", $ids) as $item) {
+            $key = (int) $item['fee_assessment_id'];
+            if ($item['basis'] === 'PER_UNIT') {
+                $tuition[$key] = ($tuition[$key] ?? 0) + FinanceService::cents($item['amount']);
+            } else {
+                $misc[$key] = ($misc[$key] ?? 0) + FinanceService::cents($item['amount']);
+            }
+        }
+        foreach (Database::select("SELECT * FROM financial_adjustments WHERE fee_assessment_id IN ({$in}) ORDER BY created_at, id", $ids) as $adjustment) {
+            $adjustments[(int) $adjustment['fee_assessment_id']][] = $adjustment;
+        }
+        foreach (Database::select("SELECT asub.application_id, SUM(s.units) AS units FROM application_subjects asub JOIN subjects s ON s.id = asub.subject_id WHERE asub.application_id IN ({$appIn}) GROUP BY asub.application_id", $applicationIds) as $row) {
+            $units[(int) $row['application_id']] = (float) $row['units'];
+        }
+        foreach (Database::select("SELECT term_id, sequence FROM grade_periods WHERE opened_at IS NOT NULL AND term_id IN ({$termIn})", $termIds) as $period) {
+            $opened[(int) $period['term_id']][] = (int) $period['sequence'];
+        }
+
+        $groups = [];
+        $totals = $empty;
+        foreach ($rows as $row) {
+            $id = (int) $row['id'];
+            $adjs = $adjustments[$id] ?? [];
+            $discount = 0;
+            foreach ($adjs as $adjustment) {
+                $signed = FinanceService::signedCents($adjustment['amount']);
+                if ($signed < 0 && in_array($adjustment['type'], ['DISCOUNT', 'SCHOLARSHIP'], true)) {
+                    $discount += -$signed;
+                }
+            }
+
+            // array_merge, not +: the computed centavo figures must win over the assessment's own columns (balance).
+            $account = array_merge($row, [
+                'units'    => $units[(int) $row['application_id']] ?? 0.0,
+                'tuition'  => $tuition[$id] ?? 0,
+                'misc'     => $misc[$id] ?? 0,
+                'discount' => $discount,
+                'due'      => max(0, FinanceService::dueCents($row)),
+                'paid'     => FinanceService::cents($row['total_paid']),
+                'balance'  => FinanceService::cents($row['balance']),
+                'plan'     => FinanceService::installments($row, $adjs, $opened[(int) $row['term_id']] ?? []),
+            ]);
+
+            $key = $row['program_id'] . '-' . $row['year_level_id'];
+            $groups[$key] ??= ['program' => $row['program_code'], 'year' => $row['year_level_name'], 'rows' => [], 'totals' => $empty];
+            $groups[$key]['rows'][] = $account;
+            foreach ($empty as $field => $zero) {
+                $groups[$key]['totals'][$field] += $account[$field];
+                $totals[$field] += $account[$field];
+            }
+        }
+
+        return ['groups' => array_values($groups), 'totals' => $totals, 'count' => count($rows)];
+    }
 }
