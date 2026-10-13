@@ -475,6 +475,57 @@ or update PHP.
 4. Run the preflight with `--url`. If anything is wrong, restore the backup and put the previous
    files back.
 
+### F.1 Updating the InfinityFree site (no command line)
+
+The school's site runs on InfinityFree, which has no SSH, no Terminal, and no cron. Nothing is deployed
+from Git: an update is **one SQL file pasted into phpMyAdmin, then one zip extracted into `htdocs/`**.
+The server layout is `htdocs/{assets, schoolhub, index.php, .htaccess, .user.ini}`, with the application
+in `htdocs/schoolhub/`.
+
+**Never overwrite or delete** `htdocs/schoolhub/config/config.local.php` (the database login) or
+`htdocs/schoolhub/storage/` (uploaded documents). The update zip contains neither, so extracting over the
+site leaves them alone; deleting the `schoolhub` folder first would destroy both.
+
+**On the development computer**
+1. `php tests/run.php` and `php tests/http/crawl.php` pass.
+2. Build the CSS: `./tailwindcss.exe -i src/input.css -o public/assets/app.css --minify`.
+3. Write the database file `build/deploy-db-<first>-<last>.sql` (the `build/` folder is git-ignored), if
+   there are new migrations in `database/migrations/` since the last deploy. It must contain:
+   - each new migration's statements, written to be **safe to run twice**: `ADD COLUMN IF NOT EXISTS`,
+     `CREATE TABLE IF NOT EXISTS`, and foreign keys added only when `information_schema` says they are
+     missing (a `PREPARE` guarded by a count);
+   - the **starting data** those migrations need, because `seed.php` cannot be run there: new permissions
+     and their `role_permissions`, new reference rows, new accounts. Replace only untouched starter rows;
+     never overwrite what the school has edited;
+   - `INSERT IGNORE INTO migrations (filename, batch, applied_at) VALUES (...)` for each migration
+     (the filename column is unique).
+4. **Test the SQL before the school sees it.** Create a scratch database, build it with `migrate.php` and
+   `seed.php`, wind it back to the live state using the `-- @down` sections of the new migrations, run the
+   file twice, and compare the result with the development database (columns, foreign keys, reference
+   rows). Then run the new feature tests against the scratch database, which needs
+   `php database/import_curricula.php` too. Drop the scratch database.
+5. Build the zip: `php database/build_infinityfree_update.php` writes
+   `build/schoolhub-infinityfree-update-<date>.zip` (assets and the application, without
+   `config.local.php`, `storage/`, `index.php`, `.htaccess`, or `.user.ini`).
+
+**On the server, in this order: database first, code second**
+1. In phpMyAdmin, **Export** the database and keep the file.
+2. Check the starting point: `SELECT filename FROM migrations WHERE filename >= '0..' ORDER BY filename;`
+   (use the first new number minus a few). It shows what is already applied.
+3. Paste the SQL file into the SQL tab and run it. It must finish without an error; if it stops, do not
+   edit it by hand, copy the error and the statement it stopped at.
+4. Run the same query again: every new migration should be listed.
+5. In the file manager, upload the zip into `htdocs/`, extract it with **overwrite**, then delete the zip
+   (it holds the whole application).
+6. Hard-refresh the browser (Ctrl+F5) so the new CSS and fonts load, then check the new pages for the
+   roles that use them.
+
+The old code runs fine against the new database (the changes only add), but the new code does not run
+against the old database, which is why the database always goes first.
+
+**Going back:** restore the phpMyAdmin export, and extract the previous update zip (keep the last one in
+`build/`).
+
 ## G. Recovery
 
 - **Restore** is command-line only: `php database/restore.php <backup.zip>`. It verifies the
