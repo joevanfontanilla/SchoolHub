@@ -20,7 +20,7 @@ $th = 'px-3 py-3 font-semibold';
 <div class="space-y-6">
     <?= partial('cashier/report-header', ['active' => 'accounts', 'heading' => 'Account List', 'subtitle' => 'Every account of a term, by program and year level, with the balance of each installment.']) ?>
 
-    <form method="GET" action="<?= e(url('/cashier/reports/account-list')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/reports/account-list')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div class="min-w-[14rem]">
             <label for="report-term" class="field-label">Term</label>
             <select id="report-term" name="term_id" class="field-input">

@@ -20,7 +20,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
 <div class="space-y-6">
     <?= partial('cashier/report-header', ['active' => 'crj', 'heading' => 'Cash Receipts Journal', 'subtitle' => 'Official receipts issued over the period, in journal form (dated by the receipt).']) ?>
 
-    <form method="GET" action="<?= e(url('/cashier/reports/receipts-journal')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/reports/receipts-journal')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div>
             <label for="crj-from" class="field-label">From</label>
             <input id="crj-from" type="date" name="from" value="<?= e($from) ?>" max="<?= e(date('Y-m-d')) ?>" class="field-input">

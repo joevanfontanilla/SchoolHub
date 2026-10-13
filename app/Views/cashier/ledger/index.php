@@ -29,7 +29,7 @@ $last = null;
         <p class="rounded-xl border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status"><?= e($error) ?></p>
     <?php endif; ?>
 
-    <form method="GET" action="<?= e(url('/cashier/ledger')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/ledger')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div>
             <label for="ledger-from" class="field-label">From</label>
             <input id="ledger-from" type="date" name="from" value="<?= e($from) ?>" class="field-input">

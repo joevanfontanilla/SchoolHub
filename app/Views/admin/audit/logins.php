@@ -17,7 +17,7 @@ $results = ['SUCCESS' => 'Success', 'FAILED' => 'Wrong password or unknown accou
         <p class="mt-1 text-sm text-slate-600">Every sign-in attempt, successful or not, with the address it came from.</p>
     </div>
 
-    <form method="GET" action="<?= e(url('/admin/login-activity')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/admin/login-activity')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div><label for="login-from" class="field-label">From</label><input id="login-from" type="date" name="from" value="<?= e($filters['from']) ?>" class="field-input"></div>
         <div><label for="login-to" class="field-label">To</label><input id="login-to" type="date" name="to" value="<?= e($filters['to']) ?>" class="field-input"></div>
         <div class="min-w-[12rem] flex-1"><label for="login-name" class="field-label">Username or email tried</label><input id="login-name" type="search" name="login" value="<?= e($filters['login']) ?>" class="field-input"></div>

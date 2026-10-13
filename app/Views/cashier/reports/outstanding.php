@@ -22,7 +22,7 @@ $collectedPercent = $report['due'] > 0 ? $report['paid'] / $report['due'] * 100 
 <div class="space-y-6">
     <?= partial('cashier/report-header', ['active' => 'outstanding', 'heading' => 'Outstanding Balances', 'subtitle' => 'Students who still owe on an active assessment, largest balance first.']) ?>
 
-    <form method="GET" action="<?= e(url('/cashier/reports/outstanding')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/reports/outstanding')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div class="min-w-[14rem]">
             <label for="report-term" class="field-label">Term</label>
             <select id="report-term" name="term_id" class="field-input">

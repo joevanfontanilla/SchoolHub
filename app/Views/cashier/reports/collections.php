@@ -23,7 +23,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
 <div class="space-y-6">
     <?= partial('cashier/report-header', ['active' => 'collections', 'heading' => 'Collections Report', 'subtitle' => 'Payments recorded or verified over a period, net of reversals. Dated by when the cashier recorded them.']) ?>
 
-    <form method="GET" action="<?= e(url('/cashier/reports/collections')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/reports/collections')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div>
             <label for="report-from" class="field-label">From</label>
             <input id="report-from" type="date" name="from" value="<?= e($from) ?>" max="<?= e(date('Y-m-d')) ?>" class="field-input">

@@ -29,7 +29,7 @@ $query = $from !== null ? '?' . http_build_query(['from' => $from, 'to' => $to])
 ]) ?>
 
 <?php if ($from !== null): ?>
-    <form method="GET" action="<?= e(url($path)) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url($path)) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div>
             <label for="report-from" class="field-label">From</label>
             <input id="report-from" type="date" name="from" value="<?= e($from) ?>" max="<?= e(date('Y-m-d')) ?>" class="field-input">

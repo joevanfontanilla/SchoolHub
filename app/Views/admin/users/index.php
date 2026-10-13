@@ -35,7 +35,7 @@ $statusBadge = static fn (string $status) => component('status-badge', match ($s
         <?= component('stat-card', ['label' => 'Disabled', 'value' => (string) ($counts[User::STATUS_DISABLED] ?? 0), 'icon' => 'shield']) ?>
     </div>
 
-    <form method="GET" action="<?= e(url('/admin/users')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/admin/users')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div class="min-w-[16rem] flex-1">
             <label for="users-q" class="field-label">Search</label>
             <input id="users-q" type="search" name="q" value="<?= e($filters['q']) ?>" placeholder="Name, username, or email" class="field-input">

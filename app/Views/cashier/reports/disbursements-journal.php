@@ -16,7 +16,7 @@ $query = http_build_query(['from' => $from, 'to' => $to]);
 <div class="space-y-6">
     <?= partial('cashier/report-header', ['active' => 'cdj', 'heading' => 'Cash Disbursements Journal', 'subtitle' => 'Money paid out on vouchers over the period, in journal form.']) ?>
 
-    <form method="GET" action="<?= e(url('/cashier/reports/disbursements-journal')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/reports/disbursements-journal')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div>
             <label for="cdj-from" class="field-label">From</label>
             <input id="cdj-from" type="date" name="from" value="<?= e($from) ?>" max="<?= e(date('Y-m-d')) ?>" class="field-input">

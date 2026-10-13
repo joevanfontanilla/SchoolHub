@@ -17,7 +17,7 @@
         <p class="mt-1 text-sm text-slate-600">Every issued assessment with its payments and balance. Open one to record a payment made at the window.</p>
     </div>
 
-    <form method="GET" action="<?= e(url('/cashier/accounts')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/cashier/accounts')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div class="min-w-[16rem] flex-1">
             <label for="accounts-q" class="field-label">Search</label>
             <input id="accounts-q" type="search" name="q" value="<?= e($q) ?>" placeholder="Name, student no., application or assessment no." class="field-input">

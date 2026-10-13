@@ -36,7 +36,7 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
 
     <section class="card p-5" aria-labelledby="find-heading">
         <h3 id="find-heading" class="text-base">Find the student</h3>
-        <form method="GET" action="<?= e(url('/cashier/walk-in-payments')) ?>" class="mt-3 flex gap-2">
+        <form method="GET" data-auto-submit action="<?= e(url('/cashier/walk-in-payments')) ?>" class="mt-3 flex gap-2">
             <label for="walkin-q" class="sr-only">Name, student number, application number, or assessment number</label>
             <input type="search" id="walkin-q" name="q" value="<?= e($q) ?>" placeholder="Name, student no., APP or ASM number" class="field-input" autofocus>
             <button type="submit" class="btn-secondary shrink-0">Search</button>

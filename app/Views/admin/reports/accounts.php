@@ -23,7 +23,7 @@ $current = ['role' => (string) $filters['role'], 'status' => (string) $filters['
         'subtitle' => 'Every account by role and status. Review flagged accounts regularly: disable the ones no longer needed.',
     ]) ?>
 
-    <form method="GET" action="<?= e(url('/admin/reports/accounts')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/admin/reports/accounts')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div class="min-w-[10rem]">
             <label for="report-role" class="field-label">Role</label>
             <select id="report-role" name="role" class="field-input">

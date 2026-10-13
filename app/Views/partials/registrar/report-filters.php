@@ -33,7 +33,7 @@ $current = array_map(static fn ($value) => (string) ($value ?? ''), $filters);
     'subtitle' => $subtitle,
 ]) ?>
 
-<form method="GET" action="<?= e(url($path)) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+<form method="GET" data-auto-submit action="<?= e(url($path)) ?>" class="card flex flex-wrap items-end gap-4 p-4">
     <?php if (in_array('term', $fields, true)): ?>
         <div class="min-w-[14rem]">
             <label for="report-term" class="field-label">Term</label>

@@ -21,7 +21,7 @@ $query = http_build_query(array_filter($filters, static fn ($v) => $v !== ''));
         <a href="<?= e(url('/admin/audit-logs/export' . ($query !== '' ? '?' . $query : ''))) ?>" class="btn-secondary"><?= icon('download', 'h-5 w-5') ?> Export CSV</a>
     </div>
 
-    <form method="GET" action="<?= e(url('/admin/audit-logs')) ?>" class="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/admin/audit-logs')) ?>" class="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div><label for="audit-from" class="field-label">From</label><input id="audit-from" type="date" name="from" value="<?= e($filters['from']) ?>" class="field-input"></div>
         <div><label for="audit-to" class="field-label">To</label><input id="audit-to" type="date" name="to" value="<?= e($filters['to']) ?>" class="field-input"></div>
         <div><label for="audit-actor" class="field-label">Who</label><input id="audit-actor" type="search" name="actor" value="<?= e($filters['actor']) ?>" placeholder="Name, username, email" class="field-input"></div>

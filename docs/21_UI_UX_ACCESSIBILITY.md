@@ -89,3 +89,22 @@ Support light/dark mode if practical, while preserving readability and contrast.
   value, and `formaction`). Without `<dialog>` support the browser's own confirmation is used.
   Signing out asks too ("Sign out?"), from the sidebar and the account menu. Routine saves and
   reversible housekeeping (mark read, archive a notification) do not ask. `tests/confirmation_test.php` fails when a deciding button has no confirmation.
+
+## Filters apply by themselves (as built)
+
+Every filter and search form (any `<form method="GET">` in the views, except the top-bar "go to a page" search,
+which is navigation) carries `data-auto-submit`, and `public/assets/app.js` makes it work without a button:
+
+- A **dropdown, checkbox, radio, or date** applies as soon as it changes.
+- A **search or number box** applies about half a second after typing stops. The page reloads, and the cursor
+  is put back at the end of the same box so typing can continue (`sessionStorage`; if storage is blocked the
+  filter still applies, only the cursor is not restored). Enter still applies at once.
+- A **date range** (`from` and `to`) waits until it is valid: if the start date is after the end date, nothing
+  is submitted and an inline alert says "The start date must be on or before the end date." The server's
+  fall-back message is never reached from the form.
+- Changing a filter resets `page` to 1.
+- The Show / Search buttons are **hidden while scripts work**. Without scripts they stay in the page, so
+  filtering still works with a click (the markup always contains them). Print, Export, and Clear are links
+  and stay.
+
+`tests/ui_filters_test.php` fails when a new filter form is added without `data-auto-submit`.

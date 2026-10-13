@@ -387,20 +387,124 @@
         });
     });
 
-    // Filter forms apply as soon as a dropdown changes. The search box still
-    // waits for Enter or its button, so typing does not reload the page.
-    document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {
-        form.querySelectorAll('select, input[type="date"]').forEach(function (select) {
-            select.addEventListener('change', function () {
-                var page = form.querySelector('input[name="page"]');
-                if (page) {
-                    page.value = '1';
+    // Filter forms (data-auto-submit) apply by themselves. A dropdown, checkbox, or date changes the
+    // results at once; a search box applies about half a second after typing stops, and the cursor is put
+    // back in it after the page reloads so typing can continue. The Show / Search buttons are hidden while
+    // scripts work (they stay for visitors without scripts). A date range waits until it is valid: the
+    // start date may not be after the end date.
+    (function () {
+        var FOCUS_KEY = 'schoolhub.autoSubmitFocus';
+        var DELAY = 500;
+
+        function isTextField(field) {
+            var type = (field.getAttribute('type') || 'text').toLowerCase();
+            return field.tagName === 'INPUT' && (type === 'search' || type === 'text' || type === 'number');
+        }
+
+        function rangeProblem(form) {
+            var from = form.querySelector('input[type="date"][name="from"]');
+            var to = form.querySelector('input[type="date"][name="to"]');
+            if (from && to && from.value && to.value && from.value > to.value) {
+                return 'The start date must be on or before the end date.';
+            }
+            return null;
+        }
+
+        function showProblem(form, message) {
+            var note = form.querySelector('[data-range-note]');
+            if (!message) {
+                if (note) {
+                    note.remove();
                 }
-                form.submit();
+                return;
+            }
+            if (!note) {
+                note = document.createElement('p');
+                note.setAttribute('data-range-note', '');
+                note.setAttribute('role', 'alert');
+                note.className = 'field-error w-full';
+                form.appendChild(note);
+            }
+            note.textContent = message;
+        }
+
+        function apply(form, field) {
+            var problem = rangeProblem(form);
+            showProblem(form, problem);
+            if (problem) {
+                return;
+            }
+            var page = form.querySelector('input[name="page"]');
+            if (page) {
+                page.value = '1';
+            }
+            if (field && isTextField(field)) {
+                try {
+                    sessionStorage.setItem(FOCUS_KEY, JSON.stringify({ action: form.getAttribute('action'), name: field.name }));
+                } catch (e) { /* storage blocked: the cursor simply is not restored */ }
+            }
+            form.submit();
+        }
+
+        document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {
+            var timers = [];
+
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
+                button.hidden = true;
+            });
+
+            form.querySelectorAll('select, input[type="date"], input[type="checkbox"], input[type="radio"]').forEach(function (field) {
+                field.addEventListener('change', function () {
+                    apply(form, field);
+                });
+            });
+
+            form.querySelectorAll('input[type="search"], input[type="text"], input[type="number"]').forEach(function (field) {
+                var last = field.value;
+                field.addEventListener('input', function (event) {
+                    if (event.isComposing) {
+                        return;
+                    }
+                    clearTimeout(timers[field.name]);
+                    timers[field.name] = setTimeout(function () {
+                        if (field.value !== last) {
+                            last = field.value;
+                            apply(form, field);
+                        }
+                    }, DELAY);
+                });
+            });
+
+            // Enter submits the form itself, so a waiting timer must not submit it a second time.
+            form.addEventListener('submit', function () {
+                Object.keys(timers).forEach(function (name) {
+                    clearTimeout(timers[name]);
+                });
             });
         });
-    });
 
+        // After a search reloads the page, put the cursor back at the end of the box.
+        try {
+            var saved = sessionStorage.getItem(FOCUS_KEY);
+            if (saved) {
+                sessionStorage.removeItem(FOCUS_KEY);
+                var where = JSON.parse(saved);
+                document.querySelectorAll('form[data-auto-submit]').forEach(function (form) {
+                    if (form.getAttribute('action') !== where.action) {
+                        return;
+                    }
+                    var field = form.querySelector('input[name="' + where.name + '"]');
+                    if (field) {
+                        field.focus({ preventScroll: true });
+                        try {
+                            var end = field.value.length;
+                            field.setSelectionRange(end, end);
+                        } catch (e) { /* a number box has no caret to move */ }
+                    }
+                });
+            }
+        } catch (e) { /* nothing to restore */ }
+    }());
     // Warn about an oversized file before it is uploaded, so the student is not
     // left waiting for a multi-megabyte upload the server will refuse anyway.
     // The server still enforces the limit; this is only an early warning.

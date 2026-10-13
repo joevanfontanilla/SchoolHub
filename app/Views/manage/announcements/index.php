@@ -22,7 +22,7 @@ $states = ['' => 'All', 'DRAFT' => 'Drafts', 'SCHEDULED' => 'Scheduled', 'PUBLIS
         <a href="<?= e(url('/manage/announcements/create')) ?>" class="btn-primary"><?= icon('plus', 'h-5 w-5') ?> New announcement</a>
     </div>
 
-    <form method="GET" action="<?= e(url('/manage/announcements')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
+    <form method="GET" data-auto-submit action="<?= e(url('/manage/announcements')) ?>" class="card flex flex-wrap items-end gap-4 p-4">
         <div class="min-w-[16rem] flex-1">
             <label for="announcements-q" class="field-label">Search</label>
             <input id="announcements-q" type="search" name="q" value="<?= e($q) ?>" placeholder="Title or text" class="field-input">
