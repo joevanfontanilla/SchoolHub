@@ -28,6 +28,7 @@ use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
 use App\Controllers\Cashier\FeeController as CashierFees;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
+use App\Controllers\Cashier\WalkInPaymentController as CashierWalkInPayments;
 use App\Controllers\Cashier\ReportController as CashierReports;
 use App\Controllers\Cashier\DisbursementController as CashierDisbursements;
 use App\Controllers\FinanceDocumentController;
@@ -232,6 +233,10 @@ $router->get('/cashier/payments',               [CashierPayments::class, 'index'
 $router->get('/cashier/payments/{id}',          [CashierPayments::class, 'show'],    $cashier('payments.record'));
 $router->post('/cashier/payments/{id}/approve', [CashierPayments::class, 'approve'], $cashier('payments.record'));
 $router->post('/cashier/payments/{id}/reject',  [CashierPayments::class, 'reject'],  $cashier('payments.record'));
+
+// Payments received in person at the window (docs/14).
+$router->get('/cashier/walk-in-payments',        [CashierWalkInPayments::class, 'index'], $cashier('payments.record'), 'cashier.walkin-payments');
+$router->post('/cashier/walk-in-payments/{id}',  [CashierWalkInPayments::class, 'store'], $cashier('payments.record'));
 
 $router->get('/cashier/accounts',                [CashierAccounts::class, 'index'],         $cashier('finance.view_account'), 'cashier.accounts');
 $router->get('/cashier/accounts/{id}',           [CashierAccounts::class, 'show'],          $cashier('finance.view_account'));

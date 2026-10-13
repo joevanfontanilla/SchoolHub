@@ -149,3 +149,24 @@ the payment and an **Official Receipt** is issued. Two additions complete the ca
 There is **no general ledger and no double-entry posting**: SchoolHub records the two cash journals
 (CRJ, CDJ), not a full chart of accounts. `DisbursementService` is the only writer of vouchers;
 `DisbursementVoucher` holds the read queries, including `journal()` for the CDJ.
+
+## Walk-in payments (as built)
+
+A counter workspace for payments received in person, at **Cashier → Walk-in Payments**
+(`/cashier/walk-in-payments`), right below **Online Payments**. Permission `payments.record`
+(the Cashier role only; Super Admin is not admitted).
+
+- **Who can pay.** Any student with an active fee assessment that still has a balance, however
+  they enrolled: "walk-in" describes how they pay, not how they registered. Search by name,
+  student number, application number, or assessment number.
+- **Recording.** Choose the account, enter the amount, method (Cash by default; Check, GCash,
+  and the other `METHODS_CASHIER`), an optional reference and remarks. It calls the same
+  `FinanceService::recordPayment` as the form on the account page, so the receipt, balance,
+  `payment_status`, enrollment effects, notification, and audit entry are identical. There is no
+  new money logic. For a student not yet enrolled, the amount is prefilled with what is still
+  needed to meet the payment policy.
+- **After recording.** The page shows the official receipt number and a **Print receipt** link
+  (`/receipts/{id}`), and says when the payment met the policy and enrolled the student.
+- **Today's counter payments.** A list of the payments recorded at the window today (not online
+  verifications, not reversals), with the receipt, payor, method, and amount, and the day's total.
+- **Unchanged.** The payment form on `/cashier/accounts/{id}`, reversals, and adjustments.

@@ -243,6 +243,29 @@ final class Finance
             && FinanceService::cents($assessment['total_paid']) < PaymentPolicy::requiredCents($assessment);
     }
 
+    /**
+     * Payments recorded at the cashier's window on a day (docs/14, Walk-in payments): not online
+     * verifications, not reversals, and not payments that were later reversed. Oldest first.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function counterPaymentsOn(string $date): array
+    {
+        return Database::select(
+            "SELECT pay.id, pay.receipt_number, pay.amount, pay.payment_method, pay.reference_number, pay.paid_at,
+                    u.first_name, u.last_name, st.student_number, fa.assessment_number
+               FROM payments pay
+               JOIN fee_assessments fa ON fa.id = pay.fee_assessment_id
+               JOIN students st        ON st.id = pay.student_id
+               JOIN users u            ON u.id  = st.user_id
+          LEFT JOIN payments r         ON r.reversed_payment_id = pay.id
+              WHERE pay.payment_submission_id IS NULL AND pay.reversed_payment_id IS NULL
+                AND pay.amount > 0 AND r.id IS NULL AND DATE(pay.paid_at) = ?
+              ORDER BY pay.paid_at, pay.id",
+            [$date]
+        );
+    }
+
     /** @return array{pending:int,collected_today:string,payments_today:int,outstanding:string,assessments:int} */
     public static function cashierStats(): array
     {
