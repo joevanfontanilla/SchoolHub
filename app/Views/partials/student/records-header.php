@@ -13,8 +13,9 @@ $tabs = [
     ['/student/schedule' . $termQuery, 'Class Schedule', 'calendar', $tab === 'schedule'],
     ['/student/attendance' . $termQuery, 'Attendance', 'attendance', $tab === 'attendance'],
     ['/student/history', 'Academic History', 'document', $tab === 'history'],
+    ['/student/prospectus', 'Curriculum Checklist', 'requirements', $tab === 'prospectus'],
 ];
-$tabLabels = ['grades' => 'Grades', 'schedule' => 'Class Schedule', 'attendance' => 'Attendance', 'history' => 'Academic History'];
+$tabLabels = ['grades' => 'Grades', 'schedule' => 'Class Schedule', 'attendance' => 'Attendance', 'history' => 'Academic History', 'prospectus' => 'Curriculum Checklist'];
 ?>
 <?= partial('page-hero', [
     'heading'     => 'Academic Records',
@@ -25,7 +26,7 @@ $tabLabels = ['grades' => 'Grades', 'schedule' => 'Class Schedule', 'attendance'
     'print'       => true,
 ]) ?>
 
-<?php if ($tab !== 'history'): ?>
+<?php if (!in_array($tab, ['history', 'prospectus'], true)): ?>
     <form method="GET" action="<?= e(url('/student/' . $tab)) ?>" class="card mb-6 flex flex-wrap items-end gap-4 p-4 sm:p-5" data-auto-submit>
         <div class="min-w-[15rem] flex-1 sm:flex-none">
             <label for="records-term" class="field-label">Term</label>

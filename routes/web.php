@@ -205,6 +205,7 @@ $router->get('/student/schedule',   [StudentAcademic::class, 'schedule'],   [...
 $router->get('/student/grades',     [StudentAcademic::class, 'grades'],     [...$student, 'can:grades.view'],     'student.grades');
 $router->get('/student/attendance', [StudentAcademic::class, 'attendance'], [...$student, 'can:attendance.view'], 'student.attendance');
 $router->get('/student/history',    [StudentAcademic::class, 'history'],    [...$student, 'can:grades.view'],     'student.history');
+$router->get('/student/prospectus',  [StudentAcademic::class, 'prospectus'], [...$student, 'can:grades.view'],     'student.prospectus');
 $router->get('/student/schedule/print', [FinanceDocumentController::class, 'schedule'], [...$student, 'can:schedule.view'], 'student.schedule.print');
 $router->get('/student/cor', [FinanceDocumentController::class, 'cor'], [...$student, 'can:enrollment.view'], 'student.cor');
 
@@ -364,6 +365,7 @@ $router->get('/registrar/students',       [RegistrarStudents::class, 'index'],  
 $router->get('/registrar/students/{id}',  [RegistrarStudents::class, 'show'],   $registrar('students.view'), 'registrar.students.show');
 $router->get('/registrar/students/{id}/photo', [RegistrarStudents::class, 'photo'], $registrar('students.view'), 'registrar.students.photo');
 $router->get('/registrar/students/{id}/cor',   [RegistrarStudents::class, 'cor'],   $registrar('students.view'), 'registrar.students.cor');
+$router->get('/registrar/students/{id}/prospectus', [RegistrarStudents::class, 'prospectus'], $registrar('students.view'), 'registrar.students.prospectus');
 $router->post('/registrar/students/{id}', [RegistrarStudents::class, 'update'], $registrar('students.manage'));
 $router->post('/registrar/students/{id}/enlistments', [RegistrarStudents::class, 'addClass'],  $registrar('academic.assign'));
 $router->post('/registrar/students/{id}/credits', [RegistrarStudents::class, 'creditSubject'], $registrar('academic.credit'));

@@ -107,6 +107,7 @@ return [
             ['/student/schedule', 'Class Schedule', 'calendar'],
             ['/student/attendance', 'Attendance', 'attendance'],
             ['/student/history', 'Academic History', 'history'],
+            ['/student/prospectus', 'Curriculum Checklist', 'requirements'],
             ['/student/status', 'Application Status', 'status'],
         ],
         User::ROLE_TEACHER => [
@@ -141,6 +142,7 @@ return [
         '/student/enrollment'       => 'apply application subjects register term',
         '/student/requirements'     => 'upload documents birth certificate form 138 id photo',
         '/student/grades'           => 'grades gwa report card marks',
+        '/student/prospectus'       => 'curriculum checklist prospectus subjects passed credited remaining progress units gwa',
         '/student/schedule'         => 'timetable classes rooms',
         '/student/account'          => 'payment pay fees balance tuition receipt statement gcash',
         '/student/documents'        => 'files uploads receipts statements schedule proof download print',

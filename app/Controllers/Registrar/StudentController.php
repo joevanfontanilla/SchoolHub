@@ -64,6 +64,17 @@ final class StudentController extends Controller
         ]);
     }
 
+    public function prospectus(Request $request): void
+    {
+        $student = $this->student($request);
+        $id = (int) $student['id'];
+        $this->appView('registrar/students/prospectus', [
+            'title'      => 'Curriculum Checklist · ' . trim($student['first_name'] . ' ' . $student['last_name']),
+            'student'    => $student,
+            'prospectus' => AcademicRecordService::prospectus($id),
+        ]);
+    }
+
     public function update(Request $request): void
     {
         $student = $this->student($request);

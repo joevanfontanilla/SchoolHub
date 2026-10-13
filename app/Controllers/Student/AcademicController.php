@@ -73,6 +73,15 @@ final class AcademicController extends Controller
         ]);
     }
 
+    public function prospectus(Request $request): void
+    {
+        $records = $this->records($request, 'prospectus');
+        $this->appView('student/academic/prospectus', $records + [
+            'title'      => 'Curriculum Checklist',
+            'prospectus' => AcademicRecordService::prospectus($records['studentId']),
+        ]);
+    }
+
     /**
      * What every tab shares: the student's terms, the chosen one with its classes,
      * that term's summary, and progress through the curriculum.

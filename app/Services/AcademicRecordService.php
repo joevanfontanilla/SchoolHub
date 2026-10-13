@@ -264,6 +264,141 @@ final class AcademicRecordService
     }
 
     /**
+     * The curriculum checklist / prospectus (docs/28): every subject of the student's
+     * curriculum, grouped by year and term, marked Passed / Credited / In progress /
+     * Failed / Incomplete / Dropped / Not yet taken, with units earned and the GWA.
+     *
+     * @return array{curriculum:array<string,mixed>,groups:array<int,mixed>,earned:float,total:float,percent:int,gwa:?string,counts:array<string,int>}|null
+     */
+    public static function prospectus(int $studentId): ?array
+    {
+        $curriculumId = (int) Database::scalar('SELECT curriculum_id FROM students WHERE id = ?', [$studentId]);
+        if ($curriculumId === 0) {
+            return null;
+        }
+        $curriculum = Curriculum::find($curriculumId);
+        if ($curriculum === null) {
+            return null;
+        }
+
+        $credited = [];
+        foreach (\App\Models\CreditedSubject::subjectIdsFor($studentId) as $subjectId) {
+            $credited[(int) $subjectId] = true;
+        }
+        $finals = self::subjectFinals($studentId);
+
+        $groups = Curriculum::grid($curriculumId);
+        $earned = 0.0;
+        $total = 0.0;
+        $gwaClasses = [];
+        $counts = ['PASSED' => 0, 'CREDITED' => 0, 'IN_PROGRESS' => 0, 'FAILED' => 0, 'INC' => 0, 'DRP' => 0, 'NOT_TAKEN' => 0];
+
+        foreach ($groups as &$group) {
+            foreach ($group['subjects'] as &$subject) {
+                $subjectId = (int) $subject['id'];
+                $units = (float) $subject['units'];
+                $active = (int) $subject['is_active'] === 1;
+                if ($active) {
+                    $total += $units;
+                }
+
+                if (isset($credited[$subjectId])) {
+                    $status = 'CREDITED';
+                    $grade = null;
+                    if ($active) {
+                        $earned += $units;
+                    }
+                } elseif (isset($finals[$subjectId])) {
+                    $status = $finals[$subjectId]['remark'];
+                    $grade = $finals[$subjectId]['grade'];
+                    if ($status === GradeCalculator::REMARK_PASSED && $active) {
+                        $earned += $units;
+                    }
+                    if ($grade !== null) {
+                        $gwaClasses[] = ['code' => $subject['code'], 'units' => $units, 'final' => $finals[$subjectId]];
+                    }
+                } else {
+                    $status = 'NOT_TAKEN';
+                    $grade = null;
+                }
+
+                $subject['status'] = $status;
+                $subject['final_grade'] = $grade;
+                $counts[$status] = ($counts[$status] ?? 0) + 1;
+            }
+        }
+        unset($group, $subject);
+
+        return [
+            'curriculum' => $curriculum,
+            'groups'     => $groups,
+            'earned'     => $earned,
+            'total'      => $total,
+            'percent'    => $total > 0 ? (int) floor($earned / $total * 100) : 0,
+            'gwa'        => GradeCalculator::gwa($gwaClasses),
+            'counts'     => $counts,
+        ];
+    }
+
+    /**
+     * The student's final grade per subject across all attempts — the most favourable
+     * outcome wins (a pass beats a later re-take in progress). For the prospectus.
+     *
+     * @return array<int,array{grade:?string,remark:string}> subject_id => final
+     */
+    private static function subjectFinals(int $studentId): array
+    {
+        $classes = Database::select(
+            "SELECT ce.id AS enlistment_id, cs.subject_id, e.term_id
+               FROM enrollments e
+               JOIN class_enlistments ce ON ce.enrollment_id = e.id AND ce.status = 'ENLISTED'
+               JOIN class_schedules cs   ON cs.id = ce.class_schedule_id
+              WHERE e.student_id = ?",
+            [$studentId]
+        );
+        if ($classes === []) {
+            return [];
+        }
+
+        $in = implode(',', array_fill(0, count($classes), '?'));
+        $grades = [];
+        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
+            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+        }
+
+        // A pass is the best outcome to show; otherwise show the current attempt.
+        $rank = [
+            GradeCalculator::REMARK_PASSED      => 5,
+            GradeCalculator::REMARK_IN_PROGRESS => 4,
+            GradeCalculator::REMARK_INC         => 3,
+            GradeCalculator::REMARK_FAILED      => 2,
+            GradeCalculator::REMARK_DRP         => 1,
+        ];
+
+        $weightsByTerm = [];
+        $finals = [];
+        foreach ($classes as $class) {
+            $termId = (int) $class['term_id'];
+            if (!isset($weightsByTerm[$termId])) {
+                $weightsByTerm[$termId] = [];
+                foreach (self::periods($termId) as $period) {
+                    $weightsByTerm[$termId][(int) $period['id']] = (float) $period['weight'];
+                }
+            }
+            if ($weightsByTerm[$termId] === []) {
+                continue;
+            }
+            $final = GradeCalculator::final($grades[(int) $class['enlistment_id']] ?? [], $weightsByTerm[$termId]);
+            $subjectId = (int) $class['subject_id'];
+            if (!isset($finals[$subjectId]) || ($rank[$final['remark']] ?? 0) > ($rank[$finals[$subjectId]['remark']] ?? 0)) {
+                $finals[$subjectId] = $final;
+            }
+        }
+
+        return $finals;
+    }
+
+    /**
      * Every term the student was enrolled in, newest first, without classes —
      * for term pickers and summaries.
      *
