@@ -137,3 +137,38 @@ Classes" list of holidays, grouped by section under an academic year (e.g. A.Y. 
   and the Super Admin** by default) creates, updates, and deletes entries at
   **`/manage/calendar`**; every change is audited (`calendar.event_*`). This is not the same
   as `AcademicCalendarService`, which sets a term's dates and enrollment window.
+
+## Walk-in enrollment (as built)
+
+An applicant who comes to the registrar's office is enrolled **by the registrar on their
+behalf**, through the same application, review, approval, assessment, payment, and
+confirmation steps as an online applicant. Only the way in differs.
+
+- **Who.** The Registrar, with permission `enrollment.walkin`, at **Registrar → Walk-in
+  registration** (`/registrar/walk-in`). Super Admin is not admitted (docs/04).
+- **Step 1, intake form.** One form collects the applicant's name and email, the profile
+  fields a submission requires (see Profile Completeness), one guardian marked as the
+  emergency contact, and the term, program, year level, and student type. Submitting it, in
+  one transaction, creates the **student account** (status `Pending`, an unusable random
+  password), the student record and profile, and a `DRAFT` application with `source =
+  walk_in` and `created_by` = the registrar. The enrollment window applies exactly as it does
+  online: there is no override for a closed term.
+- **The applicant's login.** The registrar is shown a **one-time set-up link** (the same
+  mechanism as a new staff account, docs/07) to hand over or email, and the applicant chooses
+  their own password. No password is ever shown, stored, or emailed. The link can be
+  re-issued from step 2 while the account is still `Pending`.
+- **Step 2, documents.** The registrar ticks each document **received in person**. A ticked
+  document becomes `VERIFIED` at once, with the registrar and time recorded and
+  `received_in_person = 1`; it has no uploaded file and is shown as "Received in person".
+  The registrar sees the originals, so no separate review is needed. Unticked documents stay
+  `NOT_SUBMITTED`; the applicant can upload them later once they can sign in.
+- **Submit.** Step 2 then moves the application `DRAFT` to `SUBMITTED` (docs/26 rule 2) with
+  the registrar as actor, under the same preconditions (complete profile, subjects chosen,
+  every required document in). From there it is an ordinary `SUBMITTED` application: the
+  registrar starts review, approves with a section, and so on.
+- **Cancel.** A walk-in left as a `DRAFT` can be cancelled by the registrar (docs/26 rule 10).
+- **Data.** `enrollment_applications.source` (`online` | `walk_in`, default `online`) and
+  `created_by`; `enrollment_requirements.received_in_person`. The application queue shows a
+  "Walk-in" badge.
+- **Audit.** `walkin.registered` (no personal data), `walkin.document_received`, and the
+  usual `enrollment.*` status entries.

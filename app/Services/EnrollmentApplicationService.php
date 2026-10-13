@@ -32,8 +32,19 @@ final class EnrollmentApplicationService
     public static function createDraft(User $user, array $input): int
     {
         $student = RegistrationService::ensureStudentRecord($user);
-        $studentId = (int) $student['id'];
 
+        return self::createDraftFor((int) $student['id'], $user, $input);
+    }
+
+    /**
+     * Create a DRAFT application for a student. $actor is the student themselves, or the
+     * registrar starting a walk-in (WalkInService), in which case $source is "walk_in".
+     *
+     * @param array<string,mixed> $input
+     * @throws ValidationException
+     */
+    public static function createDraftFor(int $studentId, User $actor, array $input, string $source = 'online'): int
+    {
         $validator = Validator::make($input, [
             'term_id'          => 'required|integer',
             'program_id'       => 'required|integer',
@@ -60,7 +71,7 @@ final class EnrollmentApplicationService
             throw ValidationException::withMessage($problem);
         }
 
-        return Database::transaction(static function () use ($user, $studentId, $term, $input): int {
+        return Database::transaction(static function () use ($actor, $studentId, $term, $input, $source): int {
             // Re-checked inside the transaction with the student row locked, so two
             // quick submissions of the same form cannot both create an application.
             Database::selectOne('SELECT id FROM students WHERE id = ? FOR UPDATE', [$studentId]);
@@ -79,6 +90,8 @@ final class EnrollmentApplicationService
                 'program_id'         => (int) $input['program_id'],
                 'year_level_id'      => (int) $input['year_level_id'],
                 'student_type'       => (string) $input['student_type'],
+                'source'             => $source,
+                'created_by'         => $source === 'online' ? null : $actor->id,
                 'previous_school'    => trim((string) ($input['previous_school'] ?? '')) ?: null,
                 'last_school_year'   => trim((string) ($input['last_school_year'] ?? '')) ?: null,
             ]);
@@ -98,13 +111,13 @@ final class EnrollmentApplicationService
             // Pre-check the regular load: this program's subjects for the year and term.
             SubjectSelectionService::selectDefaults($applicationId);
 
-            EnrollmentStatusService::recordCreation($applicationId, $user);
+            EnrollmentStatusService::recordCreation($applicationId, $actor);
 
             AuditService::log('enrollment.application_created', 'enrollment', 'EnrollmentApplication', $applicationId, null, [
                 'term_id'      => (int) $term['id'],
                 'program_id'   => (int) $input['program_id'],
                 'student_type' => (string) $input['student_type'],
-            ], 'SUCCESS', null, $user->id, $user->role_name);
+            ], 'SUCCESS', null, $actor->id, $actor->role_name);
 
             return $applicationId;
         });

@@ -39,8 +39,8 @@ with a validation error — not silently ignored.
 
 | # | From | To | Permitted actor | Preconditions | Side effects |
 |---|---|---|---|---|---|
-| 1 | *(none)* | `DRAFT` | Student (own) | No existing non-terminal application for the same academic year + term | Application row created |
-| 2 | `DRAFT` | `SUBMITTED` | Student (own) | Profile complete; program, year level, term selected; **at least one subject chosen**; every **required** requirement has a file `SUBMITTED` | Notify registrar queue; lock student edits |
+| 1 | *(none)* | `DRAFT` | Student (own), or Registrar for a **walk-in** (docs/09) | No existing non-terminal application for the same academic year + term | Application row created |
+| 2 | `DRAFT` | `SUBMITTED` | Student (own), or Registrar when `source` is `walk_in` | Profile complete; program, year level, term selected; **at least one subject chosen**; every **required** requirement has a file `SUBMITTED` | Notify registrar queue; lock student edits |
 | 3 | `SUBMITTED` | `UNDER_REVIEW` | Registrar | — | Reviewer recorded on the application |
 | 4 | `UNDER_REVIEW` | `REQUIREMENTS_INCOMPLETE` | Registrar | At least one **required** requirement is `NOT_SUBMITTED`, or any requirement is `REJECTED` or `CORRECTION_REQUIRED` (an optional document nobody uploaded does not count) | Remarks required; unlock student uploads; notify student |
 | 5 | `UNDER_REVIEW` | `CORRECTION_REQUIRED` | Registrar | — | Remarks required; unlock student form edits; notify student |
@@ -48,7 +48,7 @@ with a validation error — not silently ignored.
 | 7 | `CORRECTION_REQUIRED` | `SUBMITTED` | Student (own) | Form passes validation; at least one subject chosen | Re-queue; lock student edits |
 | 8 | `UNDER_REVIEW` | `APPROVED` | Registrar | **Every required requirement is `VERIFIED`**; **subjects chosen**; **a section assigned** that matches the application, is active, and has a seat | Generate fee assessment; `payment_status` → `PENDING`; notify student; enroll at once if the payment policy is `NONE` |
 | 9 | `UNDER_REVIEW` | `REJECTED` | Registrar | Reason required | Notify student. Terminal. |
-| 10 | `DRAFT` | `CANCELLED` | Student (own) | — | Terminal |
+| 10 | `DRAFT` | `CANCELLED` | Student (own), or Registrar when `source` is `walk_in` | — | Terminal |
 | 11 | `SUBMITTED`, `UNDER_REVIEW`, `REQUIREMENTS_INCOMPLETE`, `CORRECTION_REQUIRED` | `CANCELLED` | Student (own) or Registrar | — | Notify the other party. Terminal. |
 | 12 | `APPROVED` | `CANCELLED` | Registrar | **No payment recorded** (`payment_status` is `NOT_ASSESSED` or `PENDING`) **and not yet enrolled** (`enrollment_state` is `NOT_ENROLLED`) | Void the assessment; notify student. Terminal. |
 

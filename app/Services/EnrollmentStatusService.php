@@ -35,7 +35,7 @@ final class EnrollmentStatusService
      * @var array<string,array{0:int,1:array<int,string>,2:bool,3:?string}>
      */
     private const RULES = [
-        'DRAFT>SUBMITTED'                   => [2,  [self::STUDENT],   false, 'readyToSubmitFromDraft'],
+        'DRAFT>SUBMITTED'                   => [2,  [self::STUDENT, self::REGISTRAR], false, 'readyToSubmitFromDraft'],
         'SUBMITTED>UNDER_REVIEW'            => [3,  [self::REGISTRAR], false, null],
         'UNDER_REVIEW>REQUIREMENTS_INCOMPLETE' => [4, [self::REGISTRAR], true, 'hasIncompleteRequirement'],
         'UNDER_REVIEW>CORRECTION_REQUIRED'  => [5,  [self::REGISTRAR], true,  null],
@@ -43,7 +43,7 @@ final class EnrollmentStatusService
         'CORRECTION_REQUIRED>SUBMITTED'     => [7,  [self::STUDENT],   false, 'formIsValid'],
         'UNDER_REVIEW>APPROVED'             => [8,  [self::REGISTRAR], false, 'readyToApprove'],
         'UNDER_REVIEW>REJECTED'             => [9,  [self::REGISTRAR], true,  null],
-        'DRAFT>CANCELLED'                   => [10, [self::STUDENT],   false, null],
+        'DRAFT>CANCELLED'                   => [10, [self::STUDENT, self::REGISTRAR], false, null],
         'SUBMITTED>CANCELLED'               => [11, [self::STUDENT, self::REGISTRAR], false, null],
         'UNDER_REVIEW>CANCELLED'            => [11, [self::STUDENT, self::REGISTRAR], false, null],
         'REQUIREMENTS_INCOMPLETE>CANCELLED' => [11, [self::STUDENT, self::REGISTRAR], false, null],
@@ -99,6 +99,12 @@ final class EnrollmentStatusService
 
             if (!in_array($actor->role_name, $roles, true)) {
                 throw HttpException::forbidden('Your role cannot make this change to an application.');
+            }
+
+            // A draft is the student's private work. The registrar may act on one only when
+            // the registrar started it as a walk-in (docs/26 rules 2 and 10).
+            if ($from === App::DRAFT && $actor->isRegistrar() && ($application['source'] ?? 'online') !== 'walk_in') {
+                throw HttpException::forbidden('Only the student can act on their own draft.');
             }
 
             if ($remarksRequired && ($remarks === null || $remarks === '')) {

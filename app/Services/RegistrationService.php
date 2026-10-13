@@ -138,7 +138,7 @@ final class RegistrationService
     }
 
     /** A username from the email's local part, with a numeric suffix if taken. */
-    private static function availableUsername(string $email): string
+    public static function availableUsername(string $email): string
     {
         $base = strtolower((string) preg_replace('/[^a-z0-9._-]/i', '', strstr($email, '@', true) ?: ''));
         $base = substr($base !== '' ? $base : 'student', 0, 40);

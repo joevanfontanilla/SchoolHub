@@ -76,7 +76,7 @@ never by value.
 
 ### Access
 Every registrar route requires the Registrar role **and** a specific permission
-(`enrollment.review`, `enrollment.approve`, `enrollment.confirm`, `requirements.verify`,
+(`enrollment.review`, `enrollment.approve`, `enrollment.confirm`, `enrollment.walkin`, `requirements.verify`,
 `students.view`, `students.manage`, `academic.manage`, `reports.registrar`). Super Admin is not admitted.
 
 ### Documents

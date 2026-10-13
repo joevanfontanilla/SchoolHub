@@ -49,6 +49,7 @@ const PERMISSIONS = [
     'enrollment.review'   => ['enrollment', 'Review enrollment applications'],
     'enrollment.approve'  => ['enrollment', 'Approve, reject, or request correction'],
     'enrollment.confirm'  => ['enrollment', 'Confirm enrollment and assign sections'],
+    'enrollment.walkin'   => ['enrollment', 'Register and enroll walk-in applicants'],
     'requirements.verify' => ['requirements', 'Verify or reject submitted requirements'],
     'academic.manage'     => ['academic', 'Manage programs, subjects, sections, and the academic calendar'],
     'academic.assign'     => ['academic', 'Assign classes, teachers, and rooms'],
@@ -89,7 +90,7 @@ const ROLE_PERMISSIONS = [
     ],
     User::ROLE_REGISTRAR => [
         'students.view', 'students.manage', 'enrollment.view', 'enrollment.review',
-        'enrollment.approve', 'enrollment.confirm', 'requirements.verify',
+        'enrollment.approve', 'enrollment.confirm', 'enrollment.walkin', 'requirements.verify',
         'academic.manage', 'academic.assign', 'academic.credit', 'grade_periods.manage',
         'calendar.manage', 'credentials.manage', 'announcements.view', 'announcements.manage', 'announcements.publish',
         'reports.registrar', 'notifications.view',

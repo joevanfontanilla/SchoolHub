@@ -90,6 +90,10 @@ $requiredDone  = count(array_filter($requirements, static fn ($r) => (int) $r['i
                     </p>
                 <?php endif; ?>
 
+                <?php if ((int) ($requirement['received_in_person'] ?? 0) === 1): ?>
+                    <p class="mt-3 text-sm text-slate-600">Received in person by the registrar<?= !empty($requirement['verified_at']) ? ', ' . e(dt($requirement['verified_at'])) : '' ?>.</p>
+                <?php endif; ?>
+
                 <?php if ($uploadAllowed): ?>
                     <form method="POST"
                           action="<?= e(url('/student/enrollment/' . $application['id'] . '/requirements/' . $requirement['id'] . '/upload')) ?>"

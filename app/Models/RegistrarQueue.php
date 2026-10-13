@@ -41,7 +41,7 @@ final class RegistrarQueue
         $offset = ($page - 1) * self::PER_PAGE;
 
         $rows = Database::select(
-            "SELECT ea.id, ea.application_number, ea.application_status, ea.enrollment_state, ea.student_type,
+            "SELECT ea.id, ea.application_number, ea.application_status, ea.enrollment_state, ea.student_type, ea.source,
                     ea.submitted_at, ea.updated_at,
                     u.first_name, u.middle_name, u.last_name, u.email,
                     p.code AS program_code, yl.name AS year_level_name,

@@ -199,6 +199,8 @@ Added for symmetry with students; the original specification had no teacher tabl
 | `submitted_at`, `reviewed_at`, `decided_at` | DATETIME | nullable |
 | `reviewed_by` | FK → users | nullable |
 | `remarks` | TEXT | nullable |
+| `source` | VARCHAR(10) | `online` (default) or `walk_in` — how the application was started (docs/09) |
+| `created_by` | FK → users | nullable; the registrar who started a walk-in |
 
 A student may hold only one **non-terminal** application per term. MySQL cannot express
 that as a partial unique index, so it is enforced in the service layer.

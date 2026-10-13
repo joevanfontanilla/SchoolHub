@@ -51,6 +51,7 @@ use App\Controllers\Registrar\GradingController;
 use App\Controllers\Registrar\ReportController as RegistrarReports;
 use App\Controllers\Registrar\RoomController;
 use App\Controllers\Registrar\StudentController as RegistrarStudents;
+use App\Controllers\Registrar\WalkInController;
 use App\Controllers\Student\AcademicController as StudentAcademic;
 use App\Controllers\Student\CredentialController as StudentCredentials;
 use App\Controllers\Student\DashboardController as StudentDashboard;
@@ -360,6 +361,15 @@ $router->post('/registrar/applications/{id}/approve',            [RegistrarAppli
 $router->post('/registrar/applications/{id}/reject',             [RegistrarApplications::class, 'reject'],            $registrar('enrollment.approve'));
 $router->post('/registrar/applications/{id}/cancel',             [RegistrarApplications::class, 'cancel'],            $registrar('enrollment.approve'));
 $router->post('/registrar/requirements/{requirementId}/review',  [RegistrarApplications::class, 'reviewRequirement'], $registrar('requirements.verify'));
+
+// Walk-in enrollment at the counter (docs/09).
+$router->get('/registrar/walk-in',                  [WalkInController::class, 'create'],        $registrar('enrollment.walkin'), 'registrar.walkin');
+$router->post('/registrar/walk-in',                 [WalkInController::class, 'store'],         $registrar('enrollment.walkin'));
+$router->get('/registrar/walk-in/{id}',             [WalkInController::class, 'documents'],     $registrar('enrollment.walkin'));
+$router->post('/registrar/walk-in/{id}',            [WalkInController::class, 'saveDocuments'], $registrar('enrollment.walkin'));
+$router->post('/registrar/walk-in/{id}/link',       [WalkInController::class, 'reissueLink'],   $registrar('enrollment.walkin'));
+$router->post('/registrar/walk-in/{id}/email-link', [WalkInController::class, 'emailLink'],     $registrar('enrollment.walkin'));
+$router->post('/registrar/walk-in/{id}/cancel',     [WalkInController::class, 'cancel'],        $registrar('enrollment.walkin'));
 
 $router->get('/registrar/students',       [RegistrarStudents::class, 'index'],  $registrar('students.view'), 'registrar.students');
 $router->get('/registrar/students/{id}',  [RegistrarStudents::class, 'show'],   $registrar('students.view'), 'registrar.students.show');

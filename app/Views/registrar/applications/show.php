@@ -106,6 +106,8 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                                             <span class="text-brand-gray"><?= e(Download::humanSize((int) $requirement['file_size'])) ?> · <?= e(dt($requirement['uploaded_at'])) ?></span>
                                             <a href="<?= e(url('/documents/' . $requirement['file_id'])) ?>" class="text-xs font-semibold text-brand-600 hover:underline">Download<span class="sr-only"> <?= e($requirement['name']) ?></span></a>
                                         </p>
+                                    <?php elseif ((int) ($requirement['received_in_person'] ?? 0) === 1): ?>
+                                        <p class="mt-1.5 text-sm text-slate-700">Received in person<?= !empty($requirement['verified_at']) ? ', ' . e(dt($requirement['verified_at'])) : '' ?>.</p>
                                     <?php else: ?>
                                         <p class="mt-1.5 text-sm text-brand-gray">Nothing uploaded.</p>
                                     <?php endif; ?>

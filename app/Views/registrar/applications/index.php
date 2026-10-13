@@ -25,10 +25,15 @@ $statusOptions = [
 ];
 ?>
 <div class="space-y-6">
-    <div>
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
         <p class="eyebrow">Registrar</p>
         <h2 class="mt-1 text-2xl">Applications</h2>
         <p class="mt-1 text-sm text-slate-600">Oldest submissions first, so nobody waits longest.</p>
+        </div>
+        <?php if (App\Core\Auth::can('enrollment.walkin')): ?>
+            <a href="<?= e(url('/registrar/walk-in')) ?>" class="btn-primary">Walk-in registration</a>
+        <?php endif; ?>
     </div>
 
     <form method="GET" action="<?= e(url('/registrar/applications')) ?>" class="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4" data-auto-submit>
@@ -95,6 +100,7 @@ $statusOptions = [
                                         <?= e($row['application_number']) ?>
                                     </a>
                                     <p class="text-xs text-brand-gray"><?= e($row['term_name']) ?>, <?= e($row['academic_year_code']) ?></p>
+                                    <?php if (($row['source'] ?? 'online') === 'walk_in'): ?><span class="mt-1 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">Walk-in</span><?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3">
                                     <p class="font-medium text-slate-800"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></p>
