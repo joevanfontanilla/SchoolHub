@@ -190,6 +190,16 @@ $oldRemarksFor = (int) old('remarks_for', 0);
                             <?= $emergency !== null ? e($emergency['full_name'] . ' (' . $emergency['relationship'] . ') · ' . $emergency['mobile']) : '—' ?>
                         </dd>
                     </div>
+                    <?php if (($application['source'] ?? 'online') === 'walk_in' && $student['account_status'] === 'Pending' && App\Core\Auth::can('enrollment.walkin')): ?>
+                        <div class="sm:col-span-2 lg:col-span-3 rounded-xl border border-warning-line bg-warning-bg px-4 py-3 text-warning-text">
+                            <p class="font-semibold">This walk-in applicant has not set a password yet.</p>
+                            <p class="mt-1">They cannot sign in until they use their set-up link. If it was lost, issue a new one; the old one stops working.</p>
+                            <form method="POST" action="<?= e(url('/registrar/walk-in/' . $application['id'] . '/link')) ?>" class="mt-3">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn-secondary">Issue a new set-up link</button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($application['previous_school'])): ?>
                         <div class="sm:col-span-2 lg:col-span-3">
                             <dt class="text-xs font-semibold uppercase tracking-wider text-brand-gray">Previous school</dt>

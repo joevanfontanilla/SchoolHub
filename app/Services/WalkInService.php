@@ -167,7 +167,7 @@ final class WalkInService
     public static function reissueLink(User $registrar, int $applicationId): array
     {
         self::assertRegistrar($registrar);
-        $applicant = self::applicant(self::draft($applicationId));
+        $applicant = self::applicant(self::walkIn($applicationId));
         if ($applicant->status !== User::STATUS_PENDING) {
             throw ValidationException::withMessage('This applicant has already set a password, so there is no set-up link to issue.');
         }
@@ -179,7 +179,7 @@ final class WalkInService
     public static function emailLink(User $registrar, int $applicationId, string $token): User
     {
         self::assertRegistrar($registrar);
-        $applicant = self::applicant(self::draft($applicationId));
+        $applicant = self::applicant(self::walkIn($applicationId));
         $found = PasswordResetService::find($token);
         if ($found === null || $found['user']->id !== $applicant->id) {
             throw ValidationException::withMessage('That link is no longer valid. Issue a new one and email it from there.');
@@ -209,6 +209,26 @@ final class WalkInService
         );
         if ($application === null) {
             throw HttpException::notFound('That walk-in is not in progress.');
+        }
+
+        return $application;
+    }
+
+    /**
+     * A walk-in application at any stage. The set-up link is for the applicant's account, which can
+     * still be waiting for a first password long after the application was submitted.
+     *
+     * @return array<string,mixed>
+     * @throws HttpException 404 when it is not a walk-in
+     */
+    public static function walkIn(int $applicationId): array
+    {
+        $application = Database::selectOne(
+            'SELECT * FROM enrollment_applications WHERE id = ? AND source = ?',
+            [$applicationId, 'walk_in']
+        );
+        if ($application === null) {
+            throw HttpException::notFound('That walk-in was not found.');
         }
 
         return $application;

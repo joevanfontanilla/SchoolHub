@@ -93,7 +93,7 @@ final class WalkInController extends Controller
         try {
             $link = WalkInService::reissueLink(Auth::user(), $id);
         } catch (ValidationException $e) {
-            $this->failWith($e, [], "/registrar/walk-in/{$id}");
+            $this->failWith($e, [], $this->backTo($id));
             return;
         }
         $this->linkView($id, $link['token'], $link['expires_at']);
@@ -114,10 +114,10 @@ final class WalkInController extends Controller
                 $this->linkView($id, $token, $found['expires_at']);
                 return;
             }
-            $this->failWith($e, [], "/registrar/walk-in/{$id}");
+            $this->failWith($e, [], $this->backTo($id));
             return;
         }
-        $this->success("The link was emailed to {$applicant->email}.", "/registrar/walk-in/{$id}");
+        $this->success("The link was emailed to {$applicant->email}.", $this->backTo($id));
     }
 
     public function cancel(Request $request): void
@@ -131,15 +131,25 @@ final class WalkInController extends Controller
         $this->success('Walk-in cancelled.', '/registrar/walk-in');
     }
 
+    /** Where to go after a link action: the documents step while it is a draft, else the application. */
+    private function backTo(int $applicationId): string
+    {
+        return WalkInService::walkIn($applicationId)['application_status'] === Application::DRAFT
+            ? "/registrar/walk-in/{$applicationId}"
+            : "/registrar/applications/{$applicationId}";
+    }
+
     private function linkView(int $applicationId, string $token, string $expiresAt): void
     {
         // Never cached: the page holds a working password link.
         header('Cache-Control: no-store');
-        $application = WalkInService::draft($applicationId);
+        $application = WalkInService::walkIn($applicationId);
         $this->appView('registrar/walk-in/link', [
-            'title'         => 'Applicant account created',
+            'title'         => 'Applicant set-up link',
             'applicationId' => $applicationId,
             'applicant'     => WalkInService::applicant($application),
+            'newAccount'    => $application['application_status'] === Application::DRAFT,
+            'continueUrl'   => $this->backTo($applicationId),
             'link'          => absolute_url('/password/reset/' . $token),
             'expiresAt'     => $expiresAt,
         ]);

@@ -235,8 +235,31 @@ return [
             WalkInService::submit($registrar, $id, walkInRequiredIds($id));
 
             $t->assertEquals(404, statusOf(fn () => WalkInService::recordDocuments($registrar, $id, [])));
-            $t->assertEquals(404, statusOf(fn () => WalkInService::reissueLink($registrar, $id)));
             $t->assertEquals(404, statusOf(fn () => WalkInService::cancel($registrar, $id)));
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'a lost set-up link can be re-issued after the walk-in was submitted, but never for an online applicant' => function (TestRunner $t): void {
+        try {
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+            $first = WalkInService::register($registrar, walkInInput());
+            $id = $first['application_id'];
+            WalkInService::submit($registrar, $id, walkInRequiredIds($id));
+
+            $fresh = WalkInService::reissueLink($registrar, $id);
+            $t->assertNull(App\Services\PasswordResetService::find($first['token']), 'The lost link no longer works');
+            $t->assertNotNull(App\Services\PasswordResetService::find($fresh['token']), 'The new one does');
+            App\Services\PasswordResetService::complete($fresh['token'], 'Walk1nPassw0rd!x', 'Walk1nPassw0rd!x');
+
+            $student = makeStudent();
+            $online = App\Services\EnrollmentApplicationService::createDraft($student, applicationInput());
+            $t->assertEquals(404, statusOf(fn () => WalkInService::reissueLink($registrar, $online)), 'An online applicant is not the registrar\'s to issue links for');
+
+            $other = makeUser(User::ROLE_CASHIER);
+            $t->assertEquals(403, statusOf(fn () => WalkInService::reissueLink($other, $id)));
         } finally {
             actingAs(null);
             deleteTestUsers();

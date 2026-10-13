@@ -155,8 +155,10 @@ confirmation steps as an online applicant. Only the way in differs.
   online: there is no override for a closed term.
 - **The applicant's login.** The registrar is shown a **one-time set-up link** (the same
   mechanism as a new staff account, docs/07) to hand over or email, and the applicant chooses
-  their own password. No password is ever shown, stored, or emailed. The link can be
-  re-issued from step 2 while the account is still `Pending`.
+  their own password. No password is ever shown, stored, or emailed. A lost link can be
+  re-issued, from step 2 or later from the application's **Applicant** card, for as long as the
+  account is still `Pending`; the old link stops working. Only walk-in applicants, never online
+  ones.
 - **Step 2, documents.** The registrar ticks each document **received in person**. A ticked
   document becomes `VERIFIED` at once, with the registrar and time recorded and
   `received_in_person = 1`; it has no uploaded file and is shown as "Received in person".
