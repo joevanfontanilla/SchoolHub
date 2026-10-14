@@ -411,3 +411,27 @@ row (on screen, in the print, and in the CSV): the cashier who issued the receip
 which matters once the school has more than one cashier. Each printout, and the Cash Book printout, ends
 with a signature block: **Prepared by** with the signed-in cashier's name and "Cashier" under it, and a blank
 **Approved by** line.
+
+
+## Payment breakdown (as built)
+
+A table of **where the payments went**: **Cashier → Reports → Payment Breakdown**
+(`/cashier/reports/payment-breakdown`, permission `reports.cashier`), and a small version on each student's account page.
+
+- **The allocation rule.** A payment is not tied to a fee line in the books, so the report *allocates* it, for display only
+  (it never changes the ledger or any balance):
+  1. The **old account** is paid first, as in the installment table.
+  2. The rest is shared across the other lines (each fee line, and Bridging, OJT, and other charges) **in proportion to
+     each line's share of the amount charged**. Whole centavos: the leftover centavos go to the largest remainders, so the lines
+     always add up to exactly what was paid.
+  Discounts, scholarships, waivers, and corrections that lower the amount are shown as their own negative row; payments are
+  not allocated to them.
+- **A period is computed from running totals,** not payment by payment: what each line had received by the end of the period
+  minus what it had received before it. So a **reversal** simply lowers the line it had counted toward (the net is shown), and
+  a payment made in an earlier month is never counted twice.
+- **The report.** For a date range (default this month; a payment is dated when it was recorded, like the Collections report),
+  optionally one program and year level: the accounts that **paid in the period**, with, per line, the amount **assessed**,
+  the amount **collected in the period**, and its **share** of the collections. Below, collections **by payment method** and
+  **by day**. It prints and exports as CSV (audited, like every report).
+- **On a student's account page,** "Where the payments went": each line with what was assessed, what has been paid toward it
+  (the same rule applied to everything paid so far), and its share.

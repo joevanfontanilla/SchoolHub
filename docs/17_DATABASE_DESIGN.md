@@ -470,6 +470,12 @@ withdrawals are append-only. The ledger account `3020 Opening Cash Balances` tak
 > `users.signature_path` VARCHAR(255) nullable (migration 036): the user's e-signature image under
 > `storage/uploads/signatures/`, served only to its owner and embedded in the printouts they prepare.
 
+### `e_ids` (migration 037)
+`user_id` FK unique, `code` CHAR(24) unique (the random value in the QR address), `staff_number` VARCHAR(20) nullable unique
+(staff only; a student's number is `students.student_number`), `issued_at`, `issued_by` FK, `reissue_count`, `scan_count`,
+`last_scanned_at`. `e_id_lookups`: `ip_address`, `minute` (the minute started, DATETIME), `lookups`; unique on both, so the public
+page can limit lookups per visitor. See docs/29.
+
 ### `migrations`
 `filename` VARCHAR(255) unique, `batch` INT, `applied_at` DATETIME.
 Used by `database/migrate.php`. No `updated_at`.

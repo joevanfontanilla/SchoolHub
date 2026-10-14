@@ -7,6 +7,7 @@
  * @var array  $items
  * @var array  $payments
  * @var array  $adjustments
+ * @var ?array $split       PaymentBreakdownService::forAssessment(): where the payments went
  * @var array  $submissions
  * @var bool   $belowPolicy
  * @var array  $adjustmentTypes
@@ -97,6 +98,11 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
             <section class="card p-5" aria-labelledby="installments-heading">
                 <h3 id="installments-heading" class="mb-3 text-base">Installments</h3>
                 <?= partial('installments', ['plan' => $plan]) ?>
+            </section>
+
+            <section class="card p-5" aria-labelledby="split-heading">
+                <h3 id="split-heading" class="mb-3 text-base">Where the payments went</h3>
+                <?= partial('cashier/payment-split', ['split' => $split]) ?>
             </section>
 
             <section class="card p-5" aria-labelledby="payments-heading">

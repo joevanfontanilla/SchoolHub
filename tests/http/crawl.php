@@ -367,6 +367,10 @@ try {
         '/cashier/disbursements/{id}/voucher'  => [404],
         '/cashier/day-close/print'             => [404], // no closed day in the crawl fixtures
         '/account/signature'                   => [404], // no crawl user has saved a signature
+        '/verify/{code}'                       => [404], // a made-up code is simply not valid (the same page for every reason)
+        '/verify/{code}/photo'                 => [404],
+        '/admin/users/{id}/e-id'               => [404], // the crawl user is a student; the administrator opens staff cards only
+        '/admin/users/{id}/e-id/print'         => [404],
         '/branding/logo'                       => [302],
         // A student with no application is sent to the application form.
         '/student/requirements'                => [302],
@@ -423,6 +427,9 @@ try {
                 }
                 if ($expected === [200] && $route['pattern'] === '/student/cor' && $name === 'studentB') {
                     $expected = [404]; // studentB is not enrolled, so has no certificate of registration
+                }
+                if ($expected === [200] && $route['pattern'] === '/e-id/print' && $name === 'studentB') {
+                    $expected = [404]; // studentB has no student number yet, so no e-ID to print
                 }
                 if ($expected === [200] && $route['pattern'] === '/account/photo' && $name !== 'studentA') {
                     $expected = [404]; // only studentA has a photo; other roles have no avatar yet

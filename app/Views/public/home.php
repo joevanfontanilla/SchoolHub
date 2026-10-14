@@ -224,6 +224,24 @@ $swatches   = ['swatch-primary', 'swatch-navy', 'swatch-teal', 'swatch-sky'];
 </section>
 
 <!-- ======================================================================
+     Verify an ID
+     ====================================================================== -->
+<section class="bg-white" aria-labelledby="verify-home-heading">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-4 py-12 sm:px-6 lg:px-8">
+        <div class="max-w-xl">
+            <p class="eyebrow">Verify an ID</p>
+            <h2 id="verify-home-heading" class="mt-2 text-2xl sm:text-3xl">Is this a real school ID?</h2>
+            <p class="mt-2 text-slate-600">Scan the QR code on the card with your phone camera, or type its code here.</p>
+        </div>
+        <form method="GET" role="search" aria-label="Verify an ID" action="<?= e(url('/verify')) ?>" class="flex w-full max-w-md gap-2" novalidate>
+            <label for="verify-home-code" class="sr-only">ID code or address</label>
+            <input id="verify-home-code" name="code" class="field-input" autocomplete="off" placeholder="ID code or address">
+            <button type="submit" class="btn-primary shrink-0">Check ID</button>
+        </form>
+    </div>
+</section>
+
+<!-- ======================================================================
      Visit us
      ====================================================================== -->
 <section class="bg-brand-pale" aria-labelledby="contact-heading">

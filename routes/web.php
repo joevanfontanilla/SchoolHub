@@ -23,6 +23,8 @@ use App\Controllers\Admin\SettingController as AdminSettings;
 use App\Controllers\Admin\UserController as AdminUsers;
 use App\Controllers\PasswordResetController;
 use App\Controllers\AccountController;
+use App\Controllers\EIdController;
+use App\Controllers\VerifyController;
 use App\Controllers\AuthController;
 use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
@@ -100,6 +102,14 @@ $router->get('/account',        [AccountController::class, 'show'],      ['auth'
 $router->post('/account/name',  [AccountController::class, 'saveName'],  ['auth']);
 $router->post('/account/photo', [AccountController::class, 'savePhoto'], ['auth']);
 $router->get('/account/photo',  [AccountController::class, 'photo'],     ['auth'], 'account.photo');
+$router->get('/e-id',       [EIdController::class, 'show'],  ['auth'], 'eid.show');
+$router->get('/e-id/print', [EIdController::class, 'print'], ['auth'], 'eid.print');
+
+// Public verification: what a scanned e-ID QR opens (docs/29). No sign-in, minimal data.
+$router->get('/verify',              [VerifyController::class, 'form'],  [], 'verify');
+$router->get('/verify/{code}',       [VerifyController::class, 'show'],  [], 'verify.show');
+$router->get('/verify/{code}/photo', [VerifyController::class, 'photo'], [], 'verify.photo');
+
 $router->post('/account/signature',        [AccountController::class, 'saveSignature'],   ['auth']);
 $router->post('/account/signature/remove', [AccountController::class, 'removeSignature'], ['auth']);
 $router->get('/account/signature',         [AccountController::class, 'signature'],       ['auth'], 'account.signature');
@@ -148,6 +158,9 @@ $router->post('/admin/users/{id}/disable',    [AdminUsers::class, 'disable'],   
 $router->post('/admin/users/{id}/enable',     [AdminUsers::class, 'enable'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/unlock',     [AdminUsers::class, 'unlock'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/signature/remove', [AdminUsers::class, 'removeSignature'], $admin('users.manage'));
+$router->get('/admin/users/{id}/e-id',         [EIdController::class, 'staff'],        $admin('users.manage'));
+$router->get('/admin/users/{id}/e-id/print',   [EIdController::class, 'staffPrint'],   $admin('users.manage'));
+$router->post('/admin/users/{id}/e-id/reissue', [EIdController::class, 'staffReissue'], $admin('users.manage'));
 $router->post('/admin/users/{id}/reset-link', [AdminUsers::class, 'resetLink'], $admin('users.manage'));
 $router->post('/admin/users/{id}/email-link', [AdminUsers::class, 'emailLink'], $admin('users.manage'));
 
@@ -273,6 +286,9 @@ $router->get('/cashier/reports/outstanding/export',  [CashierReports::class, 'ou
 $router->get('/cashier/reports/receipts-journal',        [CashierReports::class, 'receiptsJournal'],      $cashier('reports.cashier'), 'cashier.crj');
 $router->get('/cashier/reports/receipts-journal/print',  [CashierReports::class, 'receiptsJournalPrint'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/receipts-journal/export', [CashierReports::class, 'receiptsJournalExport'], $cashier('reports.cashier'));
+$router->get('/cashier/reports/payment-breakdown',        [CashierReports::class, 'breakdown'],       $cashier('reports.cashier'), 'cashier.breakdown');
+$router->get('/cashier/reports/payment-breakdown/print',  [CashierReports::class, 'breakdownPrint'],  $cashier('reports.cashier'));
+$router->get('/cashier/reports/payment-breakdown/export', [CashierReports::class, 'breakdownExport'], $cashier('reports.cashier'));
 $router->get('/cashier/reports/cash-book',         [CashierCashBook::class, 'index'],    $cashier('reports.cashier'), 'cashier.cash-book');
 $router->get('/cashier/reports/cash-book/print',   [CashierCashBook::class, 'print'],    $cashier('reports.cashier'));
 $router->get('/cashier/reports/cash-book/export',  [CashierCashBook::class, 'export'],   $cashier('reports.cashier'));
@@ -419,6 +435,9 @@ $router->get('/registrar/students/{id}/photo', [RegistrarStudents::class, 'photo
 $router->get('/registrar/students/{id}/cor',   [RegistrarStudents::class, 'cor'],   $registrar('students.view'), 'registrar.students.cor');
 $router->get('/registrar/students/{id}/prospectus', [RegistrarStudents::class, 'prospectus'], $registrar('students.view'), 'registrar.students.prospectus');
 $router->post('/registrar/students/{id}', [RegistrarStudents::class, 'update'], $registrar('students.manage'));
+$router->get('/registrar/students/{id}/e-id',         [EIdController::class, 'student'],        $registrar('students.manage'));
+$router->get('/registrar/students/{id}/e-id/print',   [EIdController::class, 'studentPrint'],   $registrar('students.manage'));
+$router->post('/registrar/students/{id}/e-id/reissue', [EIdController::class, 'studentReissue'], $registrar('students.manage'));
 $router->post('/registrar/students/{id}/enlistments', [RegistrarStudents::class, 'addClass'],  $registrar('academic.assign'));
 $router->post('/registrar/students/{id}/credits', [RegistrarStudents::class, 'creditSubject'], $registrar('academic.credit'));
 $router->post('/registrar/students/{id}/credits/{creditId}/delete', [RegistrarStudents::class, 'removeCredit'], $registrar('academic.credit'));

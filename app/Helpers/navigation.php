@@ -28,6 +28,7 @@ return [
             ['/portal/calendar', 'Academic Calendar', 'calendar', true],
             ['/portal/announcements', 'Announcements', 'megaphone', true],
             ['/portal/notifications', 'Notifications', 'bell', true],
+            ['/e-id', 'My e-ID', 'shield', true],
             ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_TEACHER => [
@@ -44,6 +45,7 @@ return [
             ['/portal/notifications', 'Notifications', 'bell', true],
             'Reports',
             ['/teacher/reports', 'Class Reports', 'presentation', true],
+            ['/e-id', 'My e-ID', 'shield', true],
             ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_REGISTRAR => [
@@ -67,6 +69,7 @@ return [
             ['/portal/notifications', 'Notifications', 'bell', true],
             'Reports',
             ['/registrar/reports', 'Reports', 'presentation', true],
+            ['/e-id', 'My e-ID', 'shield', true],
             ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_CASHIER => [
@@ -83,6 +86,7 @@ return [
             ['/portal/announcements', 'Announcements', 'megaphone', true],
             ['/portal/calendar', 'Academic Calendar', 'calendar', true],
             ['/portal/notifications', 'Notifications', 'bell', true],
+            ['/e-id', 'My e-ID', 'shield', true],
             ['/account', 'My Account', 'user', true],
         ],
         User::ROLE_SUPER_ADMIN => [
@@ -102,6 +106,7 @@ return [
             ['/manage/announcements', 'Announcements', 'megaphone', true, ['/portal/announcements']],
             ['/manage/calendar', 'School Calendar', 'calendar', true],
             ['/portal/notifications', 'Notifications', 'bell', true],
+            ['/e-id', 'My e-ID', 'shield', true],
             ['/account', 'My Account', 'user', true],
         ],
     ],
@@ -170,6 +175,7 @@ return [
         '/registrar/reports'        => 'enrollment list statistics export',
         '/cashier/payments'         => 'verify online gcash proof',
         '/cashier/walk-in-payments' => 'counter window cash payment receive receipt pay in person',
+        '/e-id'                     => 'e-id id card qr code scan verify identification print',
         '/cashier/day-close'        => 'close day cash count drawer turnover slip over short end of day',
         '/admin/day-closes'         => 'reopen closed day cashier cash count',
         '/cashier/accounts'         => 'assessment balance student ledger window payment',
@@ -179,6 +185,7 @@ return [
         '/cashier/ledger'           => 'general ledger trial balance accounts chart of accounts debit credit revenue expense receivables cash',
         '/cashier/reports/account-list'           => 'account list program year tab class ledger balances installments prelims midterm finals',
         '/cashier/reports/receipts-journal'       => 'cash receipts journal crj official receipt or collections',
+        '/cashier/reports/payment-breakdown'      => 'payment breakdown fee line tuition collected by method day allocation where payments went',
         '/cashier/reports/cash-book'              => 'cash book inflow outflow balance carried forward bank deposit withdraw opening balance',
         '/cashier/reports/disbursements-journal'  => 'cash disbursements journal cdj voucher expenses paid out',
         '/admin/users'              => 'accounts staff create disable unlock',

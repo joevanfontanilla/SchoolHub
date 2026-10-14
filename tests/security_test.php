@@ -68,6 +68,8 @@ return [
             '/^Finance::belowPolicy\(\$row\) \? \', enrolled below policy\'/',
             '/^\$open \? \'Close\'/',
             '/^\$policy === PaymentPolicy::FULL \?/',
+            // The e-ID QR: an SVG QrCode::svg() builds from integers and an escaped label, never from raw input.
+            '/^\$card\[\'qrSvg\'\]$/',
         ];
         $safeCalls = ['e', 'component', 'partial', 'icon', 'csrf_field', 'count', 'number_format', 'round', 'money', 'signed_money'];
         $unreviewed = [];
@@ -146,6 +148,8 @@ return [
             // accountList(): "?, ?, ?" placeholder lists from array_fill, and a column name from a fixed array in code.
             'FinanceReport.php'         => ['$in', '$appIn', '$termIn', '$column'],
             'InstallmentReminderService.php' => ['$in'],
+            // report(): "?, ?, ?" placeholder lists from array_fill, and a WHERE fragment assembled only from fixed strings in code.
+            'PaymentBreakdownService.php' => ['$in', '$scope', '$filter'],
             'Notification.php'          => ['$limit', '$offset', '$where'],
             'RegistrarQueue.php'        => ['$where', '$whereSql'],
             'RegistrarReport.php'       => ['$programFilter', '$whereSql'],

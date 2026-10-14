@@ -30,7 +30,7 @@ function getForms(): array
 }
 
 return [
-    'every filter form applies by itself: data-auto-submit on each GET form, except the top-bar navigation search' => function (TestRunner $t): void {
+    'every filter form applies by itself: data-auto-submit on each GET form, except search and lookup forms (role="search"), which wait for Enter' => function (TestRunner $t): void {
         $forms = getForms();
         $t->assertTrue(count($forms) >= 25, 'Found the filter forms (' . count($forms) . ')');
 

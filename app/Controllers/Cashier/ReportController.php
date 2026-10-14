@@ -18,6 +18,7 @@ use App\Services\AuditService;
 use App\Services\CsvExport;
 use App\Services\FinanceService;
 use App\Services\InstallmentReminderService;
+use App\Services\PaymentBreakdownService;
 use App\Services\ReportRange;
 
 /**
@@ -261,6 +262,79 @@ final class ReportController extends Controller
     private function dueOnly(Request $request): bool
     {
         return (string) $request->input('due', '') === '1';
+    }
+
+    // -- Payment breakdown -------------------------------------------------------
+
+    public function breakdown(Request $request): void
+    {
+        [$from, $to, $error] = $this->range($request);
+        [$programId, $yearLevelId] = $this->breakdownFilters($request);
+
+        $this->appView('cashier/reports/payment-breakdown', [
+            'title'       => 'Payment Breakdown',
+            'from'        => $from,
+            'to'          => $to,
+            'error'       => $error,
+            'programId'   => $programId,
+            'yearLevelId' => $yearLevelId,
+            'programs'    => Program::active(),
+            'yearLevels'  => Catalog::yearLevels(),
+            'report'      => PaymentBreakdownService::report($from, $to, $programId, $yearLevelId),
+        ]);
+    }
+
+    public function breakdownPrint(Request $request): void
+    {
+        [$from, $to] = $this->range($request);
+        [$programId, $yearLevelId] = $this->breakdownFilters($request);
+
+        $this->printView('print/payment-breakdown', [
+            'title'  => 'Payment Breakdown ' . $from . ' to ' . $to,
+            'from'   => $from,
+            'to'     => $to,
+            'scope'  => $programId !== null || $yearLevelId !== null ? $this->scopeLabel(null, $programId, $yearLevelId) : '',
+            'report' => PaymentBreakdownService::report($from, $to, $programId, $yearLevelId),
+            'back'   => '/cashier/reports/payment-breakdown?' . http_build_query(array_filter(['from' => $from, 'to' => $to, 'program_id' => $programId, 'year_level_id' => $yearLevelId])),
+        ]);
+    }
+
+    public function breakdownExport(Request $request): void
+    {
+        [$from, $to] = $this->range($request);
+        [$programId, $yearLevelId] = $this->breakdownFilters($request);
+        $report = PaymentBreakdownService::report($from, $to, $programId, $yearLevelId);
+
+        AuditService::log('reports.exported', 'reports', null, null, null, [
+            'report' => 'payment-breakdown', 'from' => $from, 'to' => $to, 'program_id' => $programId, 'year_level_id' => $yearLevelId, 'rows' => count($report['lines']),
+        ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
+
+        $money = static fn (int $cents): string => FinanceService::money($cents);
+        $rows = [];
+        foreach ($report['lines'] as $row) {
+            $rows[] = ['Fee line', $row['label'], $money($row['assessed']), $money($row['collected']), number_format($row['share'], 1) . '%'];
+        }
+        if ($report['discounts'] !== 0) {
+            $rows[] = ['Fee line', 'Discounts, scholarships, and corrections', $money($report['discounts']), '', ''];
+        }
+        $rows[] = ['Total', '', $money($report['assessed']), $money($report['collected']), '100%'];
+        foreach ($report['methods'] as $method => $row) {
+            $rows[] = ['Method', $method, (string) $row['count'], $money($row['cents']), ''];
+        }
+        foreach ($report['days'] as $day => $row) {
+            $rows[] = ['Day', $day, (string) $row['count'], $money($row['cents']), ''];
+        }
+
+        CsvExport::send("payment-breakdown-{$from}-to-{$to}.csv", ['Section', 'Item', 'Assessed or payments', 'Collected', 'Share'], $rows);
+    }
+
+    /** @return array{0:?int,1:?int} program and year level */
+    private function breakdownFilters(Request $request): array
+    {
+        $program = (int) $request->input('program_id', 0);
+        $year = (int) $request->input('year_level_id', 0);
+
+        return [$program > 0 ? $program : null, $year > 0 ? $year : null];
     }
 
     // -- Cash Receipts Journal (CRJ) -------------------------------------------

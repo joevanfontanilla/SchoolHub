@@ -2,7 +2,7 @@
 /**
  * Heading and tabs shared by the cashier reports.
  *
- * @var string $active   collections|outstanding|accounts|crj|cdj|book
+ * @var string $active   collections|outstanding|accounts|crj|cdj|book|breakdown
  * @var string $heading
  * @var string $subtitle
  */
@@ -15,6 +15,7 @@ echo partial('report-header', [
         'crj'           => ['/cashier/reports/receipts-journal', 'Cash Receipts Journal', 'receipt'],
         'cdj'           => ['/cashier/reports/disbursements-journal', 'Cash Disbursements Journal', 'banknotes'],
         'book'          => ['/cashier/reports/cash-book', 'Cash Book', 'book'],
+        'breakdown'     => ['/cashier/reports/payment-breakdown', 'Payment Breakdown', 'chart-bar'],
     ],
     'active'   => $active,
     'heading'  => $heading,

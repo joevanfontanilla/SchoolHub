@@ -141,3 +141,6 @@ The Super Admin's account review, sign-in summary, activity summary, and system 
 
 **E-signature.** Where a printout has a "Prepared by" or cashier line, the preparer's e-signature (docs/08) prints
 above the name when they have one.
+
+**Payment Breakdown** (Cashier reports): collections by fee line, by payment method, and by day, with the allocation
+rule in docs/14 (Payment breakdown).

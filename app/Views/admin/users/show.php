@@ -43,6 +43,9 @@ $auditRows = static function (array $entries): string {
         </div>
         <div class="flex flex-wrap items-center gap-2">
             <?= component('status-badge', $statusBadge + ['size' => 'md']) ?>
+            <?php if (!$account->isStudent()): ?>
+                <a href="<?= e(url('/admin/users/' . $account->id . '/e-id')) ?>" class="btn-secondary"><?= icon('shield', 'h-5 w-5') ?> E-ID</a>
+            <?php endif; ?>
             <a href="<?= e(url('/admin/users/' . $account->id . '/edit')) ?>" class="btn-secondary"><?= icon('pencil', 'h-5 w-5') ?> Edit</a>
         </div>
     </div>

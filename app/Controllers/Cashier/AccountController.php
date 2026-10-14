@@ -11,6 +11,7 @@ use App\Core\Request;
 use App\Core\ValidationException;
 use App\Models\Finance;
 use App\Services\FinanceService;
+use App\Services\PaymentBreakdownService;
 use App\Services\PaymentPolicy;
 
 /**
@@ -50,6 +51,7 @@ final class AccountController extends Controller
             'submissions' => Finance::submissions($id),
             'belowPolicy' => Finance::belowPolicy($assessment),
             'plan'        => Finance::installmentPlan($assessment),
+            'split'       => PaymentBreakdownService::forAssessment($id),
             'adjustmentTypes' => FinanceService::ADJUSTMENT_TYPES,
             'required'    => PaymentPolicy::requiredCents($assessment),
             'policy'      => PaymentPolicy::current(),
