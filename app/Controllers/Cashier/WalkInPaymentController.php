@@ -30,6 +30,7 @@ final class WalkInPaymentController extends Controller
         $account = null;
         $suggested = '';
         $quick = [];
+        $plan = null;
 
         $accountId = (int) $request->input('account', 0);
         if ($accountId > 0) {
@@ -42,7 +43,8 @@ final class WalkInPaymentController extends Controller
                 $needed = PaymentPolicy::requiredCents($account) - FinanceService::cents($account['total_paid']);
                 $suggested = $needed > 0 ? FinanceService::money($needed) : '';
             }
-            $quick = FinanceService::quickAmounts($account, $suggested, Finance::installmentPlan($account));
+            $plan = Finance::installmentPlan($account);
+            $quick = FinanceService::quickAmounts($account, $suggested, $plan);
         }
 
         $paid = (int) $request->input('paid', 0);
@@ -54,6 +56,7 @@ final class WalkInPaymentController extends Controller
             'account'   => $account,
             'suggested' => $suggested,
             'quick'     => $quick,
+            'plan'      => $plan,
             'split'     => $account !== null ? PaymentBreakdownService::forAssessment((int) $account['id']) : null,
             'methods'   => FinanceService::METHODS_CASHIER,
             'received'  => $paid > 0 ? Finance::payment($paid) : null,

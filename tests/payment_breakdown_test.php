@@ -189,7 +189,13 @@ return [
         $split = strpos($view, "partial('cashier/payment-split'");
         $search = strpos($view, 'aria-labelledby="find-heading"');
         $t->assertTrue($split !== false && $search !== false && $split < $search, 'The table comes before "Find the student"');
-        $t->assertContains('if ($account !== null && $split !== null)', $view, 'Not shown without a chosen student');
+        $t->assertContains('<?php if ($account !== null): ?>', $view, 'Neither table is shown without a chosen student');
+        $t->assertContains('<?php if ($split !== null): ?>', $view, 'The split needs an account with charges');
+
+        $installments = strpos($view, "partial('installments'");
+        $t->assertTrue($installments !== false && $installments < $search, 'The Installments table also comes before "Find the student"');
+        $t->assertTrue($installments < $split, 'Installments first, then where the payments went');
+        $t->assertContains('\'plan\'      => $plan', $controller, 'The controller passes the installment plan');
     },
 
     'the breakdown routes are the cashier\'s, behind reports.cashier, and the printout ends with Prepared by' => function (TestRunner $t): void {

@@ -7,6 +7,7 @@
  * @var ?array      $account   the chosen account
  * @var string      $suggested amount still needed to meet the payment policy, in pesos, or ''
  * @var array       $quick     buttons that fill the amount: label and amount in pesos
+ * @var ?array      $plan      FinanceService::installments() for the chosen account, or null before enrollment
  * @var ?array      $split     PaymentBreakdownService::forAssessment() for the chosen account, or null
  * @var array       $methods
  * @var ?array      $received  the payment just recorded
@@ -36,14 +37,21 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
         </section>
     <?php endif; ?>
 
-    <?php if ($account !== null && $split !== null): ?>
-        <section class="card p-5" aria-labelledby="split-heading">
+    <?php if ($account !== null): ?>
+        <section class="card p-5" aria-labelledby="installments-heading">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h3 id="split-heading" class="text-base">Where <?= e($account['first_name'] . ' ' . $account['last_name']) ?>'s payments went</h3>
+                <h3 id="installments-heading" class="text-base">Installments, <?= e($account['first_name'] . ' ' . $account['last_name']) ?></h3>
                 <p class="text-sm text-brand-gray"><?= e($account['assessment_number']) ?> · balance <strong class="text-brand-navy"><?= e(money($account['balance'])) ?></strong></p>
             </div>
-            <?= partial('cashier/payment-split', ['split' => $split]) ?>
+            <?= partial('installments', ['plan' => $plan]) ?>
         </section>
+
+        <?php if ($split !== null): ?>
+            <section class="card p-5" aria-labelledby="split-heading">
+                <h3 id="split-heading" class="mb-3 text-base">Where the payments went</h3>
+                <?= partial('cashier/payment-split', ['split' => $split]) ?>
+            </section>
+        <?php endif; ?>
     <?php endif; ?>
 
     <section class="card p-5" aria-labelledby="find-heading">

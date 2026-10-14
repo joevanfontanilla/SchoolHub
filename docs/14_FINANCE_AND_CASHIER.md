@@ -166,9 +166,10 @@ A counter workspace for payments received in person, at **Cashier → Walk-in Pa
   `payment_status`, enrollment effects, notification, and audit entry are identical. There is no
   new money logic. For a student not yet enrolled, the amount is prefilled with what is still
   needed to meet the payment policy.
-- **Where the payments went.** While a student is chosen, a table at the top of the page (above the search)
-  shows the same split as the account page (docs/14, Payment breakdown): each fee line with what was assessed, what has
-  been paid toward it, and its share, then the balance. With no student chosen it is not shown.
+- **The account at a glance.** While a student is chosen, two tables at the top of the page (above the search):
+  the **Installments** table from the account page (initial payment, Prelims, Midterm, Semi-Final, Finals, each with
+  due, paid, balance, and status), then **Where the payments went**, the split of docs/14 (Payment breakdown). With no
+  student chosen neither is shown. Before the student is enrolled the installments say they are set after the down payment.
 - **After recording.** The page shows the official receipt number and a **Print receipt** link
   (`/receipts/{id}`), and says when the payment met the policy and enrolled the student.
 - **Today's counter payments.** A list of the payments recorded at the window today (not online
