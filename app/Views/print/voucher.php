@@ -26,7 +26,7 @@
     </div>
 
     <div class="grid grid-cols-3 gap-6 pt-10 text-center text-xs text-slate-600">
-        <div><div class="border-t border-slate-400 pt-1"><?= e(trim($voucher['first_name'] . ' ' . $voucher['last_name'])) ?></div><div class="mt-0.5">Prepared by (Cashier)</div></div>
+        <div><?= partial('signature-image', ['userId' => (int) $voucher['recorded_by'], 'name' => trim($voucher['first_name'] . ' ' . $voucher['last_name'])]) ?><div class="border-t border-slate-400 pt-1"><?= e(trim($voucher['first_name'] . ' ' . $voucher['last_name'])) ?></div><div class="mt-0.5">Prepared by (Cashier)</div></div>
         <div><div class="border-t border-slate-400 pt-1">&nbsp;</div><div class="mt-0.5">Approved by</div></div>
         <div><div class="border-t border-slate-400 pt-1">&nbsp;</div><div class="mt-0.5">Received by (Payee)</div></div>
     </div>

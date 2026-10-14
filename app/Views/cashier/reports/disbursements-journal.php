@@ -52,6 +52,7 @@ $query = http_build_query(['from' => $from, 'to' => $to]);
                             <th scope="col" class="px-4 py-3 font-semibold">Payee</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Particulars</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Method</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Prepared by</th>
                             <th scope="col" class="px-4 py-3 text-right font-semibold">Amount</th>
                         </tr>
                     </thead>
@@ -65,12 +66,13 @@ $query = http_build_query(['from' => $from, 'to' => $to]);
                                 <td class="px-4 py-3"><?= e($row['payee']) ?></td>
                                 <td class="px-4 py-3"><?= e($row['particulars']) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e($row['payment_method']) ?><?php if ($row['reference_number']): ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span><?php endif; ?></td>
+                                <td class="whitespace-nowrap px-4 py-3"><?= e(trim($row['first_name'] . ' ' . $row['last_name'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-brand-navy"><?= e(money($row['amount'])) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot class="bg-brand-50/60 font-semibold text-brand-navy">
-                        <tr><th scope="row" colspan="5" class="px-4 py-3 text-right">Total<?= $pages > 1 ? ' (all pages)' : '' ?></th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg tabular-nums"><?= e(money($report['total'])) ?></td></tr>
+                        <tr><th scope="row" colspan="6" class="px-4 py-3 text-right">Total<?= $pages > 1 ? ' (all pages)' : '' ?></th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg tabular-nums"><?= e(money($report['total'])) ?></td></tr>
                     </tfoot>
                 </table>
             </div>

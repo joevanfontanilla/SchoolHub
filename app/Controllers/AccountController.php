@@ -11,6 +11,7 @@ use App\Core\UploadedFile;
 use App\Core\ValidationException;
 use App\Services\AccountNameService;
 use App\Services\AvatarService;
+use App\Services\SignatureService;
 
 /**
  * "My Account", shared by every role (docs/08): the user's own name, a profile photo, and a
@@ -27,6 +28,8 @@ final class AccountController extends Controller
             'photoUrl' => AvatarService::currentUrl($user),
             'maxBytes' => AvatarService::MAX_BYTES,
             'nameLocked' => AccountNameService::lockedReason($user),
+            'signatureUrl' => SignatureService::currentUrl($user),
+            'signatureMaxBytes' => SignatureService::MAX_BYTES,
         ]);
     }
 
@@ -50,6 +53,29 @@ final class AccountController extends Controller
             return;
         }
         $this->success('Your profile photo was updated.', '/account');
+    }
+
+    public function saveSignature(Request $request): void
+    {
+        try {
+            SignatureService::save(Auth::user(), UploadedFile::fromRequest($_FILES['signature'] ?? []), (string) $request->input('drawn', ''), (string) $request->input('agree', '') === '1');
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], '/account#signature');
+            return;
+        }
+        $this->success('Your signature was saved. It will appear on the documents you prepare.', '/account#signature');
+    }
+
+    public function removeSignature(Request $request): void
+    {
+        SignatureService::remove(Auth::user(), Auth::user()->id);
+        $this->success('Your signature was removed.', '/account#signature');
+    }
+
+    /** Stream the signed-in user's own signature (inline). */
+    public function signature(Request $request): void
+    {
+        SignatureService::stream(Auth::user());
     }
 
     /** Stream the signed-in user's own photo (inline). */

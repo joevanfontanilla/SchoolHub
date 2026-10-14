@@ -7,6 +7,8 @@
  * @var ?string $photoUrl   current avatar URL, or null
  * @var int     $maxBytes
  * @var ?string $nameLocked why the name cannot be changed now (a student with an application at the registrar), or null
+ * @var ?string $signatureUrl the user's own saved e-signature preview, or null
+ * @var int     $signatureMaxBytes
  */
 ?>
 <div class="mx-auto max-w-3xl space-y-6">
@@ -42,6 +44,48 @@
         <button type="submit" class="btn-primary">Save photo</button>
     </form>
 
+    <section id="signature" class="card p-5 sm:p-6" aria-labelledby="signature-heading">
+        <h3 id="signature-heading" class="text-base">Your e-signature</h3>
+        <p class="mt-1 text-sm text-slate-600">An image of your handwritten signature. It prints above your name on the documents you prepare, such as receipts, vouchers, reports, and grade sheets. Only you can see or change it here.</p>
+
+        <?php if ($signatureUrl !== null): ?>
+            <div class="mt-4 flex flex-wrap items-center gap-4">
+                <div class="rounded-lg border border-slate-200 bg-white p-3"><img src="<?= e($signatureUrl) ?>" alt="Your saved signature" class="h-16 max-w-[14rem] object-contain"></div>
+                <form method="POST" action="<?= e(url('/account/signature/remove')) ?>"
+                      data-confirm="Documents you prepare will print the blank signature line again." data-confirm-title="Remove your signature?" data-confirm-tone="danger" data-confirm-label="Remove">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn-secondary">Remove signature</button>
+                </form>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" action="<?= e(url('/account/signature')) ?>" enctype="multipart/form-data" class="mt-5 space-y-4" novalidate data-signature-form>
+            <?= csrf_field() ?>
+            <input type="hidden" name="drawn" value="" data-signature-drawn>
+
+            <div hidden data-signature-pad-wrap>
+                <p class="field-label">Draw it here</p>
+                <canvas width="560" height="180" class="mt-1 w-full max-w-xl touch-none rounded-lg border border-slate-300 bg-white" aria-label="Signature drawing pad" data-signature-pad></canvas>
+                <button type="button" class="btn-secondary mt-2" data-signature-clear>Clear</button>
+            </div>
+
+            <div>
+                <label for="signature-file" class="field-label"><span data-signature-or hidden>Or upload</span><span data-signature-upload-only>Upload</span> an image (PNG or JPG, up to <?= e(number_format($signatureMaxBytes / 1048576, 0)) ?> MB)</label>
+                <input id="signature-file" type="file" name="signature" accept="image/png,image/jpeg" class="field-input" <?= error_for('signature') ? 'aria-invalid="true"' : '' ?>>
+                <?php if (error_for('signature')): ?><p class="field-error mt-1"><?= e(error_for('signature')) ?></p><?php endif; ?>
+            </div>
+
+            <div>
+                <label class="flex items-start gap-2 text-sm text-slate-700">
+                    <input type="checkbox" name="agree" value="1" class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600">
+                    <span>This is my own signature and I agree it may appear on documents I prepare.</span>
+                </label>
+                <?php if (error_for('agree')): ?><p class="field-error mt-1"><?= e(error_for('agree')) ?></p><?php endif; ?>
+            </div>
+
+            <button type="submit" class="btn-primary"><?= $signatureUrl !== null ? 'Replace signature' : 'Save signature' ?></button>
+        </form>
+    </section>
     <section class="card p-5 sm:p-6" aria-labelledby="security-heading">
         <h3 id="security-heading" class="text-base">Password &amp; security</h3>
         <p class="mt-1 text-sm text-slate-600">Change the password you use to sign in.</p>

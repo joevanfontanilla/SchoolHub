@@ -467,6 +467,9 @@ assessment and key, so a student is reminded of each installment once.
 `amount` DECIMAL(12,2), `reference_number` nullable, `remarks` nullable, `recorded_by` FK. Deposits and
 withdrawals are append-only. The ledger account `3020 Opening Cash Balances` takes the other side of an opening balance.
 
+> `users.signature_path` VARCHAR(255) nullable (migration 036): the user's e-signature image under
+> `storage/uploads/signatures/`, served only to its owner and embedded in the printouts they prepare.
+
 ### `migrations`
 `filename` VARCHAR(255) unique, `batch` INT, `applied_at` DATETIME.
 Used by `database/migrate.php`. No `updated_at`.

@@ -304,7 +304,7 @@ final class ReportController extends Controller
         ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
 
         CsvExport::send("cash-receipts-journal-{$from}-to-{$to}.csv",
-            ['Date', 'OR No.', 'Payor', 'Student No.', 'Particulars', 'Method', 'Reference', 'Amount'],
+            ['Date', 'OR No.', 'Payor', 'Student No.', 'Particulars', 'Method', 'Reference', 'Prepared by', 'Amount'],
             array_map(static fn (array $row): array => [
                 dt($row['paid_at'], 'Y-m-d'),
                 $row['reversed_payment_id'] !== null ? '(reversal)' : ($row['receipt_number'] ?? ''),
@@ -313,6 +313,7 @@ final class ReportController extends Controller
                 $row['reversed_payment_id'] !== null ? 'Reversal of ' . $row['reversed_receipt_number'] : ('Payment · ' . $row['assessment_number']),
                 $row['payment_method'],
                 $row['reference_number'] ?? '',
+                $row['cashier_name'],
                 FinanceService::signedMoney(FinanceService::signedCents($row['amount'])),
             ], $report['rows'])
         );
@@ -359,7 +360,7 @@ final class ReportController extends Controller
         ], 'SUCCESS', null, Auth::user()->id, Auth::user()->role_name);
 
         CsvExport::send("cash-disbursements-journal-{$from}-to-{$to}.csv",
-            ['Date', 'Voucher No.', 'Payee', 'Particulars', 'Method', 'Reference', 'Amount'],
+            ['Date', 'Voucher No.', 'Payee', 'Particulars', 'Method', 'Reference', 'Prepared by', 'Amount'],
             array_map(static fn (array $row): array => [
                 dt($row['disbursed_at'], 'Y-m-d'),
                 $row['voucher_number'],
@@ -367,6 +368,7 @@ final class ReportController extends Controller
                 $row['particulars'],
                 $row['payment_method'],
                 $row['reference_number'] ?? '',
+                trim($row['first_name'] . ' ' . $row['last_name']),
                 money($row['amount']),
             ], $report['rows'])
         );

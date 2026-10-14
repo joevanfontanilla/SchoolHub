@@ -54,7 +54,10 @@ $remarks = array_count_values(array_map(static fn (array $row) => $row['final'][
             <?= e(implode(' · ', array_map(static fn ($remark, $count) => $count . ' ' . strtolower(GradeCalculator::remarkLabel($remark)), array_keys($remarks), $remarks))) ?>
         </p>
         <div class="grid grid-cols-2 gap-10 pt-10 text-xs text-slate-600">
-            <p class="border-t border-slate-400 pt-1 text-center">Instructor's signature over printed name</p>
+            <div class="text-center">
+                <?= partial('signature-image', ['userId' => $user->id, 'name' => $user->fullName()]) ?>
+                <p class="border-t border-slate-400 pt-1">Instructor's signature over printed name<?= $user->isTeacher() ? ' · ' . e($user->fullName()) : '' ?></p>
+            </div>
             <p class="border-t border-slate-400 pt-1 text-center">Received by the Registrar</p>
         </div>
     <?php endif; ?>

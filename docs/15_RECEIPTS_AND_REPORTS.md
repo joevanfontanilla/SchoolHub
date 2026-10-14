@@ -137,3 +137,7 @@ full on paper.
 ## Administrative reports
 The Super Admin's account review, sign-in summary, activity summary, and system usage reports
 (`reports.admin`) are described in docs/19.
+
+
+**E-signature.** Where a printout has a "Prepared by" or cashier line, the preparer's e-signature (docs/08) prints
+above the name when they have one.

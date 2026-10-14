@@ -54,6 +54,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                             <th scope="col" class="px-4 py-3 font-semibold">Payor</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Particulars</th>
                             <th scope="col" class="px-4 py-3 font-semibold">Method</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Prepared by</th>
                             <th scope="col" class="px-4 py-3 text-right font-semibold">Amount</th>
                         </tr>
                     </thead>
@@ -66,12 +67,13 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                                 <td class="px-4 py-3"><?= e($row['last_name'] . ', ' . $row['first_name']) ?><span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? '') ?></span></td>
                                 <td class="px-4 py-3"><?= e($reversal ? 'Reversal of ' . $row['reversed_receipt_number'] : 'Tuition & fees · ' . $row['assessment_number']) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e($row['payment_method']) ?></td>
+                                <td class="whitespace-nowrap px-4 py-3"><?= e($row['cashier_name']) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums <?= $reversal ? 'text-danger-text' : 'text-brand-navy' ?>"><?= e($reversal ? signed_money(FinanceService::signedCents($row['amount'])) : money($row['amount'])) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot class="bg-brand-50/60 font-semibold text-brand-navy">
-                        <tr><th scope="row" colspan="5" class="px-4 py-3 text-right">Total<?= $pages > 1 ? ' (all pages)' : '' ?></th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg tabular-nums"><?= e($net) ?></td></tr>
+                        <tr><th scope="row" colspan="6" class="px-4 py-3 text-right">Total<?= $pages > 1 ? ' (all pages)' : '' ?></th><td class="whitespace-nowrap px-4 py-3 text-right font-display text-lg tabular-nums"><?= e($net) ?></td></tr>
                     </tfoot>
                 </table>
             </div>

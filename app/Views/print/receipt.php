@@ -70,6 +70,7 @@ $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
 
     <div class="mt-12 flex justify-end">
         <div class="w-64 text-center text-sm">
+            <?= partial('signature-image', ['userId' => (int) $payment['cashier_user_id'], 'name' => $payment['cashier_name']]) ?>
             <p class="border-b border-slate-400 pb-1 font-semibold"><?= e($payment['cashier_name']) ?></p>
             <p class="mt-1 text-slate-500">Cashier</p>
         </div>

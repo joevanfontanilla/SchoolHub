@@ -276,6 +276,25 @@ return [
         }
     },
 
+    'the cashier printouts end with Prepared by (the signed-in cashier) and an Approved by line' => function (TestRunner $t): void {
+        try {
+            $cashier = makeUser(User::ROLE_CASHIER);
+            $html = partial('cashier/prepared-by', ['user' => $cashier]);
+            $t->assertContains($cashier->fullName(), $html, 'The cashier is named');
+            $t->assertContains('Prepared by (Cashier)', $html);
+            $t->assertContains('Approved by', $html);
+
+            foreach (['receipts-journal', 'disbursements-journal', 'cash-book'] as $view) {
+                $t->assertContains("partial('cashier/prepared-by'", (string) file_get_contents(BASE_PATH . "/app/Views/print/{$view}.php"), "print/{$view} ends with the block");
+            }
+            foreach (['print/receipts-journal', 'print/disbursements-journal', 'cashier/reports/receipts-journal', 'cashier/reports/disbursements-journal'] as $view) {
+                $t->assertContains('Prepared by', (string) file_get_contents(BASE_PATH . "/app/Views/{$view}.php"), "{$view} has the Prepared by column");
+            }
+        } finally {
+            deleteTestUsers();
+        }
+    },
+
     'the day-close and reopen routes are gated to the cashier and the administrator' => function (TestRunner $t): void {
         $router = new Router();
         require BASE_PATH . '/routes/web.php';

@@ -100,6 +100,9 @@ $router->get('/account',        [AccountController::class, 'show'],      ['auth'
 $router->post('/account/name',  [AccountController::class, 'saveName'],  ['auth']);
 $router->post('/account/photo', [AccountController::class, 'savePhoto'], ['auth']);
 $router->get('/account/photo',  [AccountController::class, 'photo'],     ['auth'], 'account.photo');
+$router->post('/account/signature',        [AccountController::class, 'saveSignature'],   ['auth']);
+$router->post('/account/signature/remove', [AccountController::class, 'removeSignature'], ['auth']);
+$router->get('/account/signature',         [AccountController::class, 'signature'],       ['auth'], 'account.signature');
 
 // "Forgot password?" by email, and one-time password links (docs/07). Signed-out visitors only.
 $router->get('/password/forgot',  [PasswordResetController::class, 'showForgot'], ['guest'], 'password.forgot');
@@ -144,6 +147,7 @@ $router->post('/admin/users/{id}/edit',       [AdminUsers::class, 'update'],    
 $router->post('/admin/users/{id}/disable',    [AdminUsers::class, 'disable'],   $admin('users.manage'));
 $router->post('/admin/users/{id}/enable',     [AdminUsers::class, 'enable'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/unlock',     [AdminUsers::class, 'unlock'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/signature/remove', [AdminUsers::class, 'removeSignature'], $admin('users.manage'));
 $router->post('/admin/users/{id}/reset-link', [AdminUsers::class, 'resetLink'], $admin('users.manage'));
 $router->post('/admin/users/{id}/email-link', [AdminUsers::class, 'emailLink'], $admin('users.manage'));
 

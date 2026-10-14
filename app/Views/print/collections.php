@@ -79,6 +79,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
 
     <div class="flex justify-end pt-8">
         <div class="w-64 text-center text-sm">
+            <?= partial('signature-image', ['userId' => $user->id, 'name' => $user->fullName()]) ?>
             <p class="border-b border-slate-400 pb-1 font-semibold"><?= e($user->fullName()) ?></p>
             <p class="mt-1 text-slate-500">Prepared by</p>
         </div>

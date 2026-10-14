@@ -28,6 +28,7 @@ $cell = 'border-b border-slate-200 px-2 py-1.5 align-top';
                     <th class="<?= $cell ?>">Payee</th>
                     <th class="<?= $cell ?>">Particulars</th>
                     <th class="<?= $cell ?>">Method</th>
+                    <th class="<?= $cell ?>">Prepared by</th>
                     <th class="<?= $cell ?> text-right">Amount</th>
                 </tr>
             </thead>
@@ -39,16 +40,19 @@ $cell = 'border-b border-slate-200 px-2 py-1.5 align-top';
                         <td class="<?= $cell ?>"><?= e($row['payee']) ?></td>
                         <td class="<?= $cell ?>"><?= e($row['particulars']) ?></td>
                         <td class="<?= $cell ?> whitespace-nowrap"><?= e($row['payment_method']) ?></td>
+                        <td class="<?= $cell ?>"><?= e(trim($row['first_name'] . ' ' . $row['last_name'])) ?></td>
                         <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e(money($row['amount'])) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
             <tfoot>
                 <tr class="bg-slate-100 font-bold">
-                    <td class="<?= $cell ?> text-right" colspan="5">Total</td>
+                    <td class="<?= $cell ?> text-right" colspan="6">Total</td>
                     <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e(money($report['total'])) ?></td>
                 </tr>
             </tfoot>
         </table>
     <?php endif; ?>
+
+    <?= partial('cashier/prepared-by', ['user' => $user]) ?>
 </section>

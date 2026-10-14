@@ -31,6 +31,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                     <th class="<?= $cell ?>">Payor</th>
                     <th class="<?= $cell ?>">Particulars</th>
                     <th class="<?= $cell ?>">Method</th>
+                    <th class="<?= $cell ?>">Prepared by</th>
                     <th class="<?= $cell ?> text-right">Amount</th>
                 </tr>
             </thead>
@@ -43,16 +44,19 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                         <td class="<?= $cell ?>"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></td>
                         <td class="<?= $cell ?>"><?= e($reversal ? 'Reversal of ' . $row['reversed_receipt_number'] : 'Tuition & fees · ' . $row['assessment_number']) ?></td>
                         <td class="<?= $cell ?> whitespace-nowrap"><?= e($row['payment_method']) ?></td>
+                        <td class="<?= $cell ?>"><?= e($row['cashier_name']) ?></td>
                         <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e($reversal ? signed_money(FinanceService::signedCents($row['amount'])) : money($row['amount'])) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
             <tfoot>
                 <tr class="bg-slate-100 font-bold">
-                    <td class="<?= $cell ?> text-right" colspan="5">Total</td>
+                    <td class="<?= $cell ?> text-right" colspan="6">Total</td>
                     <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e($net) ?></td>
                 </tr>
             </tfoot>
         </table>
     <?php endif; ?>
+
+    <?= partial('cashier/prepared-by', ['user' => $user]) ?>
 </section>

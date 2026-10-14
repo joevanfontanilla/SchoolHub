@@ -7,6 +7,7 @@
  * @var array           $activity   what this user did
  * @var array           $aboutThem  audit entries about this account
  * @var bool            $self
+ * @var bool            $hasSignature whether the user has saved an e-signature (never shown here)
  */
 use App\Models\User;
 use App\Services\UserAdminService;
@@ -55,6 +56,18 @@ $auditRows = static function (array $entries): string {
                     <div class="flex justify-between gap-3 border-b border-brand-50 py-1.5"><dt class="text-slate-500">Failed attempts</dt><dd class="font-medium"><?= e((string) $account->failed_login_attempts) ?></dd></div>
                     <div class="flex justify-between gap-3 border-b border-brand-50 py-1.5"><dt class="text-slate-500">Locked until</dt><dd class="font-medium"><?= e($account->locked_until ? dt($account->locked_until) : '—') ?></dd></div>
                     <div class="flex justify-between gap-3 border-b border-brand-50 py-1.5"><dt class="text-slate-500">Must change password</dt><dd class="font-medium"><?= $account->must_change_password ? 'Yes' : 'No' ?></dd></div>
+                    <div class="flex items-center justify-between gap-3 border-b border-brand-50 py-1.5"><dt class="text-slate-500">E-signature</dt><dd class="font-medium">
+                        <?php if ($hasSignature): ?>
+                            On file
+                            <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/signature/remove')) ?>" class="ml-2 inline"
+                                  data-confirm="Their documents print the blank signature line again. They can add a new one on My Account." data-confirm-title="Remove this signature?" data-confirm-tone="danger" data-confirm-label="Remove">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="text-sm font-semibold text-danger-text hover:underline">Remove</button>
+                            </form>
+                        <?php else: ?>
+                            None
+                        <?php endif; ?>
+                    </dd></div>
                 </dl>
             </section>
 

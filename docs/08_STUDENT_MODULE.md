@@ -105,3 +105,25 @@ student record. Both are assembled by `RegistrationDocumentService::certificate(
 enrollment and finance data, so they always match; a term with no assessment yet still prints the
 subjects. Routes: `/student/cor` (own, `enrollment.view`) and `/registrar/students/{id}/cor`
 (`students.view`).
+
+
+## E-signature (My Account, every role)
+
+Every user can keep **one e-signature** on **My Account**: an image of their handwritten signature, used on the
+documents they prepare. It is a convenience, **not** a cryptographic digital signature or a legal certificate.
+
+- **Capture.** Upload a PNG or JPG (up to 1 MB), or **draw** it on screen with a mouse or finger (saved as a PNG).
+  Saving needs a tick on "This is my own signature and I agree it may appear on documents I prepare."
+  Only the owner can add or replace it. The owner can remove it; a Super Admin can also **remove** (never see or
+  create) someone's signature, from the user's page, for example when staff leave.
+- **Storage.** A random file name under `storage/uploads/signatures/` (`users.signature_path`), never reachable by
+  an address. The owner sees it on My Account through `/account/signature`. A printout **embeds** the image
+  (a data URI) for the person who prepared that document; there is no public link to it.
+- **Where it prints,** above the printed name: the official receipt (the cashier who issued it), the voucher
+  ("Prepared by", the cashier who recorded it), the Cash Receipts Journal, Cash Disbursements Journal, Cash Book,
+  and Collections report ("Prepared by", the cashier who prints it), the turnover slip (the cashier who closed the
+  day), and the class grade sheet (the instructor). A user without one prints the blank line as before.
+  "Approved by" and "Received by" lines stay blank for handwriting.
+- **Current signature.** A reprinted document uses the person's *current* signature, so replacing it changes how
+  old documents reprint. Each save, replacement, and removal is audited (`user.signature_updated`,
+  `user.signature_removed`), without the image.

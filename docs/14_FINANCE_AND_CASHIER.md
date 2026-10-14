@@ -404,3 +404,10 @@ Append-only like a voucher: a mistake is fixed with the opposite entry. A deposi
 inflow; the ledger posts **Dr 1020 / Cr 1010** (a withdrawal the reverse). Permission `disbursements.manage`.
 A deposit counts as cash paid out, and a withdrawal as cash received, in **Close the Day**, so
 banking the cash does not look like a shortage. A closed day refuses a new deposit or withdrawal, like any other entry.
+
+### Prepared by on the journals and the cash book
+The Cash Receipts Journal and the Cash Disbursements Journal each show a **Prepared by** column on every
+row (on screen, in the print, and in the CSV): the cashier who issued the receipt or recorded the voucher,
+which matters once the school has more than one cashier. Each printout, and the Cash Book printout, ends
+with a signature block: **Prepared by** with the signed-in cashier's name and "Cashier" under it, and a blank
+**Approved by** line.

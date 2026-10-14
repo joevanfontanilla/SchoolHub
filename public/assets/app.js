@@ -127,6 +127,70 @@
         });
     });
 
+    // The e-signature drawing pad on My Account (docs/08): draw with a mouse, pen, or finger. What is drawn
+    // is sent as a PNG with the form; without scripts only the upload field is shown.
+    document.querySelectorAll('[data-signature-form]').forEach(function (form) {
+        var wrap = form.querySelector('[data-signature-pad-wrap]');
+        var canvas = form.querySelector('[data-signature-pad]');
+        var drawn = form.querySelector('[data-signature-drawn]');
+        if (!wrap || !canvas || !drawn || !canvas.getContext) {
+            return;
+        }
+        wrap.hidden = false;
+        var or = form.querySelector('[data-signature-or]');
+        var only = form.querySelector('[data-signature-upload-only]');
+        if (or) { or.hidden = false; }
+        if (only) { only.hidden = true; }
+
+        var ctx = canvas.getContext('2d');
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#111827';
+        var drawing = false;
+        var marked = false;
+
+        function point(event) {
+            var box = canvas.getBoundingClientRect();
+            return { x: (event.clientX - box.left) * canvas.width / box.width, y: (event.clientY - box.top) * canvas.height / box.height };
+        }
+        canvas.addEventListener('pointerdown', function (event) {
+            drawing = true;
+            canvas.setPointerCapture(event.pointerId);
+            var at = point(event);
+            ctx.beginPath();
+            ctx.moveTo(at.x, at.y);
+            ctx.lineTo(at.x + 0.1, at.y + 0.1);
+            ctx.stroke();
+            marked = true;
+            event.preventDefault();
+        });
+        canvas.addEventListener('pointermove', function (event) {
+            if (!drawing) { return; }
+            var at = point(event);
+            ctx.lineTo(at.x, at.y);
+            ctx.stroke();
+        });
+        ['pointerup', 'pointercancel'].forEach(function (name) {
+            canvas.addEventListener(name, function () { drawing = false; });
+        });
+
+        var clear = form.querySelector('[data-signature-clear]');
+        if (clear) {
+            clear.addEventListener('click', function () {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                marked = false;
+                drawn.value = '';
+            });
+        }
+
+        // A drawing is sent only when something was drawn and no file was chosen.
+        form.addEventListener('submit', function () {
+            var file = form.querySelector('input[type="file"]');
+            drawn.value = marked && !(file && file.files && file.files.length) ? canvas.toDataURL('image/png') : '';
+        });
+    });
+
     // Quick amounts: a button fills the amount field and leaves everything else to the cashier.
     document.querySelectorAll('[data-fill-amount]').forEach(function (button) {
         button.addEventListener('click', function () {

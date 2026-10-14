@@ -11,6 +11,7 @@ use App\Core\Session;
 use App\Core\ValidationException;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\SignatureService;
 use App\Services\UserAdminService;
 
 /**
@@ -68,6 +69,7 @@ final class UserController extends Controller
             'activity'    => AuditLog::search(['user_id' => (string) $account->id], 10),
             'aboutThem'   => AuditLog::search(['target_type' => 'User', 'target_id' => (string) $account->id], 10),
             'self'        => $account->id === Auth::id(),
+            'hasSignature' => SignatureService::has($account->id),
         ]);
     }
 
@@ -105,6 +107,13 @@ final class UserController extends Controller
     {
         $account = $this->account($request);
         $this->act($account, static fn () => UserAdminService::unlock(Auth::user(), $account->id), 'Account unlocked. The user can sign in again.');
+    }
+
+    /** Remove someone's e-signature, for example when they leave. The administrator never sees or creates one. */
+    public function removeSignature(Request $request): void
+    {
+        $account = $this->account($request);
+        $this->act($account, static fn () => SignatureService::remove(Auth::user(), $account->id), 'The signature was removed.');
     }
 
     public function resetLink(Request $request): void
