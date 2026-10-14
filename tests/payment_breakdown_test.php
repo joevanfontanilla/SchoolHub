@@ -180,6 +180,18 @@ return [
         }
     },
 
+    'the walk-in payments page shows the chosen student\'s split at the top, above the search, and nothing when no student is chosen' => function (TestRunner $t): void {
+        $controller = (string) file_get_contents(BASE_PATH . '/app/Controllers/Cashier/WalkInPaymentController.php');
+        $t->assertContains('PaymentBreakdownService::forAssessment((int) $account[\'id\'])', $controller, 'The controller passes the split for the chosen account');
+        $t->assertContains('$account !== null ? PaymentBreakdownService', $controller, 'And only when an account is chosen');
+
+        $view = (string) file_get_contents(BASE_PATH . '/app/Views/cashier/walk-in-payments/index.php');
+        $split = strpos($view, "partial('cashier/payment-split'");
+        $search = strpos($view, 'aria-labelledby="find-heading"');
+        $t->assertTrue($split !== false && $search !== false && $split < $search, 'The table comes before "Find the student"');
+        $t->assertContains('if ($account !== null && $split !== null)', $view, 'Not shown without a chosen student');
+    },
+
     'the breakdown routes are the cashier\'s, behind reports.cashier, and the printout ends with Prepared by' => function (TestRunner $t): void {
         $router = new Router();
         require BASE_PATH . '/routes/web.php';

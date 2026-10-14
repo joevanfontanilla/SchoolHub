@@ -11,6 +11,7 @@ use App\Core\Request;
 use App\Core\ValidationException;
 use App\Models\Finance;
 use App\Services\FinanceService;
+use App\Services\PaymentBreakdownService;
 use App\Services\PaymentPolicy;
 
 /**
@@ -53,6 +54,7 @@ final class WalkInPaymentController extends Controller
             'account'   => $account,
             'suggested' => $suggested,
             'quick'     => $quick,
+            'split'     => $account !== null ? PaymentBreakdownService::forAssessment((int) $account['id']) : null,
             'methods'   => FinanceService::METHODS_CASHIER,
             'received'  => $paid > 0 ? Finance::payment($paid) : null,
             'today'     => Finance::counterPaymentsOn(date('Y-m-d')),

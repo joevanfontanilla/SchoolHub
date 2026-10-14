@@ -7,6 +7,7 @@
  * @var ?array      $account   the chosen account
  * @var string      $suggested amount still needed to meet the payment policy, in pesos, or ''
  * @var array       $quick     buttons that fill the amount: label and amount in pesos
+ * @var ?array      $split     PaymentBreakdownService::forAssessment() for the chosen account, or null
  * @var array       $methods
  * @var ?array      $received  the payment just recorded
  * @var array       $today     counter payments recorded today
@@ -32,6 +33,16 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
                 </p>
             </div>
             <a href="<?= e(url('/receipts/' . $received['id'] . '?print=1')) ?>" target="_blank" rel="noopener" class="btn-primary"><?= icon('receipt', 'h-5 w-5') ?> Print receipt<span class="sr-only"> <?= e($received['receipt_number']) ?></span></a>
+        </section>
+    <?php endif; ?>
+
+    <?php if ($account !== null && $split !== null): ?>
+        <section class="card p-5" aria-labelledby="split-heading">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 id="split-heading" class="text-base">Where <?= e($account['first_name'] . ' ' . $account['last_name']) ?>'s payments went</h3>
+                <p class="text-sm text-brand-gray"><?= e($account['assessment_number']) ?> · balance <strong class="text-brand-navy"><?= e(money($account['balance'])) ?></strong></p>
+            </div>
+            <?= partial('cashier/payment-split', ['split' => $split]) ?>
         </section>
     <?php endif; ?>
 
