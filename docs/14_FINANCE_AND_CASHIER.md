@@ -141,7 +141,8 @@ the payment and an **Official Receipt** is issued. Two additions complete the ca
   and date. A voucher number (`DV-YYYY-NNNNN`) is issued from `SequenceService`, and the action is
   audited (`disbursement.recorded`). Vouchers are **append-only** — a mistake is corrected with a
   reversing voucher, never an edit — and each prints on a voucher form with Prepared/Approved/Received
-  signature lines.
+  signature lines. There is no sidebar link for vouchers, to avoid repeating the journal: open the
+  **Cash Disbursements Journal** and use **All vouchers** or **New voucher**.
 - **Cash Disbursements Journal (CDJ).** A read-only report (`/cashier/reports/disbursements-journal`)
   listing vouchers over a date range — Date, Voucher No., Payee, Particulars, Method, Amount — printable
   and exportable.

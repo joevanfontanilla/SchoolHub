@@ -77,7 +77,6 @@ return [
             ['/cashier/accounts', 'Student Accounts', 'users', true],
             ['/cashier/day-close', 'Close the Day', 'calendar-check', true],
             ['/cashier/fees', 'Fee Schedule', 'banknotes', true],
-            ['/cashier/disbursements', 'Disbursements', 'credit-card', true],
             ['/cashier/ledger', 'General Ledger', 'book', true],
             ['/cashier/reports', 'Reports', 'presentation', true],
             'Communication',

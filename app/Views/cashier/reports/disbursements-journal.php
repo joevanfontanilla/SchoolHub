@@ -27,6 +27,7 @@ $query = http_build_query(['from' => $from, 'to' => $to]);
         </div>
         <button type="submit" class="btn-secondary"><?= icon('search', 'h-5 w-5') ?> Show</button>
         <div class="ml-auto flex flex-wrap gap-2">
+            <a href="<?= e(url('/cashier/disbursements')) ?>" class="btn-secondary"><?= icon('list-check', 'h-5 w-5') ?> All vouchers</a>
             <a href="<?= e(url('/cashier/disbursements/create')) ?>" class="btn-secondary"><?= icon('plus', 'h-5 w-5') ?> New voucher</a>
             <a href="<?= e(url('/cashier/reports/disbursements-journal/print?' . $query)) ?>" class="btn-secondary"><?= icon('document', 'h-5 w-5') ?> Print</a>
             <a href="<?= e(url('/cashier/reports/disbursements-journal/export?' . $query)) ?>" class="btn-primary"><?= icon('download', 'h-5 w-5') ?> Export CSV</a>
