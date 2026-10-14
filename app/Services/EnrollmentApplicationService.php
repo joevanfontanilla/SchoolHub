@@ -226,6 +226,47 @@ final class EnrollmentApplicationService
     }
 
     /**
+     * Every problem with the enrollment choices (term, program, year level, student type, transferee
+     * school), as field errors, without creating anything. createDraftFor() applies the same rules one at a time.
+     *
+     * @param array<string,mixed> $input
+     * @return array<string,array<int,string>>
+     */
+    public static function intakeErrors(array $input): array
+    {
+        $validator = Validator::make($input, [
+            'term_id'          => 'required|integer',
+            'program_id'       => 'required|integer',
+            'year_level_id'    => 'required|integer',
+            'student_type'     => 'required|in:' . implode(',', Student::TYPES),
+            'previous_school'  => 'nullable|max:200',
+            'last_school_year' => 'nullable|max:20',
+        ], [
+            'term_id'       => 'Term',
+            'program_id'    => 'Program',
+            'year_level_id' => 'Year level',
+        ]);
+        $errors = $validator->errors();
+
+        if (!isset($errors['term_id'])) {
+            $term = Term::find((int) $input['term_id']);
+            if ($term === null || !Term::isOpen($term)) {
+                $errors['term_id'] = ['Enrollment for that term is not open.'];
+            }
+        }
+        if (!isset($errors['program_id']) && (int) Database::scalar('SELECT COUNT(*) FROM programs WHERE id = ? AND is_active = 1', [(int) $input['program_id']]) === 0) {
+            $errors['program_id'] = ['Please choose a program that is currently offered.'];
+        }
+        if (!isset($errors['year_level_id']) && (int) Database::scalar('SELECT COUNT(*) FROM year_levels WHERE id = ?', [(int) $input['year_level_id']]) === 0) {
+            $errors['year_level_id'] = ['Please choose a valid year level.'];
+        }
+        if (!isset($errors['student_type']) && ($input['student_type'] ?? '') === 'Transferee' && trim((string) ($input['previous_school'] ?? '')) === '') {
+            $errors['previous_school'] = ['Transferees must give the name of the school they are transferring from.'];
+        }
+
+        return $errors;
+    }
+    /**
      * Problems with the application form itself, or null when it is valid.
      * Used on create, on edit, and again as a precondition at submission.
      *

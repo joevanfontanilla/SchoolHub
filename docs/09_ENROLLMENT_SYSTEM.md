@@ -153,21 +153,39 @@ confirmation steps as an online applicant. Only the way in differs.
   password), the student record and profile, and a `DRAFT` application with `source =
   walk_in` and `created_by` = the registrar. The enrollment window applies exactly as it does
   online: there is no override for a closed term.
+  **Every mistake is reported in one pass**: the account, the profile, the guardian, and the enrollment
+  choices are all checked before anything is written, so the registrar fixes the form once. The guardian
+  error is attached to the guardian's fields and says "the applicant's emergency contact". The form also
+  **refuses a program, year level, and term that has no section** (with a link to Sections), instead of
+  leaving a draft that cannot be approved, and **warns when the name and date of birth match a student already
+  registered** (the registrar can enroll that student instead, or tick that it is a different person).
 - **The applicant's login.** The registrar is shown a **one-time set-up link** (the same
   mechanism as a new staff account, docs/07) to hand over or email, and the applicant chooses
   their own password. No password is ever shown, stored, or emailed. A lost link can be
   re-issued, from step 2 or later from the application's **Applicant** card, for as long as the
   account is still `Pending`; the old link stops working. Only walk-in applicants, never online
-  ones.
+  ones. The link is shown on its own page (`/registrar/walk-in/{id}/link`) reached by a redirect, never
+  as the reply to the form, so a refresh or the Back button cannot resubmit anything; it is read from the
+  session once and then gone, and opening the page again explains that it was shown once.
 - **Step 2, documents.** The registrar ticks each document **received in person**. A ticked
   document becomes `VERIFIED` at once, with the registrar and time recorded and
   `received_in_person = 1`; it has no uploaded file and is shown as "Received in person".
   The registrar sees the originals, so no separate review is needed. Unticked documents stay
   `NOT_SUBMITTED`; the applicant can upload them later once they can sign in.
+  The registrar can also **upload the applicant's photo** here; it is saved as their profile photo, so the
+  e-ID card (docs/29) works straight away.
 - **Submit.** Step 2 then moves the application `DRAFT` to `SUBMITTED` (docs/26 rule 2) with
   the registrar as actor, under the same preconditions (complete profile, subjects chosen,
-  every required document in). From there it is an ordinary `SUBMITTED` application: the
-  registrar starts review, approves with a section, and so on.
+  every required document in), and **straight on to `UNDER_REVIEW`**: the registrar already verified the
+  documents at the counter, so there is no separate "Start review" click. Both moves are in the status
+  history. The registrar lands on the application page to choose the section and approve. A required
+  document that is missing refuses the submit and keeps the ticks; "Save and finish later" keeps the walk-in
+  under "Walk-ins not yet submitted". The registrar who created the walk-in is **not** sent the "New
+  application" alert for it; the other registrars are.
+- **A student who is already registered** (Continuing or Returning, or anyone with an account) is found with
+  **Find an existing student** on the intake page, by name, student number, or email. The registrar then
+  enters only the enrollment choices; the application is created on the **existing account** (no new account,
+  no set-up link), as a walk-in draft, and continues at step 2.
 - **Cancel.** A walk-in left as a `DRAFT` can be cancelled by the registrar (docs/26 rule 10).
 - **Data.** `enrollment_applications.source` (`online` | `walk_in`, default `online`) and
   `created_by`; `enrollment_requirements.received_in_person`. The application queue shows a

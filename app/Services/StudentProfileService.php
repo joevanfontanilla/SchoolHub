@@ -66,6 +66,60 @@ final class StudentProfileService
         $nameLocked = !$allowNameEdit;
         $user = $actor;
 
+        $check = self::check($input, $nameLocked, $photo, 'your');
+        if ($check['errors'] !== []) {
+            throw ValidationException::withErrors($check['errors']);
+        }
+        $guardians = self::normalizeGuardians($input['guardians'] ?? []);
+        $extension = $check['extension'];
+        $uploaded = $photo !== null && $photo->error() !== UPLOAD_ERR_NO_FILE;
+
+        // Store the new photo before the transaction; remove it again if the write fails, and
+        // remove the replaced one only after it succeeds (docs/10, the announcement image pattern).
+        $before = Student::profile($studentId);
+        $oldPhoto = $before['photo_path'] ?? null;
+        $newPhotoPath = null;
+        if ($uploaded) {
+            $newPhotoPath = 'uploads/profile-photos/' . bin2hex(random_bytes(16)) . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
+            $photo->moveTo(STORAGE_PATH . '/' . $newPhotoPath);
+        }
+        $removePhoto = $oldPhoto !== null && ($newPhotoPath !== null || !empty($input['remove_photo']));
+
+        try {
+            self::write($user, $ownerUserId, $studentId, $input, $guardians, $nameLocked, $before, $newPhotoPath, $removePhoto);
+        } catch (\Throwable $e) {
+            if ($newPhotoPath !== null) {
+                @unlink(STORAGE_PATH . '/' . $newPhotoPath);
+            }
+            throw $e;
+        }
+
+        // The old file is superseded only once the new row is committed.
+        if ($oldPhoto !== null && ($newPhotoPath !== null || $removePhoto)) {
+            @unlink(STORAGE_PATH . '/' . $oldPhoto);
+        }
+    }
+
+
+    /**
+     * Every problem with a profile form, without saving anything, so a caller that also checks other things
+     * (the walk-in intake) can report them all at once.
+     *
+     * @param array<string,mixed> $input
+     * @param string $guardianOwner whose emergency contact it is, for the message ("your", "the applicant's")
+     * @return array<string,array<int,string>>
+     */
+    public static function errorsFor(array $input, bool $allowNameEdit, ?UploadedFile $photo = null, string $guardianOwner = 'your'): array
+    {
+        return self::check($input, !$allowNameEdit, $photo, $guardianOwner)['errors'];
+    }
+
+    /**
+     * @param array<string,mixed> $input
+     * @return array{errors:array<string,array<int,string>>,extension:?string} the photo's validated extension, when one was sent
+     */
+    private static function check(array $input, bool $nameLocked, ?UploadedFile $photo, string $guardianOwner): array
+    {
         $rules = [
             'birthdate'         => 'required|date|before_today',
             'sex'               => 'required|in:' . implode(',', self::SEXES),
@@ -94,14 +148,12 @@ final class StudentProfileService
             'birthdate'         => 'Date of birth',
         ]);
         $errors = $validator->errors();
-
-        $guardians = self::normalizeGuardians($input['guardians'] ?? []);
-        $errors += self::guardianErrors($guardians);
+        $errors += self::guardianErrors(self::normalizeGuardians($input['guardians'] ?? []), $guardianOwner);
 
         // A photo is optional. When one is sent, it must be a genuine small JPG or PNG; the error
         // is attached to the photo field so the rest of the form is preserved and shown again.
-        $uploaded = $photo !== null && $photo->error() !== UPLOAD_ERR_NO_FILE;
-        if ($uploaded) {
+        $extension = null;
+        if ($photo !== null && $photo->error() !== UPLOAD_ERR_NO_FILE) {
             try {
                 $extension = DocumentUploadService::assertGenuineFile($photo, self::PHOTO_EXTENSIONS, self::PHOTO_MAX_BYTES, 'a profile photo');
             } catch (ValidationException $e) {
@@ -109,34 +161,7 @@ final class StudentProfileService
             }
         }
 
-        if ($errors !== []) {
-            throw ValidationException::withErrors($errors);
-        }
-
-        // Store the new photo before the transaction; remove it again if the write fails, and
-        // remove the replaced one only after it succeeds (docs/10, the announcement image pattern).
-        $before = Student::profile($studentId);
-        $oldPhoto = $before['photo_path'] ?? null;
-        $newPhotoPath = null;
-        if ($uploaded) {
-            $newPhotoPath = 'uploads/profile-photos/' . bin2hex(random_bytes(16)) . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
-            $photo->moveTo(STORAGE_PATH . '/' . $newPhotoPath);
-        }
-        $removePhoto = $oldPhoto !== null && ($newPhotoPath !== null || !empty($input['remove_photo']));
-
-        try {
-            self::write($user, $ownerUserId, $studentId, $input, $guardians, $nameLocked, $before, $newPhotoPath, $removePhoto);
-        } catch (\Throwable $e) {
-            if ($newPhotoPath !== null) {
-                @unlink(STORAGE_PATH . '/' . $newPhotoPath);
-            }
-            throw $e;
-        }
-
-        // The old file is superseded only once the new row is committed.
-        if ($oldPhoto !== null && ($newPhotoPath !== null || $removePhoto)) {
-            @unlink(STORAGE_PATH . '/' . $oldPhoto);
-        }
+        return ['errors' => $errors, 'extension' => $extension];
     }
 
     /**
@@ -338,7 +363,7 @@ final class StudentProfileService
      * @param array<int,array<string,mixed>> $guardians
      * @return array<string,array<int,string>>
      */
-    private static function guardianErrors(array $guardians): array
+    private static function guardianErrors(array $guardians, string $owner = 'your'): array
     {
         $errors = [];
 
@@ -357,7 +382,7 @@ final class StudentProfileService
         }
 
         if ($guardians === [] || !in_array(1, array_column($guardians, 'is_emergency_contact'), true)) {
-            $errors['guardians'] = ['Add at least one guardian and mark them as your emergency contact.'];
+            $errors['guardians'] = ["Add at least one guardian and mark them as {$owner} emergency contact."];
         }
 
         return $errors;

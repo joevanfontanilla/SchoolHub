@@ -6,9 +6,13 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\HttpException;
+use App\Core\UploadedFile;
 use App\Core\ValidationException;
 use App\Core\Validator;
+use App\Models\Catalog;
 use App\Models\EnrollmentApplication as Application;
+use App\Models\Student;
+use App\Models\Term;
 use App\Models\User;
 
 /**
@@ -34,16 +38,10 @@ final class WalkInService
 
         $input['email'] = strtolower(trim((string) ($input['email'] ?? '')));
 
-        $validator = Validator::make($input, [
-            'first_name'      => 'required|max:100',
-            'middle_name'     => 'nullable|max:100',
-            'last_name'       => 'required|max:100',
-            'suffix'          => 'nullable|max:20',
-            'email'           => 'required|email|max:150|unique:users,email',
-            'privacy_consent' => 'accepted',
-        ], ['privacy_consent' => 'data privacy notice']);
-        if ($validator->fails()) {
-            throw ValidationException::withErrors($validator->errors());
+        // Everything is checked before anything is written, so the registrar fixes the form once.
+        $errors = self::registerErrors($input);
+        if ($errors !== []) {
+            throw ValidationException::withErrors($errors);
         }
 
         $created = Database::transaction(static function () use ($registrar, $input): array {
@@ -78,6 +76,213 @@ final class WalkInService
         $link = PasswordResetService::issue(User::find($created['user_id']), PasswordResetService::SETUP, $registrar);
 
         return $created + ['token' => $link['token'], 'expires_at' => $link['expires_at']];
+    }
+
+    /**
+     * Every problem with a new-account intake, in one pass: the account, the profile and guardian, the
+     * enrollment choices, whether a section exists for them, and a likely duplicate of a registered student.
+     *
+     * @param array<string,mixed> $input
+     * @return array<string,array<int,string>>
+     */
+    public static function registerErrors(array $input): array
+    {
+        $validator = Validator::make($input, [
+            'first_name'      => 'required|max:100',
+            'middle_name'     => 'nullable|max:100',
+            'last_name'       => 'required|max:100',
+            'suffix'          => 'nullable|max:20',
+            'email'           => 'required|email|max:150|unique:users,email',
+            'privacy_consent' => 'accepted',
+        ], ['privacy_consent' => 'data privacy notice']);
+
+        $errors = $validator->errors();
+        $errors += StudentProfileService::errorsFor($input, true, null, "the applicant's");
+        $errors += EnrollmentApplicationService::intakeErrors($input);
+        $errors += self::sectionErrors($input, $errors);
+
+        // With no guardian entered, flag the three fields themselves, not only a message above them.
+        if (isset($errors['guardians']) && array_filter(array_keys($errors), static fn (string $key): bool => str_starts_with($key, 'guardians.')) === []) {
+            foreach (['full_name' => 'Name', 'relationship' => 'Relationship', 'mobile' => 'Mobile number'] as $field => $label) {
+                $errors["guardians.0.{$field}"] = ["{$label} is required."];
+            }
+        }
+
+        // The same person may already be registered: offer the existing record before creating a second one.
+        if (!isset($errors['first_name'], $errors['last_name'], $errors['birthdate']) && empty($input['confirm_new'])) {
+            $matches = self::possibleDuplicates(trim((string) ($input['first_name'] ?? '')), trim((string) ($input['last_name'] ?? '')), trim((string) ($input['birthdate'] ?? '')));
+            if ($matches !== []) {
+                $names = implode('; ', array_map(static fn (array $m): string => $m['last_name'] . ', ' . $m['first_name'] . ($m['student_number'] ? ' (' . $m['student_number'] . ')' : ''), $matches));
+                $errors['duplicate'] = ["A student with this name and date of birth is already registered: {$names}. Use Find an existing student to enroll them, or tick that this is a different person."];
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * An application on an account that already exists (a continuing or returning student): no new
+     * account and no set-up link, only the enrollment choices.
+     *
+     * @param array<string,mixed> $input term_id, program_id, year_level_id, student_type, previous_school, last_school_year
+     * @return int the DRAFT application's id
+     * @throws ValidationException
+     */
+    public static function registerExisting(User $registrar, int $studentId, array $input): int
+    {
+        self::assertRegistrar($registrar);
+
+        $student = Database::selectOne('SELECT id, user_id FROM students WHERE id = ?', [$studentId]);
+        $user = $student !== null ? User::find((int) $student['user_id']) : null;
+        if ($user === null) {
+            throw HttpException::notFound('That student was not found.');
+        }
+        if (!in_array($user->status, [User::STATUS_ACTIVE, User::STATUS_PENDING], true)) {
+            throw ValidationException::withMessage('This student\'s account is ' . strtolower($user->status) . ', so an application cannot be started for them.');
+        }
+
+        $errors = EnrollmentApplicationService::intakeErrors($input);
+        $errors += self::sectionErrors($input, $errors);
+        if (!isset($errors['term_id']) && Application::hasOpenApplicationForTerm($studentId, (int) $input['term_id'])) {
+            $errors['term_id'] = ['This student already has an application for that term. Continue it, or cancel it first.'];
+        }
+        if ($errors !== []) {
+            throw ValidationException::withErrors($errors);
+        }
+
+        $applicationId = EnrollmentApplicationService::createDraftFor($studentId, $registrar, $input, 'walk_in');
+        AuditService::log('walkin.registered', 'enrollment', 'EnrollmentApplication', $applicationId, null, [
+            'student_id' => $studentId, 'existing_account' => true,
+        ], 'SUCCESS', null, $registrar->id, $registrar->role_name);
+
+        return $applicationId;
+    }
+
+    /**
+     * Students the registrar can enroll again, by name, student number, or email.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public static function findStudents(string $query): array
+    {
+        $query = trim($query);
+        if (mb_strlen($query) < 2) {
+            return [];
+        }
+        $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query) . '%';
+
+        return Database::select(
+            "SELECT s.id, s.student_number, u.first_name, u.last_name, u.email, u.status, p.code AS program_code
+               FROM students s
+               JOIN users u ON u.id = s.user_id
+          LEFT JOIN programs p ON p.id = s.program_id
+              WHERE (CONCAT(u.first_name, ' ', u.last_name) LIKE ? OR CONCAT(u.last_name, ', ', u.first_name) LIKE ? OR s.student_number LIKE ? OR u.email LIKE ?)
+                AND u.status IN ('Active', 'Pending')
+              ORDER BY u.last_name, u.first_name
+              LIMIT 10",
+            [$like, $like, $like, $like]
+        );
+    }
+
+    /** One registered student, with the name and number shown on the page that starts their application. @return array<string,mixed>|null */
+    public static function studentSummary(int $studentId): ?array
+    {
+        return Database::selectOne(
+            'SELECT s.id, s.student_number, u.first_name, u.last_name, u.email, u.status, p.code AS program_code
+               FROM students s JOIN users u ON u.id = s.user_id LEFT JOIN programs p ON p.id = s.program_id
+              WHERE s.id = ?',
+            [$studentId]
+        );
+    }
+
+    /** Students already registered with this name and date of birth, at most three. @return array<int,array<string,mixed>> */
+    public static function possibleDuplicates(string $firstName, string $lastName, string $birthdate): array
+    {
+        if ($firstName === '' || $lastName === '' || $birthdate === '') {
+            return [];
+        }
+
+        return Database::select(
+            'SELECT s.id, s.student_number, u.first_name, u.last_name
+               FROM students s
+               JOIN users u ON u.id = s.user_id
+               JOIN student_profiles sp ON sp.student_id = s.id
+              WHERE LOWER(u.first_name) = LOWER(?) AND LOWER(u.last_name) = LOWER(?) AND sp.birthdate = ?
+              LIMIT 3',
+            [$firstName, $lastName, $birthdate]
+        );
+    }
+
+    /**
+     * The applicant's photo, taken at the counter: saved as their profile photo, so the e-ID card works.
+     *
+     * @return bool true when a photo was saved, false when none was sent
+     * @throws ValidationException
+     */
+    public static function savePhoto(User $registrar, int $applicationId, ?UploadedFile $file): bool
+    {
+        self::assertRegistrar($registrar);
+        if ($file === null || $file->error() === UPLOAD_ERR_NO_FILE) {
+            return false;
+        }
+        $application = self::draft($applicationId);
+        $studentId = (int) $application['student_id'];
+
+        try {
+            $extension = DocumentUploadService::assertGenuineFile($file, StudentProfileService::PHOTO_EXTENSIONS, StudentProfileService::PHOTO_MAX_BYTES, 'a profile photo');
+        } catch (ValidationException $e) {
+            throw ValidationException::withErrors(['photo' => [$e->getMessage()]]);
+        }
+
+        $old = Student::profile($studentId)['photo_path'] ?? null;
+        $path = 'uploads/profile-photos/' . bin2hex(random_bytes(16)) . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
+        $file->moveTo(STORAGE_PATH . '/' . $path);
+
+        try {
+            Database::transaction(static function () use ($registrar, $applicationId, $studentId, $path): void {
+                $changed = Database::update('student_profiles', ['photo_path' => $path], ['student_id' => $studentId]);
+                if ($changed === 0) {
+                    throw ValidationException::withMessage('This student\'s profile is not complete yet, so a photo cannot be saved. Complete the profile first.');
+                }
+                AuditService::log('walkin.photo_saved', 'enrollment', 'EnrollmentApplication', $applicationId, null, ['student_id' => $studentId],
+                    'SUCCESS', null, $registrar->id, $registrar->role_name);
+            });
+        } catch (\Throwable $e) {
+            @unlink(STORAGE_PATH . '/' . $path);
+            throw $e;
+        }
+        if ($old !== null && $old !== $path) {
+            @unlink(STORAGE_PATH . '/' . $old);
+        }
+
+        return true;
+    }
+
+    /**
+     * A program, year level, and term with no section cannot be approved, so it is refused at the counter
+     * instead of leaving a draft that goes nowhere.
+     *
+     * @param array<string,mixed>                $input
+     * @param array<string,array<int,string>>    $errors problems already found with those three choices
+     * @return array<string,array<int,string>>
+     */
+    private static function sectionErrors(array $input, array $errors): array
+    {
+        $term = (int) ($input['term_id'] ?? 0);
+        $program = (int) ($input['program_id'] ?? 0);
+        $year = (int) ($input['year_level_id'] ?? 0);
+        if ($term <= 0 || $program <= 0 || $year <= 0 || isset($errors['term_id']) || isset($errors['program_id']) || isset($errors['year_level_id'])) {
+            return [];
+        }
+        if (Catalog::sectionsForApplication(['term_id' => $term, 'program_id' => $program, 'year_level_id' => $year]) !== []) {
+            return [];
+        }
+
+        $termRow = Term::find($term);
+        $programCode = (string) Database::scalar('SELECT code FROM programs WHERE id = ?', [$program]);
+        $yearName = (string) Database::scalar('SELECT name FROM year_levels WHERE id = ?', [$year]);
+
+        return ['program_id' => ["No section exists for {$programCode}, {$yearName}, " . ($termRow !== null ? Term::label($termRow) : 'that term') . '. Create one under Registrar, Sections first, or choose another program or year.']];
     }
 
     /**
@@ -124,7 +329,7 @@ final class WalkInService
     }
 
     /**
-     * Step 2 (submit): save the ticks, then move the DRAFT to SUBMITTED as the registrar.
+     * Step 2 (submit): save the ticks, then move the DRAFT to SUBMITTED and straight on to UNDER_REVIEW as the registrar.
      * The ticks are kept even when the submission is refused, so the registrar can fix the
      * one missing item and submit again.
      *
@@ -149,6 +354,8 @@ final class WalkInService
         }
 
         EnrollmentStatusService::transition($applicationId, Application::SUBMITTED, $registrar);
+        // The registrar verified every document at the counter, so review starts at once: no separate click.
+        EnrollmentStatusService::transition($applicationId, Application::UNDER_REVIEW, $registrar);
     }
 
     /** Cancel a walk-in that was never submitted (docs/26 rule 10). */

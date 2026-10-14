@@ -5,6 +5,7 @@
  * @var array              $application
  * @var App\Models\User    $applicant
  * @var array              $requirements
+ * @var bool               $hasPhoto the applicant already has a profile photo
  */
 $required = array_filter($requirements, static fn ($r) => (int) $r['is_required'] === 1);
 $receivedRequired = array_filter($required, static fn ($r) => $r['status'] === 'VERIFIED');
@@ -19,7 +20,7 @@ $receivedRequired = array_filter($required, static fn ($r) => $r['status'] === '
         </p>
     </div>
 
-    <form method="POST" action="<?= e(url('/registrar/walk-in/' . $application['id'])) ?>" class="space-y-6">
+    <form method="POST" action="<?= e(url('/registrar/walk-in/' . $application['id'])) ?>" enctype="multipart/form-data" class="space-y-6" novalidate>
         <?= csrf_field() ?>
 
         <section class="card" aria-labelledby="docs-heading">
@@ -53,13 +54,29 @@ $receivedRequired = array_filter($required, static fn ($r) => $r['status'] === '
             </ul>
         </section>
 
+        <section class="card p-5" aria-labelledby="photo-heading">
+            <h3 id="photo-heading" class="text-base">Applicant's photo</h3>
+            <p class="mt-0.5 text-sm text-brand-gray">Optional. A recent photo with a plain background, used on the e-ID card. <?= $hasPhoto ? 'A photo is already saved; choosing another replaces it.' : 'There is no photo yet, so the card would show initials.' ?> Saving a photo does not tick the 2x2 photograph document above.</p>
+            <div class="mt-3 flex flex-wrap items-center gap-4">
+                <?php if ($hasPhoto): ?>
+                    <img src="<?= e(url('/registrar/students/' . $application['student_id'] . '/photo')) ?>" alt="Saved photo of <?= e($applicant->fullName()) ?>" class="h-24 w-20 rounded-lg object-cover ring-1 ring-slate-300">
+                <?php endif; ?>
+                <div class="min-w-0 flex-1">
+                    <label for="walkin-photo" class="field-label">Photo (JPG or PNG, up to 2 MB)</label>
+                    <input id="walkin-photo" type="file" name="photo" accept="image/png,image/jpeg" class="field-input" <?= error_for('photo') ? 'aria-invalid="true"' : '' ?>>
+                    <?php if (error_for('photo')): ?><p class="field-error mt-1"><?= e(error_for('photo')) ?></p><?php endif; ?>
+                </div>
+            </div>
+        </section>
+
         <div class="flex flex-wrap gap-3">
             <button type="submit" name="action" value="submit" class="btn-primary btn-lg"
-                    data-confirm-click="The application goes to the registrar queue as submitted. Documents not ticked stay missing." data-confirm-title="Submit this walk-in?" data-confirm-tone="primary" data-confirm-label="Submit">
+                    data-confirm-click="Every required document must be ticked. The application then goes straight to review, where you choose the section and approve it." data-confirm-title="Submit this walk-in?" data-confirm-tone="primary" data-confirm-label="Submit">
                 Submit application
             </button>
             <button type="submit" name="action" value="save" class="btn-secondary btn-lg">Save and finish later</button>
         </div>
+        <p class="text-sm text-brand-gray">Not every required document today? Choose <strong>Save and finish later</strong>. The ticks and photo are kept, and the walk-in waits under <em>Walk-ins not yet submitted</em> on the Walk-in registration page until the rest arrive.</p>
     </form>
 
     <section class="card space-y-4 p-5" aria-labelledby="account-heading">

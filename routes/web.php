@@ -423,7 +423,10 @@ $router->post('/registrar/requirements/{requirementId}/review',  [RegistrarAppli
 // Walk-in enrollment at the counter (docs/09).
 $router->get('/registrar/walk-in',                  [WalkInController::class, 'create'],        $registrar('enrollment.walkin'), 'registrar.walkin');
 $router->post('/registrar/walk-in',                 [WalkInController::class, 'store'],         $registrar('enrollment.walkin'));
+$router->get('/registrar/walk-in/student/{studentId}',  [WalkInController::class, 'existing'],      $registrar('enrollment.walkin'));
+$router->post('/registrar/walk-in/student/{studentId}', [WalkInController::class, 'storeExisting'], $registrar('enrollment.walkin'));
 $router->get('/registrar/walk-in/{id}',             [WalkInController::class, 'documents'],     $registrar('enrollment.walkin'));
+$router->get('/registrar/walk-in/{id}/link',        [WalkInController::class, 'link'],          $registrar('enrollment.walkin'));
 $router->post('/registrar/walk-in/{id}',            [WalkInController::class, 'saveDocuments'], $registrar('enrollment.walkin'));
 $router->post('/registrar/walk-in/{id}/link',       [WalkInController::class, 'reissueLink'],   $registrar('enrollment.walkin'));
 $router->post('/registrar/walk-in/{id}/email-link', [WalkInController::class, 'emailLink'],     $registrar('enrollment.walkin'));

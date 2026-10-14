@@ -36,14 +36,17 @@ final class NotificationService
         ]);
     }
 
-    /** Notify every active user holding a role, e.g. all registrars. */
-    public static function notifyRole(string $roleName, string $type, string $title, ?string $body = null, ?string $link = null): void
+    /** Notify every active user holding a role, e.g. all registrars, except one who caused the event. */
+    public static function notifyRole(string $roleName, string $type, string $title, ?string $body = null, ?string $link = null, ?int $exceptUserId = null): void
     {
         $users = Database::select(
             "SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = ? AND u.status = 'Active'",
             [$roleName]
         );
         foreach ($users as $user) {
+            if ($exceptUserId !== null && (int) $user['id'] === $exceptUserId) {
+                continue;
+            }
             self::notify((int) $user['id'], $type, $title, $body, $link);
         }
     }

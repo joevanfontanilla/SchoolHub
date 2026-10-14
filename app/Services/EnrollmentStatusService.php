@@ -255,7 +255,9 @@ final class EnrollmentStatusService
                 'enrollment.submitted',
                 $from === App::DRAFT ? "New application {$number}" : "Application {$number} was resubmitted",
                 null,
-                "/registrar/applications/{$id}"
+                "/registrar/applications/{$id}",
+                // A registrar who submits for a walk-in does not need an alert about their own entry.
+                $actor->isRegistrar() ? $actor->id : null
             );
         }
 

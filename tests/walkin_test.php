@@ -15,11 +15,30 @@ use App\Models\User;
 use App\Services\EnrollmentStatusService as Status;
 use App\Core\Router;
 use App\Services\WalkInService;
+use App\Core\UploadedFile;
+use App\Models\Catalog;
+use App\Services\NotificationService;
 
 /** The intake form a registrar submits for an applicant. */
+/** The intake needs a section for its program, year level, and term (docs/09); make a fixture one when the database has none. */
+function ensureIntakeSection(array $input): void
+{
+    if (Catalog::sectionsForApplication($input) === []) {
+        Database::insert('sections', [
+            'code'          => TEST_CODE . strtoupper(bin2hex(random_bytes(3))),
+            'program_id'    => (int) $input['program_id'],
+            'year_level_id' => (int) $input['year_level_id'],
+            'term_id'       => (int) $input['term_id'],
+            'capacity'      => 40,
+            'is_active'     => 1,
+        ]);
+    }
+}
+
 function walkInInput(array $overrides = []): array
 {
     $email = TEST_PREFIX . bin2hex(random_bytes(4)) . '@test.local';
+    ensureIntakeSection(applicationInput());
 
     return array_merge(completeProfileInput(), applicationInput(), [
         'first_name'      => 'Walk',
@@ -177,11 +196,13 @@ return [
             WalkInService::submit($registrar, $id, $required);
 
             $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$id]);
-            $t->assertEquals(Application::SUBMITTED, $application['application_status']);
+            $t->assertEquals(Application::UNDER_REVIEW, $application['application_status'], 'Submitting goes straight on to review: the documents were verified at the counter');
             $t->assertNotNull($application['submitted_at']);
-            $history = Database::selectOne("SELECT * FROM enrollment_status_history WHERE application_id = ? AND new_value = 'SUBMITTED'", [$id]);
-            $t->assertEquals($registrar->id, (int) $history['actor_user_id'], 'The registrar is the recorded actor');
-            $t->assertEquals(User::ROLE_REGISTRAR, $history['actor_role']);
+            foreach (['SUBMITTED', 'UNDER_REVIEW'] as $step) {
+                $history = Database::selectOne("SELECT * FROM enrollment_status_history WHERE application_id = ? AND new_value = ?", [$id, $step]);
+                $t->assertEquals($registrar->id, (int) $history['actor_user_id'], "The registrar is the recorded actor of {$step}");
+                $t->assertEquals(User::ROLE_REGISTRAR, $history['actor_role']);
+            }
         } finally {
             actingAs(null);
             deleteTestUsers();
@@ -195,7 +216,7 @@ return [
             $id = $result['application_id'];
             WalkInService::submit($registrar, $id, walkInRequiredIds($id));
 
-            Status::transition($id, Application::UNDER_REVIEW, $registrar);
+            $t->assertEquals(Application::UNDER_REVIEW, Database::scalar('SELECT application_status FROM enrollment_applications WHERE id = ?', [$id]), 'Already under review: no Start review click');
             $section = assignSectionForTest($id);
             App\Services\EnrollmentApplicationService::approve($registrar, $id, $section);
 
@@ -325,5 +346,224 @@ return [
             }
         }
         $t->assertTrue($found >= 7, 'The walk-in routes are registered');
+    },
+
+    'every mistake on the intake form is reported in one pass, with the guardian fields flagged and registrar wording' => function (TestRunner $t): void {
+        try {
+            $errors = WalkInService::registerErrors([]);
+            foreach (['first_name', 'last_name', 'email', 'privacy_consent', 'birthdate', 'sex', 'civil_status', 'mobile', 'barangay', 'city_municipality', 'province',
+                      'guardians', 'guardians.0.full_name', 'guardians.0.relationship', 'guardians.0.mobile', 'term_id', 'student_type', 'year_level_id', 'program_id'] as $field) {
+                $t->assertTrue(isset($errors[$field]), "{$field} is reported on the first submit");
+            }
+            $t->assertContains('the applicant\'s emergency contact', $errors['guardians'][0], 'Not "your" emergency contact');
+
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+            $threw = null;
+            try {
+                WalkInService::register($registrar, []);
+            } catch (ValidationException $e) {
+                $threw = $e->errors();
+            }
+            $t->assertEquals(array_keys($errors), array_keys($threw ?? []), 'register() throws the same full list, and creates nothing');
+            $t->assertEquals(1, (int) Database::scalar('SELECT COUNT(*) FROM users WHERE username LIKE ?', [testPrefixPattern()]), 'Only the registrar fixture exists: nothing was created');
+
+            $partial = array_keys(WalkInService::registerErrors(walkInInput(['mobile' => '', 'barangay' => ''])));
+            sort($partial);
+            $t->assertEquals(['barangay', 'mobile'], $partial, 'Only what is wrong is reported');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'a program, year level, and term with no section is refused at intake instead of leaving a draft that cannot be approved' => function (TestRunner $t): void {
+        try {
+            $input = walkInInput();
+            $withoutSection = null;
+            foreach (App\Models\Program::active() as $program) {
+                foreach (Catalog::yearLevels() as $year) {
+                    $candidate = ['term_id' => $input['term_id'], 'program_id' => (int) $program['id'], 'year_level_id' => (int) $year['id']];
+                    if (Catalog::sectionsForApplication($candidate) === []) {
+                        $withoutSection = $candidate;
+                        break 2;
+                    }
+                }
+            }
+            if ($withoutSection === null) {
+                $t->assertTrue(true, 'Every program and year already has a section here: nothing to refuse');
+                return;
+            }
+
+            $errors = WalkInService::registerErrors(array_merge($input, $withoutSection));
+            $t->assertTrue(isset($errors['program_id']), 'The program field carries the problem');
+            $t->assertContains('No section exists', $errors['program_id'][0]);
+            $t->assertContains('Sections', $errors['program_id'][0], 'It says where to fix it');
+            $t->assertEquals([], array_diff_key($errors, ['program_id' => 1]), 'Nothing else is wrong');
+
+            $t->assertTrue(WalkInService::registerErrors($input) === [], 'A combination with a section is accepted');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+            deleteTestCatalog();
+        }
+    },
+
+    'a name and date of birth already registered is flagged, and the registrar can say it is a different person' => function (TestRunner $t): void {
+        try {
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+            $first = walkInInput(['first_name' => 'Zeta', 'last_name' => 'Duplicate', 'birthdate' => '2004-02-03']);
+            WalkInService::register($registrar, $first);
+
+            $again = walkInInput(['first_name' => 'zeta', 'last_name' => 'DUPLICATE', 'birthdate' => '2004-02-03']);
+            $errors = WalkInService::registerErrors($again);
+            $t->assertTrue(isset($errors['duplicate']), 'The same name and birthdate, in any case, is flagged');
+            $t->assertContains('Find an existing student', $errors['duplicate'][0]);
+
+            $t->assertTrue(WalkInService::registerErrors($again + ['confirm_new' => '1']) === [], 'Ticking "different person" lets it through');
+            $t->assertTrue(WalkInService::registerErrors(array_merge($again, ['birthdate' => '2004-02-04'])) === [], 'A different birthdate is not a match');
+            $t->assertEquals(1, count(WalkInService::possibleDuplicates('Zeta', 'Duplicate', '2004-02-03')));
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'a registered student is enrolled again on their own account: no new account, no link' => function (TestRunner $t): void {
+        try {
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+            $result = WalkInService::register($registrar, walkInInput());
+            $studentId = (int) Database::scalar('SELECT student_id FROM enrollment_applications WHERE id = ?', [$result['application_id']]);
+            $input = applicationInput('Continuing');
+            ensureIntakeSection($input);
+            $users = (int) Database::scalar('SELECT COUNT(*) FROM users');
+
+            // While the first application is open, a second for the same term is refused.
+            $errors = fieldErrors(static fn () => WalkInService::registerExisting($registrar, $studentId, $input));
+            $t->assertTrue(isset($errors['term_id']), 'One open application per term');
+
+            WalkInService::cancel($registrar, $result['application_id']);
+            $second = WalkInService::registerExisting($registrar, $studentId, $input);
+
+            $application = Database::selectOne('SELECT * FROM enrollment_applications WHERE id = ?', [$second]);
+            $t->assertEquals($studentId, (int) $application['student_id'], 'On the existing student');
+            $t->assertEquals('walk_in', $application['source']);
+            $t->assertEquals(Application::DRAFT, $application['application_status']);
+            $t->assertEquals('Continuing', $application['student_type']);
+            $t->assertEquals($users, (int) Database::scalar('SELECT COUNT(*) FROM users'), 'No new account was made');
+            $t->assertEquals(1, (int) Database::scalar("SELECT COUNT(*) FROM audit_logs WHERE action = 'walkin.registered' AND target_id = ?", [$second]), 'Audited');
+            $t->assertEquals([$second], array_map('intval', array_column(array_filter(WalkInService::unfinished(), static fn ($r) => (int) $r['id'] === $second), 'id')), 'It appears under Walk-ins not yet submitted');
+
+            $bad = fieldErrors(static fn () => WalkInService::registerExisting($registrar, $studentId, ['term_id' => '', 'program_id' => '', 'year_level_id' => '', 'student_type' => '']));
+            foreach (['term_id', 'program_id', 'year_level_id', 'student_type'] as $field) {
+                $t->assertTrue(isset($bad[$field]), "{$field} is required");
+            }
+            $t->assertEquals(404, statusOf(static fn () => WalkInService::registerExisting($registrar, 999999999, $input)), 'An unknown student');
+            $t->assertEquals(403, statusOf(static fn () => WalkInService::registerExisting(makeUser(User::ROLE_CASHIER), $studentId, $input)), 'Only the registrar');
+
+            Database::update('users', ['status' => User::STATUS_DISABLED], ['id' => (int) Database::scalar('SELECT user_id FROM students WHERE id = ?', [$studentId])]);
+            $t->assertThrows(fn () => WalkInService::registerExisting($registrar, $studentId, $input), 'account is disabled', 'A disabled account is refused');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'registered students are found by name, student number, or email, and nothing odd matches everyone' => function (TestRunner $t): void {
+        try {
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+            $result = WalkInService::register($registrar, walkInInput(['first_name' => 'Findable', 'last_name' => 'Personxyz']));
+            $studentId = (int) Database::scalar('SELECT student_id FROM enrollment_applications WHERE id = ?', [$result['application_id']]);
+            $ids = static fn (string $q): array => array_map('intval', array_column(WalkInService::findStudents($q), 'id'));
+
+            $t->assertTrue(in_array($studentId, $ids('Personxyz'), true), 'By last name');
+            $t->assertTrue(in_array($studentId, $ids('findable person'), true), 'By first and last name');
+            $t->assertTrue(in_array($studentId, $ids('Personxyz, Findable'), true), 'Last name first');
+            $t->assertTrue(in_array($studentId, $ids(substr(User::find($result['user_id'])->email, 0, 12)), true), 'By email');
+            $t->assertEquals([], $ids('P'), 'One character matches nobody');
+            $t->assertEquals([], $ids('%'), 'A wildcard is just a character, not "everyone"');
+            $t->assertEquals([], $ids('_____'), 'And so is an underscore');
+            $t->assertTrue(count($ids('Personxyz')) <= 10, 'At most ten results');
+
+            Database::update('users', ['status' => User::STATUS_DISABLED], ['id' => $result['user_id']]);
+            $t->assertFalse(in_array($studentId, $ids('Personxyz'), true), 'A disabled account is not offered');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'the registrar who submits a walk-in is not alerted about their own entry, but the other registrars are' => function (TestRunner $t): void {
+        try {
+            $mine = makeUser(User::ROLE_REGISTRAR);
+            $other = makeUser(User::ROLE_REGISTRAR);
+            $result = WalkInService::register($mine, walkInInput());
+            WalkInService::submit($mine, $result['application_id'], walkInRequiredIds($result['application_id']));
+
+            $alerts = static fn (User $user): int => (int) Database::scalar("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'enrollment.submitted'", [$user->id]);
+            $t->assertEquals(0, $alerts($mine), 'Not the registrar who entered it');
+            $t->assertEquals(1, $alerts($other), 'Another registrar is told');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+        }
+    },
+
+    'the applicant\'s photo is saved at the counter as their profile photo, replaced cleanly, and refused when it is not a real image' => function (TestRunner $t): void {
+        $paths = [];
+        try {
+            $registrar = makeUser(User::ROLE_REGISTRAR);
+            $result = WalkInService::register($registrar, walkInInput());
+            $id = $result['application_id'];
+            $studentId = (int) Database::scalar('SELECT student_id FROM enrollment_applications WHERE id = ?', [$id]);
+            $photoPath = static fn () => (string) Database::scalar('SELECT photo_path FROM student_profiles WHERE student_id = ?', [$studentId]);
+
+            $t->assertFalse(WalkInService::savePhoto($registrar, $id, null), 'No photo sent');
+            $t->assertFalse(WalkInService::savePhoto($registrar, $id, UploadedFile::forTesting(fixtureFile('png'), 'x.png', UPLOAD_ERR_NO_FILE)), 'An empty file field');
+
+            $errors = fieldErrors(static fn () => WalkInService::savePhoto($registrar, $id, UploadedFile::forTesting(fixtureFile('fake_pdf'), 'me.png')));
+            $t->assertTrue(isset($errors['photo']), 'A text file renamed .png is refused');
+            $t->assertEquals('', $photoPath(), 'Nothing was saved');
+
+            $t->assertTrue(WalkInService::savePhoto($registrar, $id, UploadedFile::forTesting(fixtureFile('png'), 'me.png')), 'A real image is saved');
+            $first = $photoPath();
+            $paths[] = $first;
+            $t->assertTrue(str_starts_with($first, 'uploads/profile-photos/') && is_file(STORAGE_PATH . '/' . $first), 'As the profile photo, under storage/uploads/profile-photos');
+
+            WalkInService::savePhoto($registrar, $id, UploadedFile::forTesting(fixtureFile('png'), 'again.png'));
+            $second = $photoPath();
+            $paths[] = $second;
+            $t->assertTrue($second !== $first && !is_file(STORAGE_PATH . '/' . $first), 'A new photo replaces the old file');
+            $t->assertEquals(2, (int) Database::scalar("SELECT COUNT(*) FROM audit_logs WHERE action = 'walkin.photo_saved' AND target_id = ?", [$id]), 'Each save is audited');
+
+            WalkInService::submit($registrar, $id, walkInRequiredIds($id));
+            $t->assertEquals(404, statusOf(static fn () => WalkInService::savePhoto($registrar, $id, UploadedFile::forTesting(fixtureFile('png'), 'late.png'))), 'Not once the walk-in is submitted');
+            $t->assertEquals(403, statusOf(static fn () => WalkInService::savePhoto(makeUser(User::ROLE_CASHIER), $id, UploadedFile::forTesting(fixtureFile('png'), 'x.png'))), 'Only the registrar');
+        } finally {
+            actingAs(null);
+            deleteTestUsers();
+            foreach ($paths as $path) {
+                @unlink(STORAGE_PATH . '/' . $path);
+            }
+        }
+    },
+
+    'the set-up link is shown on its own page after a redirect, never as the reply to a form post' => function (TestRunner $t): void {
+        $controller = (string) file_get_contents(BASE_PATH . '/app/Controllers/Registrar/WalkInController.php');
+        $t->assertFalse(str_contains($controller, 'linkView'), 'No action renders the link as its own response any more');
+        $t->assertContains('private function showLinkNext', $controller);
+        $t->assertContains('Session::forget(self::LINK_KEY)', $controller, 'The held link is read once and then gone');
+        $t->assertContains('The set-up link is shown only once', $controller, 'Opening the page again explains it');
+        $t->assertContains('header(\'Cache-Control: no-store\')', $controller, 'And the page is never cached');
+
+        $router = new Router();
+        require BASE_PATH . '/routes/web.php';
+        $found = [];
+        foreach ($router->routes() as $route) {
+            if (in_array($route['pattern'], ['/registrar/walk-in/{id}/link', '/registrar/walk-in/student/{studentId}'], true)) {
+                $found[] = $route['method'] . ' ' . $route['pattern'];
+                $t->assertTrue(in_array('can:enrollment.walkin', $route['middleware'], true), $route['pattern'] . ' needs enrollment.walkin');
+            }
+        }
+        $t->assertEquals(4, count($found), 'The link page (GET) with "issue a new link" (POST), and the existing-student page (GET) with its form (POST)');
     },
 ];

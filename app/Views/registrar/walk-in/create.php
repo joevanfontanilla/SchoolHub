@@ -9,6 +9,8 @@
  * @var array $sexes
  * @var array $civilStatus
  * @var array $unfinished
+ * @var string $find   what the registrar searched for among registered students
+ * @var array $found  the students that matched
  */
 use App\Models\Term;
 
@@ -55,6 +57,30 @@ $guardianValue = static fn (string $name) => (string) ((old('guardians', [[]])[0
         </p>
     </div>
 
+    <section class="card p-5" aria-labelledby="find-heading">
+        <h3 id="find-heading" class="text-base">Already registered? Find an existing student</h3>
+        <p class="mt-1 text-sm text-slate-600">A continuing or returning student keeps their account. Find them, then enter only the enrollment choices. No new account is made.</p>
+        <form method="GET" role="search" aria-label="Find an existing student" action="<?= e(url('/registrar/walk-in')) ?>" class="mt-3 flex gap-2" novalidate>
+            <label for="find-student" class="sr-only">Name, student number, or email</label>
+            <input type="search" id="find-student" name="find" value="<?= e($find) ?>" placeholder="Name, student number, or email" class="field-input" autocomplete="off">
+            <button type="submit" class="btn-secondary shrink-0">Search</button>
+        </form>
+        <?php if ($find !== ''): ?>
+            <?php if ($found === []): ?>
+                <p class="mt-3 text-sm text-slate-600">No registered student matches “<?= e($find) ?>”. Use the form below to register them.</p>
+            <?php else: ?>
+                <ul class="mt-3 divide-y divide-slate-100 text-sm">
+                    <?php foreach ($found as $row): ?>
+                        <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                            <span><span class="font-semibold text-brand-navy"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></span> <span class="text-brand-gray">· <?= e($row['student_number'] ?? 'no student number yet') ?><?= $row['program_code'] ? ' · ' . e($row['program_code']) : '' ?> · <?= e($row['email']) ?></span></span>
+                            <a href="<?= e(url('/registrar/walk-in/student/' . $row['id'])) ?>" class="font-semibold text-brand-600 hover:underline">Enroll this student<span class="sr-only">: <?= e($row['first_name'] . ' ' . $row['last_name']) ?></span></a>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        <?php endif; ?>
+    </section>
+
     <?php if ($unfinished !== []): ?>
         <section class="card p-5" aria-labelledby="unfinished-heading">
             <h3 id="unfinished-heading" class="text-base">Walk-ins not yet submitted</h3>
@@ -88,6 +114,15 @@ $guardianValue = static fn (string $name) => (string) ((old('guardians', [[]])[0
                     <?= component('field', ['name' => 'last_name', 'label' => 'Last name', 'required' => true, 'value' => old('last_name', '')]) ?>
                     <?= component('field', ['name' => 'suffix', 'label' => 'Suffix', 'value' => old('suffix', ''), 'help' => 'Jr., III…']) ?>
                 </div>
+                <?php if ($duplicate = error_for('duplicate')): ?>
+                    <div class="clear-both mb-5 rounded-xl border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text" role="alert">
+                        <p><?= e($duplicate) ?></p>
+                        <label class="mt-2 flex items-start gap-2 font-medium">
+                            <input type="checkbox" name="confirm_new" value="1" class="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600" <?= old('confirm_new') ? 'checked' : '' ?>>
+                            <span>This is a different person. Create a new account.</span>
+                        </label>
+                    </div>
+                <?php endif; ?>
                 <div class="mt-5 max-w-md">
                     <?= component('field', ['name' => 'email', 'label' => 'Email (used to sign in)', 'type' => 'email', 'required' => true, 'value' => old('email', ''),
                         'help' => 'The applicant sets their own password through a link, so use an address they can open.']) ?>
