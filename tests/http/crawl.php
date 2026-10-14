@@ -366,6 +366,7 @@ try {
         '/registrar/walk-in/{id}'              => [404], // the crawl fixtures hold no walk-in draft
         '/cashier/disbursements/{id}/voucher'  => [404],
         '/cashier/day-close/print'             => [404], // no closed day in the crawl fixtures
+        '/account/signature'                   => [404], // no crawl user has saved a signature
         '/branding/logo'                       => [302],
         // A student with no application is sent to the application form.
         '/student/requirements'                => [302],
