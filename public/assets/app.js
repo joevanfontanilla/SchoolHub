@@ -470,7 +470,7 @@
                 button.hidden = true;
             });
 
-            form.querySelectorAll('select, input[type="date"], input[type="checkbox"], input[type="radio"]').forEach(function (field) {
+            form.querySelectorAll('select, input[type="date"], input[type="month"], input[type="checkbox"], input[type="radio"]').forEach(function (field) {
                 field.addEventListener('change', function () {
                     apply(form, field);
                 });

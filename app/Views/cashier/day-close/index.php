@@ -37,8 +37,8 @@ $dayLabel = dt($date . ' 00:00:00', 'F j, Y');
     <?php endif; ?>
 
     <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
-        <?= component('stat-card', ['label' => 'Cash received', 'value' => $money($summary['receivedCash']), 'hint' => $summary['paymentCount'] . ' payment' . ($summary['paymentCount'] === 1 ? '' : 's') . ', ' . $summary['reversalCount'] . ' reversal' . ($summary['reversalCount'] === 1 ? '' : 's'), 'icon' => 'banknotes', 'tone' => 'success']) ?>
-        <?= component('stat-card', ['label' => 'Cash paid out', 'value' => $money($summary['paidOutCash']), 'hint' => 'Cash vouchers', 'icon' => 'credit-card']) ?>
+        <?= component('stat-card', ['label' => 'Cash received', 'value' => $money($summary['receivedCash']), 'hint' => 'Includes bank withdrawals. ' . $summary['paymentCount'] . ' payment' . ($summary['paymentCount'] === 1 ? '' : 's') . ', ' . $summary['reversalCount'] . ' reversal' . ($summary['reversalCount'] === 1 ? '' : 's'), 'icon' => 'banknotes', 'tone' => 'success']) ?>
+        <?= component('stat-card', ['label' => 'Cash paid out', 'value' => $money($summary['paidOutCash']), 'hint' => 'Cash vouchers and bank deposits', 'icon' => 'credit-card']) ?>
         <?= component('stat-card', ['label' => 'Expected in the drawer', 'value' => $money($summary['expectedCash']), 'hint' => 'Received minus paid out', 'icon' => 'receipt']) ?>
         <?= component('stat-card', ['label' => 'Not cash', 'value' => $money($summary['otherReceived']), 'hint' => 'GCash, cheques, bank. Not counted.', 'icon' => 'inbox']) ?>
     </div>

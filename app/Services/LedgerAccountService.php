@@ -36,6 +36,7 @@ final class LedgerAccountService
     public const BANK = '1020';
     public const RECEIVABLES = '1100';
     public const OPENING_BALANCES = '3010';
+    public const OPENING_CASH = '3020';
     public const BRIDGING = '4800';
     public const OJT = '4810';
     public const OTHER_CHARGES = '4890';
@@ -48,6 +49,7 @@ final class LedgerAccountService
         [self::BANK, 'Cash in Bank and E-wallets', self::ASSET, true],
         [self::RECEIVABLES, 'Student Receivables', self::ASSET, true],
         [self::OPENING_BALANCES, 'Opening Balances (Old Accounts)', self::EQUITY, true],
+        [self::OPENING_CASH, 'Opening Cash Balances', self::EQUITY, true],
         [self::BRIDGING, 'Bridging Fees', self::REVENUE, true],
         [self::OJT, 'OJT Fees', self::REVENUE, true],
         [self::OTHER_CHARGES, 'Other Charges and Fees', self::REVENUE, true],

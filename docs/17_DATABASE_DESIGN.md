@@ -461,6 +461,12 @@ assessment and key, so a student is reminded of each installment once.
 > `payments.first_printed_at` DATETIME nullable (migration 034): when staff first opened the
 > receipt. Anything after that is a duplicate copy.
 
+### `cash_movements` (migration 035)
+`movement_number` VARCHAR(20) unique, `movement_type` (`OPENING`, `DEPOSIT`, `WITHDRAWAL`), `opening_key` (`CASH` or
+`BANK` for an opening balance, otherwise NULL; unique, so each account has one), `entered_at` DATETIME,
+`amount` DECIMAL(12,2), `reference_number` nullable, `remarks` nullable, `recorded_by` FK. Deposits and
+withdrawals are append-only. The ledger account `3020 Opening Cash Balances` takes the other side of an opening balance.
+
 ### `migrations`
 `filename` VARCHAR(255) unique, `batch` INT, `applied_at` DATETIME.
 Used by `database/migrate.php`. No `updated_at`.

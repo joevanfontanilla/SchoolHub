@@ -13,7 +13,8 @@ use App\Core\Database;
  *
  * Accrual basis: an assessment debits Student Receivables and credits revenue, a payment debits cash
  * and credits Student Receivables. A payment is dated by when the cashier recorded it, like the
- * Collections report and the Cash Receipts Journal; a voucher by its disbursement date.
+ * Collections report and the Cash Receipts Journal; a voucher by its disbursement date. Opening cash
+ * balances and bank deposits/withdrawals (cash_movements) are posted when they were entered.
  *
  * No code voids an assessment today, so every assessment is posted as it stands. If voiding is ever
  * added, it must post the reversal here.
@@ -118,6 +119,27 @@ final class LedgerService
             $expense = $voucher['expense_account_id'] !== null ? (int) $voucher['expense_account_id'] : $ids['code'][LedgerAccountService::UNCATEGORIZED];
             $post((string) $voucher['disbursed_at'], (string) $voucher['voucher_number'], $voucher['payee'] . ': ' . $voucher['particulars'],
                 $expense, $cashFor((string) $voucher['payment_method']), FinanceService::cents($voucher['amount']), 'VOUCHER');
+        }
+
+        // Opening cash balances and moves between the cash and bank accounts.
+        $cash = $ids['code'][LedgerAccountService::CASH];
+        $bank = $ids['code'][LedgerAccountService::BANK];
+        foreach (Database::select(
+            'SELECT movement_number, movement_type, opening_key, entered_at, amount, reference_number FROM cash_movements WHERE entered_at <= ? ORDER BY entered_at, id',
+            [$end]
+        ) as $movement) {
+            $cents = FinanceService::cents($movement['amount']);
+            $ref = (string) $movement['movement_number'];
+            $slip = $movement['reference_number'] !== null ? ' (' . $movement['reference_number'] . ')' : '';
+            if ($movement['movement_type'] === 'OPENING') {
+                $target = $movement['opening_key'] === 'BANK' ? $bank : $cash;
+                $post((string) $movement['entered_at'], $ref, 'Opening balance, ' . ($movement['opening_key'] === 'BANK' ? 'Bank and E-wallets' : 'Cash on Hand'),
+                    $target, $ids['code'][LedgerAccountService::OPENING_CASH], $cents, 'OPENING');
+            } elseif ($movement['movement_type'] === 'DEPOSIT') {
+                $post((string) $movement['entered_at'], $ref, 'Deposit to bank' . $slip, $bank, $cash, $cents, 'CASH_MOVE');
+            } else {
+                $post((string) $movement['entered_at'], $ref, 'Withdrawal from bank' . $slip, $cash, $bank, $cents, 'CASH_MOVE');
+            }
         }
 
         // Stable order: by time, then the order the postings were made in.
@@ -240,7 +262,7 @@ final class LedgerService
             }
         }
         foreach ([LedgerAccountService::CASH, LedgerAccountService::BANK, LedgerAccountService::RECEIVABLES, LedgerAccountService::OPENING_BALANCES,
-                  LedgerAccountService::BRIDGING, LedgerAccountService::OJT, LedgerAccountService::OTHER_CHARGES, LedgerAccountService::DISCOUNTS,
+                  LedgerAccountService::OPENING_CASH, LedgerAccountService::BRIDGING, LedgerAccountService::OJT, LedgerAccountService::OTHER_CHARGES, LedgerAccountService::DISCOUNTS,
                   LedgerAccountService::UNCATEGORIZED] as $code) {
             if (!isset($ids['code'][$code])) {
                 throw new \RuntimeException("The ledger account {$code} is missing. Run: php database/seed.php");

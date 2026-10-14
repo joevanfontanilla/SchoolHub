@@ -35,9 +35,15 @@ final class DayCloseService
             $methods[(string) $row['payment_method']] = FinanceService::signedCents($row['total']);
         }
 
-        $receivedCash = $methods['Cash'] ?? 0;
-        $otherReceived = array_sum($methods) - $receivedCash;
-        $paidOutCash = FinanceService::cents((string) Database::scalar(
+        // Banking the cash is not a shortage: a deposit leaves the drawer, a withdrawal from the bank enters it.
+        $moves = [];
+        foreach (Database::select("SELECT movement_type, SUM(amount) AS total FROM cash_movements WHERE movement_type <> 'OPENING' AND DATE(entered_at) = ? GROUP BY movement_type", [$date]) as $row) {
+            $moves[(string) $row['movement_type']] = FinanceService::cents((string) $row['total']);
+        }
+
+        $otherReceived = array_sum($methods) - ($methods['Cash'] ?? 0);
+        $receivedCash = ($methods['Cash'] ?? 0) + ($moves['WITHDRAWAL'] ?? 0);
+        $paidOutCash = ($moves['DEPOSIT'] ?? 0) + FinanceService::cents((string) Database::scalar(
             "SELECT COALESCE(SUM(amount), 0) FROM disbursement_vouchers WHERE payment_method = 'Cash' AND DATE(created_at) = ?",
             [$date]
         ));

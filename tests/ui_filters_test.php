@@ -48,7 +48,7 @@ return [
         $js = (string) file_get_contents(BASE_PATH . '/public/assets/app.js');
 
         $t->assertContains("form[data-auto-submit]", $js, 'The script looks for the attribute');
-        $t->assertContains("'select, input[type=\"date\"], input[type=\"checkbox\"], input[type=\"radio\"]'", $js, 'Dropdowns, dates, and checkboxes apply on change');
+        $t->assertContains("'select, input[type=\"date\"], input[type=\"month\"], input[type=\"checkbox\"], input[type=\"radio\"]'", $js, 'Dropdowns, dates, and checkboxes apply on change');
         $t->assertContains('input[type="search"], input[type="text"], input[type="number"]', $js, 'Search and number boxes apply after a pause');
         $t->assertContains('The start date must be on or before the end date.', $js, 'A reversed date range waits instead of loading an error');
         $t->assertContains('button.hidden = true', $js, 'The Show and Search buttons are hidden while scripts work');

@@ -366,3 +366,40 @@ The first time staff open a receipt it is the original. Every later opening by s
 opening by the student after that, shows **DUPLICATE COPY**, and each staff reprint is audited
 (`finance.receipt_reprinted`). The **Print receipt** button after a payment opens the receipt with
 the browser's print dialog already open.
+
+## The Cash Book (as built)
+
+The school's paper cash book, as a report: **Cashier → Reports → Cash Book**
+(`/cashier/reports/cash-book`, permission `reports.cashier`). It is **computed** from the same
+records as the general ledger (payments, reversals, vouchers, and the entries below), so it always
+agrees with the Cash Receipts Journal, the Cash Disbursements Journal, and the ledger accounts 1010 and 1020.
+
+- **Layout.** Two sides, like the school's template. **Cash Inflow** on the left and **Cash Outflow**
+  on the right, each with Date, Transaction Details, and Amount. The first inflow row is
+  **Balance C/F**. Below: Total Inflow, Total Outflow, then the summary.
+- **A month at a time.** A month picker (default: this month) and an **Account** dropdown: *Cash on
+  Hand* (1010) or *Bank and E-wallets* (1020: GCash, Maya, cheques, bank transfers). Both apply by
+  themselves. Balance C/F is the previous month's closing balance for that account.
+- **Inflow** is cash payments (or e-wallet, cheque, and bank payments in the Bank book), the opening
+  balance, and withdrawals from the bank. A **reversed payment** is a *negative* inflow on the day
+  it was reversed. **Outflow** is vouchers and deposits to the bank.
+- **Summary.** Total Inflow (including Balance C/F), Total Outflow, **Closing Balance**; for the Cash
+  book also **Counted at day close** (the total of the month's counts from Close the Day) and
+  **Over/short** (the total of their differences), with the number of days that had cash activity
+  but were not closed. Close the Day counts each day's collections, not the whole drawer, so these are
+  totals of the daily counts. Nothing extra is typed.
+- It prints on one landscape page and exports as CSV (audited, like every report).
+
+### Opening balance
+A one-time entry for Cash on Hand and for Bank, with a date: what the school held when it started
+using the system. It is the first month's Balance C/F and posts to the ledger as **Dr the cash account,
+Cr 3020 Opening Cash Balances**. It can be corrected; each change is audited with the old and new amount.
+Permission `disbursements.manage`.
+
+### Bank deposits and withdrawals
+**Deposit to bank** (cash to bank) and **Withdraw from bank** (bank to cash): amount, reference
+(deposit slip number), remarks, recorded at the time it is entered (`cash_movements`, numbered CM-yyyy-nnnnn).
+Append-only like a voucher: a mistake is fixed with the opposite entry. A deposit is a Cash outflow and a Bank
+inflow; the ledger posts **Dr 1020 / Cr 1010** (a withdrawal the reverse). Permission `disbursements.manage`.
+A deposit counts as cash paid out, and a withdrawal as cash received, in **Close the Day**, so
+banking the cash does not look like a shortage. A closed day refuses a new deposit or withdrawal, like any other entry.

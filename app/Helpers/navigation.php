@@ -180,6 +180,7 @@ return [
         '/cashier/ledger'           => 'general ledger trial balance accounts chart of accounts debit credit revenue expense receivables cash',
         '/cashier/reports/account-list'           => 'account list program year tab class ledger balances installments prelims midterm finals',
         '/cashier/reports/receipts-journal'       => 'cash receipts journal crj official receipt or collections',
+        '/cashier/reports/cash-book'              => 'cash book inflow outflow balance carried forward bank deposit withdraw opening balance',
         '/cashier/reports/disbursements-journal'  => 'cash disbursements journal cdj voucher expenses paid out',
         '/admin/users'              => 'accounts staff create disable unlock',
         '/admin/roles'              => 'permissions access',
