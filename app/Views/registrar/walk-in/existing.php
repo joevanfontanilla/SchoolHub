@@ -40,7 +40,7 @@ foreach ($programs as $program) {
     $programOptions[$program['id']] = $program['code'] . ' · ' . $program['name'];
 }
 $yearOptions = array_column($yearLevels, 'name', 'id');
-$typeOptions = array_combine($studentTypes, $studentTypes);
+$typeOptions = \App\Models\Student::TYPE_LABELS;
 ?>
 <div class="mx-auto max-w-3xl space-y-6">
     <div>

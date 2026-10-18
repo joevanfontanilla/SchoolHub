@@ -84,7 +84,7 @@ Single-use. Index `(token_hash)`.
 `user_id` FK unique (one student per user account),
 `student_number` VARCHAR(20) **NULL** unique (format in section 9),
 `program_id` FK **NULL**, `curriculum_id` FK **NULL** (docs/28), `year_level_id` FK **NULL**,
-`student_type` VARCHAR(20) (`New`, `Transferee`, `Continuing`, `Returning`),
+`student_type` VARCHAR(20) (`New`, `Old`, `Transferee`, `Summer`),
 `status` VARCHAR(20) (`Applicant`, `Enrolled`, `Inactive`, `Graduated`),
 `admitted_at` DATE nullable.
 
@@ -195,7 +195,7 @@ Added for symmetry with students; the original specification had no teacher tabl
 | `student_id` | FK | RESTRICT |
 | `academic_year_id`, `term_id` | FK | the period applied for |
 | `program_id`, `year_level_id` | FK | what the student applied **for** |
-| `student_type` | VARCHAR(20) | New, Transferee, Continuing, Returning — fixed once the draft exists |
+| `student_type` | VARCHAR(20) | New, Old, Transferee, Summer — fixed once the draft exists (migration 040 renamed Continuing and Returning to Old) |
 | `previous_school`, `last_school_year` | VARCHAR | nullable; `previous_school` required for transferees |
 | `application_status` | VARCHAR(30) | axis 1 — see `docs/26` |
 | `payment_status` | VARCHAR(20) | axis 2 — **derived**, see `docs/26` section 3 |

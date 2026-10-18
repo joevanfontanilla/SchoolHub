@@ -70,6 +70,11 @@ The student type decides which documents are required, so it is fixed once the d
 created. Program, year level, and previous school remain editable while the application is
 `DRAFT` or `CORRECTION_REQUIRED`.
 
+The types are **New student**, **Old student**, **Transferee**, and **Summer**. The type is a label for reports and the registrar;
+it is chosen on the online form and the walk-in form, and does not change fees, sections, or the term. Only a Transferee must name a
+previous school, and the document list per type is in docs/10. (Earlier versions had Continuing and Returning; migration 040 turned
+those into Old.)
+
 ---
 
 ## Enrollment flow as built
@@ -182,7 +187,7 @@ confirmation steps as an online applicant. Only the way in differs.
   document that is missing refuses the submit and keeps the ticks; "Save and finish later" keeps the walk-in
   under "Walk-ins not yet submitted". The registrar who created the walk-in is **not** sent the "New
   application" alert for it; the other registrars are.
-- **A student who is already registered** (Continuing or Returning, or anyone with an account) is found with
+- **A student who is already registered** (an Old student, or anyone with an account) is found with
   **Find an existing student** on the intake page, by name, student number, or email. The registrar then
   enters only the enrollment choices; the application is created on the **existing account** (no new account,
   no set-up link), as a walk-in draft, and continues at step 2.

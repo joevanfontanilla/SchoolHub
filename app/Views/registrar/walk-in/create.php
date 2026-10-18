@@ -42,7 +42,7 @@ foreach ($programs as $program) {
     $programOptions[$program['id']] = $program['code'] . ' · ' . $program['name'];
 }
 $yearOptions = array_column($yearLevels, 'name', 'id');
-$typeOptions = array_combine($studentTypes, $studentTypes);
+$typeOptions = \App\Models\Student::TYPE_LABELS;
 
 $guardianField = static fn (string $name) => "guardians[0][{$name}]";
 $guardianValue = static fn (string $name) => (string) ((old('guardians', [[]])[0] ?? [])[$name] ?? '');
@@ -59,7 +59,7 @@ $guardianValue = static fn (string $name) => (string) ((old('guardians', [[]])[0
 
     <section class="card p-5" aria-labelledby="find-heading">
         <h3 id="find-heading" class="text-base">Already registered? Find an existing student</h3>
-        <p class="mt-1 text-sm text-slate-600">A continuing or returning student keeps their account. Find them, then enter only the enrollment choices. No new account is made.</p>
+        <p class="mt-1 text-sm text-slate-600">An old student keeps their account. Find them, then enter only the enrollment choices. No new account is made.</p>
         <form method="GET" role="search" aria-label="Find an existing student" action="<?= e(url('/registrar/walk-in')) ?>" class="mt-3 flex gap-2" novalidate>
             <label for="find-student" class="sr-only">Name, student number, or email</label>
             <input type="search" id="find-student" name="find" value="<?= e($find) ?>" placeholder="Name, student number, or email" class="field-input" autocomplete="off">

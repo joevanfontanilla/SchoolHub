@@ -121,7 +121,7 @@ final class WalkInService
     }
 
     /**
-     * An application on an account that already exists (a continuing or returning student): no new
+     * An application on an account that already exists (an old student): no new
      * account and no set-up link, only the enrollment choices.
      *
      * @param array<string,mixed> $input term_id, program_id, year_level_id, student_type, previous_school, last_school_year

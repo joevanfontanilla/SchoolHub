@@ -55,8 +55,8 @@ use App\Models\Term;
         <ul class="mt-4 space-y-2 text-sm text-slate-700">
             <li>New students who have completed senior high school.</li>
             <li>Transferees from another recognized institution.</li>
-            <li>Continuing students proceeding to the next term.</li>
-            <li>Returning students resuming after a break.</li>
+            <li>Old students of the school, continuing or coming back.</li>
+            <li>Summer students enrolling for the summer term.</li>
         </ul>
     </section>
 

@@ -30,7 +30,10 @@ $filters = ['term_id' => null, 'program_id' => $programId, 'year_level_id' => nu
                             <th scope="col" class="px-3 py-3 text-right font-semibold">Applicants</th>
                             <th scope="col" class="px-3 py-3 text-right font-semibold">Approved</th>
                             <th scope="col" class="px-3 py-3 text-right font-semibold">Enrolled</th>
-                            <th scope="col" class="px-3 py-3 text-right font-semibold">New students</th>
+                            <th scope="col" class="px-3 py-3 text-right font-semibold">New</th>
+                            <th scope="col" class="px-3 py-3 text-right font-semibold">Old</th>
+                            <th scope="col" class="px-3 py-3 text-right font-semibold">Transferee</th>
+                            <th scope="col" class="px-3 py-3 text-right font-semibold">Summer</th>
                             <th scope="col" class="px-3 py-3 text-right font-semibold">Units</th>
                             <?php foreach ($report['programs'] as $code): ?>
                                 <th scope="col" class="px-3 py-3 text-right font-semibold"><?= e($code) ?></th>
@@ -45,6 +48,9 @@ $filters = ['term_id' => null, 'program_id' => $programId, 'year_level_id' => nu
                                 <td class="px-3 py-3 text-right tabular-nums"><?= e(number_format($term['approved'])) ?></td>
                                 <td class="px-3 py-3 text-right font-semibold tabular-nums"><?= e(number_format($term['enrolled'])) ?></td>
                                 <td class="px-3 py-3 text-right tabular-nums"><?= e(number_format($term['new'])) ?></td>
+                                <td class="px-3 py-3 text-right tabular-nums"><?= e(number_format($term['old'])) ?></td>
+                                <td class="px-3 py-3 text-right tabular-nums"><?= e(number_format($term['transferee'])) ?></td>
+                                <td class="px-3 py-3 text-right tabular-nums"><?= e(number_format($term['summer'])) ?></td>
                                 <td class="px-3 py-3 text-right tabular-nums"><?= e(number_format($term['units'], 1)) ?></td>
                                 <?php foreach ($report['programs'] as $code): ?>
                                     <td class="px-3 py-3 text-right tabular-nums <?= ($term['by_program'][$code] ?? 0) === 0 ? 'text-slate-400' : '' ?>"><?= e(number_format($term['by_program'][$code] ?? 0)) ?></td>

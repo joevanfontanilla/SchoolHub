@@ -215,10 +215,10 @@ final class ReportController extends Controller
         $this->audit('history', ['program_id' => $programId], count($report['terms']));
 
         CsvExport::send('enrollment-history-' . date('Y-m-d') . '.csv',
-            ['Term', 'Academic year', 'Starts', 'Applicants', 'Approved', 'Enrolled', 'New students', 'Units', ...$report['programs']],
+            ['Term', 'Academic year', 'Starts', 'Applicants', 'Approved', 'Enrolled', 'New', 'Old', 'Transferee', 'Summer', 'Units', ...$report['programs']],
             array_map(static fn (array $term): array => [
                 $term['name'], $term['academic_year_code'], $term['start_date'], $term['applicants'], $term['approved'],
-                $term['enrolled'], $term['new'], $term['units'],
+                $term['enrolled'], $term['new'], $term['old'], $term['transferee'], $term['summer'], $term['units'],
                 ...array_map(static fn (string $code) => $term['by_program'][$code] ?? 0, $report['programs']),
             ], $report['terms'])
         );

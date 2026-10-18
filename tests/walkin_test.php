@@ -433,7 +433,7 @@ return [
             $registrar = makeUser(User::ROLE_REGISTRAR);
             $result = WalkInService::register($registrar, walkInInput());
             $studentId = (int) Database::scalar('SELECT student_id FROM enrollment_applications WHERE id = ?', [$result['application_id']]);
-            $input = applicationInput('Continuing');
+            $input = applicationInput('Old');
             ensureIntakeSection($input);
             $users = (int) Database::scalar('SELECT COUNT(*) FROM users');
 
@@ -448,7 +448,7 @@ return [
             $t->assertEquals($studentId, (int) $application['student_id'], 'On the existing student');
             $t->assertEquals('walk_in', $application['source']);
             $t->assertEquals(Application::DRAFT, $application['application_status']);
-            $t->assertEquals('Continuing', $application['student_type']);
+            $t->assertEquals('Old', $application['student_type']);
             $t->assertEquals($users, (int) Database::scalar('SELECT COUNT(*) FROM users'), 'No new account was made');
             $t->assertEquals(1, (int) Database::scalar("SELECT COUNT(*) FROM audit_logs WHERE action = 'walkin.registered' AND target_id = ?", [$second]), 'Audited');
             $t->assertEquals([$second], array_map('intval', array_column(array_filter(WalkInService::unfinished(), static fn ($r) => (int) $r['id'] === $second), 'id')), 'It appears under Walk-ins not yet submitted');

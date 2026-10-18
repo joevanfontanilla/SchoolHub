@@ -228,7 +228,7 @@ final class RegistrarReport
               WHERE t.start_date <= DATE_ADD(CURDATE(), INTERVAL 1 YEAR)
               ORDER BY t.start_date DESC'
         ) as $term) {
-            $terms[(int) $term['id']] = $term + ['applicants' => 0, 'approved' => 0, 'enrolled' => 0, 'new' => 0, 'units' => 0.0, 'by_program' => []];
+            $terms[(int) $term['id']] = $term + ['applicants' => 0, 'approved' => 0, 'enrolled' => 0, 'new' => 0, 'old' => 0, 'transferee' => 0, 'summer' => 0, 'units' => 0.0, 'by_program' => []];
         }
 
         foreach (Database::select(
@@ -246,7 +246,8 @@ final class RegistrarReport
 
         $programs = [];
         foreach (Database::select(
-            "SELECT e.term_id, p.code AS program_code, COUNT(*) AS enrolled, SUM(ea.student_type = 'New') AS new_students, SUM(e.total_units) AS units
+            "SELECT e.term_id, p.code AS program_code, COUNT(*) AS enrolled, SUM(ea.student_type = 'New') AS new_students, SUM(ea.student_type = 'Old') AS old_students,
+                    SUM(ea.student_type = 'Transferee') AS transferees, SUM(ea.student_type = 'Summer') AS summer_students, SUM(e.total_units) AS units
                FROM enrollments e
                JOIN enrollment_applications ea ON ea.id = e.application_id
                JOIN sections sec ON sec.id = e.section_id
@@ -264,6 +265,9 @@ final class RegistrarReport
             $terms[$id]['by_program'][$row['program_code']] = (int) $row['enrolled'];
             $terms[$id]['enrolled'] += (int) $row['enrolled'];
             $terms[$id]['new'] += (int) $row['new_students'];
+            $terms[$id]['old'] += (int) $row['old_students'];
+            $terms[$id]['transferee'] += (int) $row['transferees'];
+            $terms[$id]['summer'] += (int) $row['summer_students'];
             $terms[$id]['units'] += (float) $row['units'];
         }
 

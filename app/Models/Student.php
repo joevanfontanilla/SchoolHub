@@ -12,7 +12,9 @@ use App\Core\Database;
  */
 final class Student
 {
-    public const TYPES = ['New', 'Transferee', 'Continuing', 'Returning'];
+    /** The stored value => what people read (docs/09). */
+    public const TYPE_LABELS = ['New' => 'New student', 'Old' => 'Old student', 'Transferee' => 'Transferee', 'Summer' => 'Summer'];
+    public const TYPES = ['New', 'Old', 'Transferee', 'Summer'];
 
     public const STATUS_APPLICANT = 'Applicant';
     public const STATUS_ENROLLED  = 'Enrolled';

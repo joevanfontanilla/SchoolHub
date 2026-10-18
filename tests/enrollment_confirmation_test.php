@@ -117,7 +117,7 @@ return [
                     'term_id'            => $otherTerm,
                     'program_id'         => (int) Database::scalar('SELECT program_id FROM enrollment_applications WHERE id = ?', [$id]),
                     'year_level_id'      => (int) Database::scalar('SELECT year_level_id FROM enrollment_applications WHERE id = ?', [$id]),
-                    'student_type'       => 'Continuing',
+                    'student_type'       => 'Old',
                     'application_status' => 'APPROVED',
                 ]);
 
