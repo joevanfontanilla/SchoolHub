@@ -15,6 +15,8 @@
  * @var array  $addable      other classes of the term
  * @var ?float $unitLimit
  * @var array  $history
+ * @var ?array $withdrawn    the latest withdrawn enrollment, when the student has no current one
+ * @var ?string $balance     what the student still owes on it, in pesos
  */
 $id = (int) $student['id'];
 $value = static fn (string $field) => old($field, $profile[$field] ?? '');
@@ -53,7 +55,7 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
                 <p class="eyebrow"><?= e($student['student_number'] ?? 'No student number yet') ?></p>
                 <h2 class="mt-1 text-2xl"><?= e(trim($student['first_name'] . ' ' . ($student['middle_name'] ? $student['middle_name'] . ' ' : '') . $student['last_name'])) ?></h2>
                 <p class="mt-1 text-sm text-slate-600">
-                    <?= e($student['email']) ?> · <?= e($student['status']) ?>
+                    <?= e($student['email']) ?> · <?= e($withdrawn !== null ? 'Withdrawn' : $student['status']) ?>
                     <?= $student['program_code'] ? ' · ' . e($student['program_code'] . ', ' . $student['year_level_name']) : '' ?>
                 </p>
             </div>
@@ -104,6 +106,54 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
         </p>
     <?php endif; ?>
 
+    <?php if ($enrollment !== null): ?>
+        <?php $reasonError = error_for('reason'); ?>
+        <section id="withdraw" class="card p-5" aria-labelledby="withdraw-heading">
+            <h2 id="withdraw-heading" class="text-base">Withdraw from this term</h2>
+            <p class="mt-1 text-sm text-slate-600">Drops every class and frees the seat. The record, grades, attendance, fees and payments stay. The e-ID stops being valid. You can reinstate the student while the school year is active.</p>
+            <?php if ($balance !== null): ?>
+                <p class="mt-2 rounded-lg bg-warning-bg px-3 py-2 text-sm text-warning-text">Balance on the account: <strong><?= e(money($balance)) ?></strong>. Withdrawing does not change fees or payments. Any refund or reduction is a separate adjustment by the cashier.</p>
+            <?php endif; ?>
+            <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/withdraw')) ?>" class="mt-3 flex flex-wrap items-end gap-3" novalidate
+                  data-confirm="Every class is dropped and the seat is freed. The student is notified. Fees and payments are not changed." data-confirm-title="Withdraw this student?" data-confirm-tone="danger" data-confirm-label="Withdraw student"
+                  data-confirm-requires="#withdraw-reason" data-confirm-requires-message="Write the reason for withdrawing the student first. It is recorded in the audit log.">
+                <?= csrf_field() ?>
+                <div class="min-w-[16rem] flex-1">
+                    <label for="withdraw-reason" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>
+                    <input id="withdraw-reason" name="reason" class="field-input <?= $reasonError ? 'field-input-error' : '' ?>" maxlength="480" placeholder="e.g. Transferred to another school">
+                    <?php if ($reasonError): ?><p class="field-error"><span><?= e($reasonError) ?></span></p><?php endif; ?>
+                </div>
+                <button type="submit" class="btn-danger">Withdraw student</button>
+            </form>
+        </section>
+    <?php elseif ($withdrawn !== null): ?>
+        <?php $reasonError = error_for('reason'); ?>
+        <section id="withdraw" class="card p-5" aria-labelledby="withdraw-heading">
+            <div class="flex flex-wrap items-center gap-2">
+                <h2 id="withdraw-heading" class="text-base">Withdrawn · <?= e($withdrawn['term_name']) ?>, <?= e($withdrawn['academic_year_code']) ?></h2>
+                <?= component('status-badge', ['status' => 'CANCELLED', 'label' => 'Withdrawn']) ?>
+            </div>
+            <p class="mt-1 text-sm text-slate-600">Section <?= e($withdrawn['section_code']) ?> · withdrawn <?= e(dt($withdrawn['withdrawn_at'])) ?> by <?= e((string) $withdrawn['withdrawn_by_name']) ?>. Reason: <?= e((string) $withdrawn['withdraw_reason']) ?></p>
+            <?php if ($balance !== null): ?>
+                <p class="mt-2 text-sm text-slate-600">Balance on the account: <strong><?= e(money($balance)) ?></strong>.</p>
+            <?php endif; ?>
+            <?php if ($withdrawn['reinstate_problem'] !== null): ?>
+                <p class="mt-3 text-sm text-slate-600"><?= e($withdrawn['reinstate_problem']) ?></p>
+            <?php else: ?>
+                <form method="POST" action="<?= e(url('/registrar/students/' . $id . '/reinstate')) ?>" class="mt-3 flex flex-wrap items-end gap-3" novalidate
+                      data-confirm="The student is enrolled again and the classes dropped by the withdrawal come back." data-confirm-title="Reinstate this student?" data-confirm-tone="success" data-confirm-label="Reinstate"
+                      data-confirm-requires="#reinstate-reason" data-confirm-requires-message="Write the reason for reinstating the student first.">
+                    <?= csrf_field() ?>
+                    <div class="min-w-[16rem] flex-1">
+                        <label for="reinstate-reason" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>
+                        <input id="reinstate-reason" name="reason" class="field-input <?= $reasonError ? 'field-input-error' : '' ?>" maxlength="480" placeholder="e.g. Withdrawn by mistake">
+                        <?php if ($reasonError): ?><p class="field-error"><span><?= e($reasonError) ?></span></p><?php endif; ?>
+                    </div>
+                    <button type="submit" class="btn-primary">Reinstate student</button>
+                </form>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
     <?php if ($enrollment !== null): ?>
         <?php
         $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 1, '.', ''), '0'), '.');

@@ -136,8 +136,8 @@ Two levels, because payments, receipts, grades, enrollments, and the audit log a
   `Active`, so an administrator enables it on purpose.
 - **Erase permanently.** Only for an account that nothing refers to (a mistake or a test account): the database
   refuses it otherwise, and the account stays deleted. Students never qualify (their student record refers to them).
-- **Refused** for: your own account; the last active Super Admin; a student who is currently enrolled (withdraw
-  them or wait for the term to end); a teacher who still teaches active classes or advises a section.
+- **Refused** for: your own account; the last active Super Admin; a student who is currently enrolled (the registrar
+  withdraws them first, docs/26); a teacher who still teaches active classes or advises a section.
 - Audited: `user.deleted`, `user.restored`, `user.erased`, with the reason. The deleted accounts are listed under the
   Users filter **Deleted** and are left out of every other list, picker, and count of active people.
 

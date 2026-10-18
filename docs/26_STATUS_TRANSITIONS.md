@@ -89,9 +89,17 @@ The payment threshold is policy-driven, read from the `enrollment_payment_policy
 system setting (`FULL` \| `MINIMUM_DOWNPAYMENT` \| `NONE`), because `docs/09` says only
 "pays according to school policy". Default: `MINIMUM_DOWNPAYMENT`.
 
-`DROPPED` / `WITHDRAWN` is deliberately **not** in v1.0 — dropping is not listed in
-`docs/03_SCOPE.md`. Add it only with approval, as a new state, never by deleting the
-enrollment record.
+### Withdrawal (added with approval, after v1.0)
+`enrollments.status` gains `WITHDRAWN`. The enrollment row is never deleted. `enrollment_applications.enrollment_state`
+stays `ENROLLED`, so fees, payments, and receipts keep working; the withdrawal is its own history row (axis `enrollment`).
+
+| From | To | Actor | Preconditions | Side effects |
+|---|---|---|---|---|
+| `ENROLLED` | `WITHDRAWN` | Registrar (`students.manage`) | A reason of 5+ characters | Every `ENLISTED` class is marked `DROPPED` (reason "Withdrawn: ..."), units recomputed, the section seat is freed, `withdrawn_at/by` and `withdraw_reason` are saved, the student is notified, history and audit rows (`enrollment.withdrawn`) are written. Grades, attendance, and the record stay. The e-ID stops being Valid. The student can still sign in to see their record and balance. |
+| `WITHDRAWN` | `ENROLLED` | Registrar (`students.manage`) | A reason; the term's school year is active and not ended; the section is active and has a seat | The classes dropped by the withdrawal return to `ENLISTED`, units recomputed, the withdrawal fields are cleared, the student is notified, history and audit (`enrollment.reinstated`). |
+
+Withdrawal never changes fees or payments. A refund or reduction is a separate, manual cashier adjustment (docs/14); the
+withdrawal screen shows the balance and says so. Deleting a student's account (docs/07) is refused only while they are `ENROLLED`.
 
 ## 5. Enforcement rules
 

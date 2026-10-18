@@ -16,6 +16,7 @@ use App\Services\AcademicRecordService;
 use App\Services\EnlistmentService;
 use App\Services\StudentProfileService;
 use App\Services\StudentRecordService;
+use App\Services\WithdrawalService;
 
 /**
  * Student records (docs/11 "Student records", docs/04 "manage student records").
@@ -41,8 +42,14 @@ final class StudentController extends Controller
         $id = (int) $student['id'];
         $enrollment = AcademicRecordService::currentEnrollment($id);
         $enrollmentId = $enrollment === null ? null : (int) $enrollment['id'];
+        $withdrawn = $enrollment === null ? WithdrawalService::withdrawnFor($id) : null;
+        $assessment = $enrollment !== null || $withdrawn !== null
+            ? \App\Models\Finance::assessmentForApplication((int) ($enrollment['application_id'] ?? $withdrawn['application_id']))
+            : null;
 
         $this->appView('registrar/students/show', [
+            'withdrawn'    => $withdrawn,
+            'balance'      => $assessment['balance'] ?? null,
             'enrollment'   => $enrollment,
             'classes'      => $enrollmentId === null ? [] : AcademicRecordService::classesForEnrollment($enrollmentId),
             'notEnlisted'  => $enrollmentId === null ? [] : EnlistmentService::notEnlisted($enrollmentId),
@@ -107,6 +114,40 @@ final class StudentController extends Controller
             return;
         }
         $this->success('Class added to the student\'s load.', "/registrar/students/{$id}#classes");
+    }
+
+    /** Withdraw the student's current enrollment: classes dropped, seat freed, record and money untouched. */
+    public function withdraw(Request $request): void
+    {
+        $id = (int) $this->student($request)['id'];
+        $enrollment = AcademicRecordService::currentEnrollment($id);
+        if ($enrollment === null) {
+            throw HttpException::notFound('This student has no current enrollment.');
+        }
+        try {
+            WithdrawalService::withdraw(Auth::user(), (int) $enrollment['id'], (string) $request->input('reason', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), "/registrar/students/{$id}#withdraw");
+            return;
+        }
+        $this->success('The student was withdrawn. Their record and balance stay; any refund is a separate cashier adjustment.', "/registrar/students/{$id}");
+    }
+
+    /** Bring a withdrawn student back into their term. */
+    public function reinstate(Request $request): void
+    {
+        $id = (int) $this->student($request)['id'];
+        $withdrawn = WithdrawalService::withdrawnFor($id);
+        if ($withdrawn === null) {
+            throw HttpException::notFound('This student has no withdrawn enrollment.');
+        }
+        try {
+            WithdrawalService::reinstate(Auth::user(), (int) $withdrawn['id'], (string) $request->input('reason', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), "/registrar/students/{$id}#withdraw");
+            return;
+        }
+        $this->success('The student is enrolled again, and their classes are back.', "/registrar/students/{$id}");
     }
 
     /** Drop one enlistment. It stays on the record as dropped. */

@@ -258,7 +258,7 @@ final class UserAdminService
             $user->isSuperAdmin() && $user->status === User::STATUS_ACTIVE && self::otherActiveSuperAdmins($user->id) === 0
                 => 'This is the last active Super Admin. Create or enable another Super Admin first.',
             $user->isStudent() && EIdService::enrolledNow($user->id)
-                => 'This student is currently enrolled. Withdraw them first, or wait until the school year ends.',
+                => 'This student is currently enrolled. Ask the registrar to withdraw them from the term first, or wait until the school year ends.',
             $user->isTeacher() && (int) Database::scalar("SELECT COUNT(*) FROM class_schedules WHERE teacher_user_id = ? AND status = 'ACTIVE'", [$user->id]) > 0
                 => 'This teacher still teaches classes. Assign those classes to another teacher first.',
             (int) Database::scalar('SELECT COUNT(*) FROM sections WHERE adviser_user_id = ? AND is_active = 1', [$user->id]) > 0

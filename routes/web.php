@@ -445,6 +445,8 @@ $router->get('/registrar/students/{id}/e-id',         [EIdController::class, 'st
 $router->get('/registrar/students/{id}/e-id/print',   [EIdController::class, 'studentPrint'],   $registrar('students.manage'));
 $router->post('/registrar/students/{id}/e-id/reissue', [EIdController::class, 'studentReissue'], $registrar('students.manage'));
 $router->post('/registrar/students/{id}/enlistments', [RegistrarStudents::class, 'addClass'],  $registrar('academic.assign'));
+$router->post('/registrar/students/{id}/withdraw',   [RegistrarStudents::class, 'withdraw'],  $registrar('students.manage'));
+$router->post('/registrar/students/{id}/reinstate',  [RegistrarStudents::class, 'reinstate'], $registrar('students.manage'));
 $router->post('/registrar/students/{id}/credits', [RegistrarStudents::class, 'creditSubject'], $registrar('academic.credit'));
 $router->post('/registrar/students/{id}/credits/{creditId}/delete', [RegistrarStudents::class, 'removeCredit'], $registrar('academic.credit'));
 $router->post('/registrar/enlistments/{id}/drop',     [RegistrarStudents::class, 'dropClass'], $registrar('academic.assign'));
