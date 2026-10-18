@@ -37,6 +37,7 @@ final class GradingController extends Controller
             'term'    => $term,
             'periods' => $periods,
             'graded'  => array_sum(array_column($periods, 'grade_count')) > 0,
+            'missingSemiFinals' => $periods !== [] && !in_array('Semi-Finals', array_column($periods, 'name'), true),
         ]);
     }
 
@@ -62,6 +63,21 @@ final class GradingController extends Controller
             return;
         }
         $this->success('Weights saved.', $back);
+    }
+
+    /** Add the Semi-Finals period to a term that lacks it. */
+    public function addSemiFinals(Request $request): void
+    {
+        $termId = (int) $request->param('id');
+        $back = "/registrar/grading?term_id={$termId}";
+
+        try {
+            GradingService::addSemiFinals(Auth::user(), $termId);
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], $back);
+            return;
+        }
+        $this->success('Semi-Finals was added. It is closed: open it when teachers should enter Semi-Finals grades.', $back);
     }
 
     private function toggle(Request $request, bool $open): void

@@ -96,6 +96,57 @@ final class GradingService
         });
     }
 
+    /**
+     * Give a term that lacks it a Semi-Finals period, between Midterm and Finals, closed, with the standard 20/20/20/40 weights.
+     * Refused when a student in the term already has a complete final (every existing period graded), because adding a period
+     * would change it; grades already entered are never touched.
+     */
+    public static function addSemiFinals(User $registrar, int $termId): void
+    {
+        self::assertRegistrar($registrar);
+
+        Database::transaction(static function () use ($registrar, $termId): void {
+            $periods = Database::select('SELECT * FROM grade_periods WHERE term_id = ? ORDER BY sequence FOR UPDATE', [$termId]);
+            if ($periods === []) {
+                throw HttpException::notFound('That term has no grading periods.');
+            }
+            $names = array_column($periods, 'name');
+            if (in_array('Semi-Finals', $names, true)) {
+                throw ValidationException::withMessage('This term already has a Semi-Finals period.');
+            }
+            if ($names !== ['Prelim', 'Midterm', 'Finals']) {
+                throw ValidationException::withMessage('This term has custom grading periods, so Semi-Finals cannot be added automatically.');
+            }
+
+            $complete = (int) Database::scalar(
+                'SELECT COUNT(*) FROM (
+                    SELECT ce.id FROM class_enlistments ce
+                      JOIN class_schedules cs ON cs.id = ce.class_schedule_id
+                      JOIN grades g ON g.class_enlistment_id = ce.id
+                     WHERE cs.term_id = ?
+                     GROUP BY ce.id HAVING COUNT(*) >= ?
+                 ) complete',
+                [$termId, count($periods)]
+            );
+            if ($complete > 0) {
+                throw ValidationException::withMessage('A student in this term already has a complete final grade. Adding a period would change it, so Semi-Finals cannot be added.');
+            }
+
+            $old = [];
+            foreach ($periods as $period) {
+                $old[$period['name']] = (float) $period['weight'];
+            }
+            $finals = $periods[2];
+            Database::update('grade_periods', ['sequence' => 4, 'weight' => '40.00'], ['id' => $finals['id']]);
+            Database::insert('grade_periods', ['term_id' => $termId, 'name' => 'Semi-Finals', 'sequence' => 3, 'weight' => '20.00', 'is_open' => 0]);
+            Database::update('grade_periods', ['weight' => '20.00'], ['id' => $periods[0]['id']]);
+            Database::update('grade_periods', ['weight' => '20.00'], ['id' => $periods[1]['id']]);
+
+            AuditService::log('grading.period_added', 'academic', 'Term', $termId, $old,
+                ['Prelim' => 20.0, 'Midterm' => 20.0, 'Semi-Finals' => 20.0, 'Finals' => 40.0], 'SUCCESS', 'Semi-Finals added', $registrar->id, $registrar->role_name);
+        });
+    }
+
     // -- Grade entry (teacher) -------------------------------------------------
 
     /**

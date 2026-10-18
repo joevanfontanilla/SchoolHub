@@ -32,8 +32,16 @@ The registrar may change a term's weights on **Registrar → Grading periods**. 
 total exactly 100, and they are **fixed once any grade has been recorded in that term**.
 The number of periods is not hardcoded — `GradeCalculator` weights whatever periods a term
 has — but every term seeded from `GradingService::DEFAULT_PERIODS` gets these four. A term
-that already had grades recorded before Semi-Finals was introduced keeps its original
+that already had a complete final recorded before Semi-Finals was introduced keeps its original
 three-period scheme, so its past finals never shift (migration 026).
+
+**Every term should have Semi-Finals.** A term without it (Prelim, Midterm, Finals only) gets it by migration 041, and the registrar can
+add it on **Registrar → Grading periods** ("Add Semi-Finals period", `GradingService::addSemiFinals`):
+- It goes between Midterm and Finals, starts **closed**, and the weights become **20 / 20 / 20 / 40**.
+- It is refused when any student's class in that term already has every existing period graded, because that final would change.
+  Grades already entered are never touched; a final simply reads "In progress" until Semi-Finals is graded.
+- It is refused for a term whose periods are not exactly Prelim, Midterm, and Finals (set those by hand).
+- It is audited as `grading.period_added`, with the old and new weights. The teacher's grade sheet shows the new column at once.
 
 ## The final grade
 

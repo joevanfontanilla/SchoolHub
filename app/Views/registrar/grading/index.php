@@ -6,6 +6,7 @@
  * @var ?array $term
  * @var array  $periods
  * @var bool   $graded
+ * @var bool   $missingSemiFinals this term has no Semi-Finals period yet
  */
 $failed = errors() !== [];
 $weightError = error_for('weights');
@@ -63,6 +64,18 @@ $weightError = error_for('weights');
                 <?php endforeach; ?>
             </ul>
         </section>
+
+        <?php if ($missingSemiFinals): ?>
+            <section class="card p-5" aria-labelledby="semi-heading">
+                <h3 id="semi-heading" class="text-base">Semi-Finals is missing</h3>
+                <p class="mt-1 text-sm text-slate-600">Every term has Prelim, Midterm, Semi-Finals, and Finals. Adding it puts a Semi-Finals column on the teachers' grade sheets, between Midterm and Finals, and sets the weights to 20 / 20 / 20 / 40. Grades already entered are not touched.</p>
+                <form method="POST" action="<?= e(url('/registrar/grading/terms/' . $term['id'] . '/semi-finals')) ?>" class="mt-3"
+                      data-confirm="Semi-Finals is added between Midterm and Finals, closed, and the weights become 20 / 20 / 20 / 40. It is refused if a student already has a complete final." data-confirm-title="Add the Semi-Finals period?" data-confirm-tone="warning" data-confirm-label="Add Semi-Finals">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn-primary">Add Semi-Finals period</button>
+                </form>
+            </section>
+        <?php endif; ?>
 
         <section class="card" aria-labelledby="weights-heading">
             <h3 id="weights-heading" class="border-b border-slate-200 px-5 py-4 text-base">Weights</h3>

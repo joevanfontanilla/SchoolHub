@@ -499,6 +499,7 @@ $router->get('/registrar/grading',                     [GradingController::class
 $router->post('/registrar/grading/periods/{id}/open',  [GradingController::class, 'open'],    $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/periods/{id}/close', [GradingController::class, 'close'],   $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/terms/{id}/weights', [GradingController::class, 'weights'], $registrar('grade_periods.manage'));
+$router->post('/registrar/grading/terms/{id}/semi-finals', [GradingController::class, 'addSemiFinals'], $registrar('grade_periods.manage'));
 
 // Reports (docs/15): on screen, printable, and an audited CSV export.
 $router->get('/registrar/reports',                     [RegistrarReports::class, 'index'],              $registrar('reports.registrar'), 'registrar.reports');
