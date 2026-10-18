@@ -12,6 +12,7 @@ use App\Core\ValidationException;
 use App\Models\Catalog;
 use App\Models\GradePeriod;
 use App\Models\Term;
+use App\Services\GradeSubmissionService;
 use App\Services\GradingService;
 
 /**
@@ -39,6 +40,66 @@ final class GradingController extends Controller
             'graded'  => array_sum(array_column($periods, 'grade_count')) > 0,
             'missingSemiFinals' => $periods !== [] && !in_array('Semi-Finals', array_column($periods, 'name'), true),
         ]);
+    }
+
+    /** The sheets teachers have submitted, waiting to be confirmed (or any status, by filter). */
+    public function submissions(Request $request): void
+    {
+        $status = strtoupper((string) $request->input('status', GradeSubmissionService::SUBMITTED));
+        $this->appView('registrar/grading/submissions', [
+            'title'       => 'Grade submissions',
+            'status'      => $status,
+            'submissions' => GradeSubmissionService::listing($status),
+            'waiting'     => GradeSubmissionService::countSubmitted(),
+        ]);
+    }
+
+    public function showSubmission(Request $request): void
+    {
+        $submission = GradeSubmissionService::find((int) $request->param('id'));
+        if ($submission === null) {
+            throw HttpException::notFound('That grade submission was not found.');
+        }
+        $this->appView('registrar/grading/submission', [
+            'title'      => $submission['period_name'] . ' grades · ' . $submission['subject_code'],
+            'submission' => $submission,
+            'sheet'      => GradeSubmissionService::sheet((int) $submission['class_schedule_id'], (int) $submission['grade_period_id']),
+        ]);
+    }
+
+    public function confirmSubmission(Request $request): void
+    {
+        $id = (int) $request->param('id');
+        try {
+            GradeSubmissionService::confirm(Auth::user(), $id);
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], "/registrar/grading/submissions/{$id}");
+            return;
+        }
+        $this->success('Confirmed. The grades are released: students can see them now and were told.', '/registrar/grading/submissions');
+    }
+
+    public function confirmMany(Request $request): void
+    {
+        $ids = (array) $request->input('ids', []);
+        if ($ids === []) {
+            $this->failWith(ValidationException::withMessage('Tick the sheets to confirm first.'), [], '/registrar/grading/submissions');
+            return;
+        }
+        $count = GradeSubmissionService::confirmMany(Auth::user(), $ids);
+        $this->success($count . ($count === 1 ? ' sheet was' : ' sheets were') . ' confirmed and released to students.', '/registrar/grading/submissions');
+    }
+
+    public function returnSubmission(Request $request): void
+    {
+        $id = (int) $request->param('id');
+        try {
+            GradeSubmissionService::returnToTeacher(Auth::user(), $id, (string) $request->input('reason', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), "/registrar/grading/submissions/{$id}");
+            return;
+        }
+        $this->success('Returned to the teacher. Students cannot see these grades until they are submitted and confirmed again.', '/registrar/grading/submissions');
     }
 
     public function open(Request $request): void

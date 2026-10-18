@@ -130,7 +130,7 @@ return [
         }
     },
 
-    'closing a period locks its grades and tells students; reopening is audited' => function (TestRunner $t): void {
+    'closing a period locks a draft but releases nothing to students; reopening is audited' => function (TestRunner $t): void {
         try {
             $c = gradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
@@ -144,7 +144,7 @@ return [
                 Grading::closePeriod($c['registrar'], $prelim);
                 $t->assertThrows(static fn () => Grading::recordGrades($c['teacher'], $c['class_id'], $prelim, [$c['enlistment_id'] => '3.00']), 'closed');
                 $t->assertEquals('1.25', Database::scalar('SELECT grade FROM grades WHERE class_enlistment_id = ?', [$c['enlistment_id']]));
-                $t->assertEquals(1, (int) Database::scalar("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'grades.released'", [$c['student']->id]));
+                $t->assertEquals(0, (int) Database::scalar("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'grades.released'", [$c['student']->id]), 'Closing releases nothing: only the registrar\'s confirmation does');
 
                 Grading::openPeriod($c['registrar'], $prelim);
                 $t->assertEquals(2, (int) Database::scalar("SELECT COUNT(*) FROM audit_logs WHERE action = 'grading.period_opened' AND target_id = ? AND user_id = ?", [$prelim, $c['registrar']->id]));
@@ -198,7 +198,7 @@ return [
         try {
             $c = gradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
-                $record = static fn () => Record::classesForEnrollment($c['enrollment_id'])[0]['final'];
+                $record = static fn () => Record::classesForEnrollment($c['enrollment_id'], true)[0]['final'];
 
                 // Grade every period but the last: the final is still unknown.
                 $ids = array_values($periods);

@@ -156,15 +156,39 @@ A class the registrar dropped shows **OW** as its final, whatever grades it had.
 A teacher opening another teacher's class, or a class that does not exist, gets **404**. A
 registrar, cashier, or Super Admin calling the grade service gets **403**.
 
+## Releasing grades: submit, then confirm
+
+A student sees a grade only after the Registrar has confirmed it. The unit is **one class's grades for one period** (a *grade submission*,
+`grade_submissions`, `GradeSubmissionService`):
+
+| Status | Meaning | Who can act |
+|---|---|---|
+| **Draft** | The teacher is still entering grades ("Save grades"). Students see nothing. | Teacher edits, while the period is open |
+| **Submitted** | The teacher pressed **Submit to Registrar**. Locked for the teacher. Students see "Pending release". | Registrar confirms or returns |
+| **Confirmed** | The Registrar confirmed it: **released** to students. Locked. | Registrar can return it |
+| **Returned** | The Registrar sent it back with a reason. Hidden from students again. | Teacher edits (even if the period has closed) and resubmits |
+
+- **Submit** needs the period open (unless the sheet was returned) and **a grade or a mark for every enlisted student** in that period. It
+  notifies the registrars (`grades.submitted`).
+- **Confirm and release** (one sheet, or several at once) notifies the teacher (`grades.confirmed`) and each student who has a grade in it
+  (`grades.released`, "[Period] grades are available"). **Return to teacher** needs a reason (5+ characters) and notifies the teacher
+  (`grades.returned`); it works on a Submitted or a Confirmed sheet.
+- Until a sheet is Confirmed its grades are **left out of everything a student sees and of every rule that depends on a pass**: the period
+  columns, the final, the GWA, the academic history, the curriculum checklist, prerequisites and curriculum progress. The Registrar's student
+  record shows the grades as entered. A grade with no submission at all (anything saved before this step existed) counts as released;
+  migration 043 recorded those as Confirmed.
+- Closing a period **no longer releases anything**: only confirmation does. Opening and closing a period stay the Registrar's, and a closed
+  period still locks a Draft.
+- Audit: `grades.submitted`, `grades.confirmed`, `grades.returned`, each with the class, period, and (for a return) the reason.
+
 ## Locking and corrections
 
 - Closing a period **locks** its grades. A teacher's save for a closed period is refused
   and changes nothing.
-- When a period is closed, each student who has a grade in it is notified
-  (`grades.released`).
-- **To correct a locked grade:** the registrar reopens the period (audited as
-  `grading.period_opened`), the teacher makes the change, and the registrar closes the
-  period again.
+- Students are notified when a sheet is **confirmed** (`grades.released`), not when a period closes.
+- **To correct a released grade:** the registrar uses **Return to teacher** on that class's period (audited as `grades.returned`); the grades
+  are hidden from students again, the teacher makes the change and resubmits, and the registrar confirms. Reopening the whole period is no
+  longer needed.
 - A save is **all or nothing**: if any entry on the sheet is invalid, or belongs to a
   student not enlisted in the class, nothing is saved and each bad entry is named.
 - A blank entry leaves that grade unchanged. A grade is never deleted.

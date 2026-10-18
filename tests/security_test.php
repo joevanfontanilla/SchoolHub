@@ -135,6 +135,7 @@ return [
         // and integers cast before use. A new one must be reviewed and added, or bound with ?.
         $reviewed = [
             'AcademicRecordService.php' => ['$in'],
+            'GradeSubmissionService.php' => ['$in', '$where'],
             'AdminReport.php'           => ['$in', '$range'],
             'Announcement.php'          => ['$a', '$u', '$column', '$type', '$in', '$limit', '$offset', '$stateSql', '$where'],
             'AnnouncementService.php'   => ['$in', '$table'],

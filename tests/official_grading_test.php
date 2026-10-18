@@ -94,7 +94,7 @@ return [
         try {
             $c = officialGradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
-                $final = static fn () => Record::classesForEnrollment($c['enrollment_id'])[0]['final'];
+                $final = static fn () => Record::classesForEnrollment($c['enrollment_id'], true)[0]['final'];
                 $values = ['Prelim' => '92.4', 'Midterm' => '88', 'Semi-Finals' => '90', 'Finals' => '85'];
                 foreach ($values as $name => $value) {
                     openPeriodForTest((int) $periods[$name]);

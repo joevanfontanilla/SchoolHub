@@ -28,9 +28,12 @@ final class AcademicRecordService
     /**
      * Every class of one enrollment with meetings, period grades, and the final.
      *
+     * Grades a teacher has entered but the registrar has not confirmed are left out unless $includePending (the registrar's own view), and a
+     * period that is submitted and waiting is listed in `pending_periods` so the student can see "Pending release" (docs/27).
+     *
      * @return array<int,array<string,mixed>>
      */
-    public static function classesForEnrollment(int $enrollmentId): array
+    public static function classesForEnrollment(int $enrollmentId, bool $includePending = false): array
     {
         $enrollment = Database::selectOne('SELECT * FROM enrollments WHERE id = ?', [$enrollmentId]);
         if ($enrollment === null) {
@@ -65,12 +68,15 @@ final class AcademicRecordService
         if ($classes !== []) {
             $enlistmentIds = array_map(static fn ($c) => (int) $c['enlistment_id'], $classes);
             $in = implode(',', array_fill(0, count($enlistmentIds), '?'));
-            foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, percentage, remark FROM grades WHERE class_enlistment_id IN ({$in})", $enlistmentIds) as $row) {
+            foreach (Database::select("SELECT g.class_enlistment_id, g.grade_period_id, g.grade, g.percentage, g.remark FROM grades g WHERE g.class_enlistment_id IN ({$in})" . ($includePending ? '' : ' AND ' . GradeSubmissionService::VISIBLE_TO_STUDENT), $enlistmentIds) as $row) {
                 $gradesByEnlistment[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
             }
         }
 
+        $submitted = $includePending ? [] : GradeSubmissionService::submittedPeriods(array_map(static fn ($c) => (int) $c['class_id'], $classes));
+
         foreach ($classes as &$class) {
+            $class['pending_periods'] = $submitted[(int) $class['class_id']] ?? [];
             $class['meetings'] = $meetingsByClass[(int) $class['class_id']] ?? [];
             $grades = $gradesByEnlistment[(int) $class['enlistment_id']] ?? [];
             $class['period_grades'] = $grades;
@@ -203,7 +209,7 @@ final class AcademicRecordService
 
         $in = implode(',', array_fill(0, count($classes), '?'));
         $grades = [];
-        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, percentage, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
+        foreach (Database::select("SELECT g.class_enlistment_id, g.grade_period_id, g.grade, g.percentage, g.remark FROM grades g WHERE g.class_enlistment_id IN ({$in}) AND " . GradeSubmissionService::VISIBLE_TO_STUDENT, array_column($classes, 'enlistment_id')) as $row) {
             $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
         }
 
@@ -362,7 +368,7 @@ final class AcademicRecordService
 
         $in = implode(',', array_fill(0, count($classes), '?'));
         $grades = [];
-        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, percentage, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
+        foreach (Database::select("SELECT g.class_enlistment_id, g.grade_period_id, g.grade, g.percentage, g.remark FROM grades g WHERE g.class_enlistment_id IN ({$in}) AND " . GradeSubmissionService::VISIBLE_TO_STUDENT, array_column($classes, 'enlistment_id')) as $row) {
             $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
         }
 

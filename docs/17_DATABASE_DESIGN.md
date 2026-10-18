@@ -477,6 +477,12 @@ withdrawals are append-only. The ledger account `3020 Opening Cash Balances` tak
 > `enrollments.withdrawn_at` DATETIME, `withdrawn_by` FK users, `withdraw_reason` VARCHAR(500), all nullable (migration 039);
 > `status` gains `WITHDRAWN`. See docs/26, "Withdrawal".
 
+### `grade_submissions` (migration 043)
+`class_schedule_id` FK, `grade_period_id` FK (unique together), `status` VARCHAR(12) (`DRAFT`, `SUBMITTED`, `CONFIRMED`, `RETURNED`),
+`submitted_by` / `submitted_at`, `confirmed_by` / `confirmed_at`, `returned_by` / `returned_at`, `return_reason` VARCHAR(500). Created when a
+teacher first saves grades for a class and period. A grade is visible to a student only when no submission exists for it or its status is
+`CONFIRMED` (docs/27). Migration 043 added a `CONFIRMED` row for every class and period that already had grades.
+
 ### `e_ids` (migration 037)
 `user_id` FK unique, `code` CHAR(24) unique (the random value in the QR address), `staff_number` VARCHAR(20) nullable unique
 (staff only; a student's number is `students.student_number`), `issued_at`, `issued_by` FK, `reissue_count`, `scan_count`,

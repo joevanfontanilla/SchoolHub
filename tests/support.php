@@ -89,6 +89,9 @@ function deleteTestUsers(): void
         Database::query('DELETE FROM announcements WHERE id = ?', [$announcement['id']]);
     }
 
+    // Grade submissions made, confirmed, or returned by fixture users, and the notices they sent to real registrars.
+    dropGradeSubmissions("submitted_by IN ({$in}) OR confirmed_by IN ({$in}) OR returned_by IN ({$in})", [...$ids, ...$ids, ...$ids]);
+
     // Backups made by fixture users, with their archives.
     foreach (Database::select("SELECT id, path FROM backups WHERE created_by IN ({$in})", $ids) as $backup) {
         @unlink(STORAGE_PATH . '/' . $backup['path']);
@@ -205,6 +208,21 @@ const TEST_CODE = 'ZZT';
  * and curricula have codes starting ZZT; fixture subjects either have a ZZT code
  * or belong to a ZZT curriculum (so a test can use real-looking codes like CORE 1).
  */
+/** Fixture setup: release a class's saved grades to students, as the registrar's confirmation does. */
+function confirmGradeSheets(int $classId): void
+{
+    Database::query("UPDATE grade_submissions SET status = 'CONFIRMED', confirmed_at = NOW() WHERE class_schedule_id = ?", [$classId]);
+}
+
+/** Remove the grade submissions matching a WHERE fragment, with the "submitted" notices they sent to registrars. @param array<int,mixed> $bindings */
+function dropGradeSubmissions(string $where, array $bindings): void
+{
+    foreach (array_column(Database::select("SELECT id FROM grade_submissions WHERE {$where}", $bindings), 'id') as $id) {
+        Database::query('DELETE FROM notifications WHERE link_url = ?', ['/registrar/grading/submissions/' . $id]);
+        Database::query('DELETE FROM grade_submissions WHERE id = ?', [$id]);
+    }
+}
+
 function deleteTestCatalog(): void
 {
     $like = TEST_CODE . '%';
@@ -219,6 +237,7 @@ function deleteTestCatalog(): void
     if ($classIds !== []) {
         $in = implode(',', array_fill(0, count($classIds), '?'));
         Database::query("DELETE a FROM attendance a JOIN class_enlistments ce ON ce.id = a.class_enlistment_id WHERE ce.class_schedule_id IN ({$in})", $classIds);
+        dropGradeSubmissions("class_schedule_id IN ({$in})", $classIds);
         Database::query("DELETE g FROM grades g JOIN class_enlistments ce ON ce.id = g.class_enlistment_id WHERE ce.class_schedule_id IN ({$in})", $classIds);
         Database::query("DELETE FROM class_enlistments WHERE class_schedule_id IN ({$in})", $classIds);
         Database::query("DELETE FROM class_meetings WHERE class_schedule_id IN ({$in})", $classIds);

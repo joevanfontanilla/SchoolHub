@@ -13,6 +13,7 @@ use App\Models\GradePeriod;
 use App\Services\AcademicRecordService;
 use App\Services\AttendanceService;
 use App\Services\GradeCalculator;
+use App\Services\GradeSubmissionService;
 use App\Services\GradingService;
 
 /**
@@ -140,12 +141,18 @@ final class ClassController extends Controller
             $period = $open[0] ?? $periods[0] ?? null;
         }
 
+        $submissions = GradeSubmissionService::forClass((int) $class['id']);
+
         $this->appView('teacher/classes/grades', [
             'title'   => 'Grades · ' . $class['code'],
             'class'   => $class,
             'periods' => $periods,
             'period'  => $period,
             'sheet'   => ClassSchedule::gradeSheet((int) $class['id'], (int) $class['term_id']),
+            'submissions' => $submissions,
+            'submission'  => $period === null ? null : ($submissions[(int) $period['id']] ?? null),
+            'status'      => $period === null ? GradeSubmissionService::DRAFT : (string) (($submissions[(int) $period['id']]['status'] ?? null) ?? GradeSubmissionService::DRAFT),
+            'editable'    => $period !== null && $this->editable($period, $submissions),
         ]);
     }
 
@@ -166,6 +173,39 @@ final class ClassController extends Controller
             ? 'Nothing changed.'
             : sprintf('Grades saved: %d new, %d changed.', $result['saved'], $result['changed']);
         $this->success($message, $back);
+    }
+
+    /** Save what is on the sheet, then send the class's grades for this period to the registrar. */
+    public function submitGrades(Request $request): void
+    {
+        $class = $this->ownedClass($request);
+        $periodId = (int) $request->input('period_id', 0);
+        $back = '/teacher/classes/' . $class['id'] . '/grades?period=' . $periodId;
+
+        try {
+            if ((array) $request->input('grades', []) !== []) {
+                GradingService::recordGrades(Auth::user(), (int) $class['id'], $periodId, (array) $request->input('grades', []));
+            }
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), $back);
+            return;
+        }
+        try {
+            GradeSubmissionService::submit(Auth::user(), (int) $class['id'], $periodId);
+        } catch (ValidationException $e) {
+            // What was typed is already saved, so there is nothing to put back in the boxes.
+            $this->failWith($e, [], $back);
+            return;
+        }
+        $this->success('Submitted to the registrar. Students will see these grades once the registrar confirms them.', $back);
+    }
+
+    /** The teacher may type in a draft of an open period, or in a sheet the registrar returned. @param array<string,mixed> $period @param array<int,array<string,mixed>> $submissions */
+    private function editable(array $period, array $submissions): bool
+    {
+        $status = (string) (($submissions[(int) $period['id']]['status'] ?? null) ?? GradeSubmissionService::DRAFT);
+
+        return $status === GradeSubmissionService::RETURNED || ($status === GradeSubmissionService::DRAFT && (int) $period['is_open'] === 1);
     }
 
     public function schedule(Request $request): void

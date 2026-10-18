@@ -21,6 +21,7 @@
 - Password change
 - User creation/disable/delete/restore/erase
 - Student withdrawal and reinstatement
+- Grade submission, confirmation, and return
 - Role/permission changes
 - Enrollment status changes
 - Requirement verification

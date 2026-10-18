@@ -45,6 +45,10 @@ return [
                 }
             });
 
+            foreach ($classes as $classId) {
+                confirmGradeSheets($classId);
+            }
+
             $finals = [];
             foreach (Record::classesForEnrollment($enrolled['enrollment_id']) as $class) {
                 $finals[array_search((int) $class['subject_id'], $subjects, true)] = $class['final']['remark'];

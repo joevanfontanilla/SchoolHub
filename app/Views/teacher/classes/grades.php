@@ -7,12 +7,17 @@
  * @var array  $periods
  * @var ?array $period  the period being entered
  * @var array  $sheet   ClassSchedule::gradeSheet()
+ * @var array  $submissions  this class's submissions by period id
+ * @var ?array $submission   the shown period's submission, when the teacher has saved anything
+ * @var string $status       DRAFT, SUBMITTED, CONFIRMED, or RETURNED for the shown period
+ * @var bool   $editable     whether the teacher can type in the shown period now
  */
 use App\Services\GradeCalculator;
 
 $failed = errors() !== [];
 $old = (array) old('grades', []);
-$open = $period !== null && (int) $period['is_open'] === 1;
+$open = $editable;
+$statusLabel = ['DRAFT' => 'Draft', 'SUBMITTED' => 'Submitted', 'CONFIRMED' => 'Confirmed', 'RETURNED' => 'Returned'];
 // What goes back in the box: a mark, or the percentage (so saving the sheet again changes nothing), or the equivalent of an old grade.
 $valueOf = static function (?array $entry): string {
     if ($entry === null) {
@@ -50,14 +55,28 @@ $valueOf = static function (?array $entry): string {
                    <?= $selected ? 'aria-current="page"' : '' ?>>
                     <?= e($option['name']) ?>
                     <span class="text-xs font-normal"><?= (int) $option['is_open'] === 1 ? '(open)' : '(closed)' ?></span>
+                    <?php $optionStatus = (string) (($submissions[(int) $option['id']]['status'] ?? null) ?? ''); ?>
+                    <?php if ($optionStatus !== '' && $optionStatus !== 'DRAFT'): ?><span class="badge bg-brand-50 text-xs font-normal text-brand-navy"><?= e($statusLabel[$optionStatus] ?? $optionStatus) ?></span><?php endif; ?>
                 </a>
             <?php endforeach; ?>
         </nav>
 
+        <?php if ($status === 'RETURNED' && $submission !== null): ?>
+            <p class="rounded-lg border border-warning-text/30 bg-warning-bg px-4 py-3 text-sm text-warning-text" role="status">
+                <strong>The registrar returned these grades.</strong> Reason: <?= e((string) $submission['return_reason']) ?>. Correct them and submit again.
+            </p>
+        <?php endif; ?>
+
         <?php if (!$open): ?>
             <p class="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700" role="status">
                 <svg class="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
-                <span><strong><?= e($period['name']) ?> is closed.</strong> Its grades are locked. If one must change, ask the registrar to reopen the period.</span>
+                <?php if ($status === 'SUBMITTED'): ?>
+                    <span><strong><?= e($period['name']) ?> grades were submitted</strong> and are waiting for the registrar. They are locked, and students cannot see them yet.</span>
+                <?php elseif ($status === 'CONFIRMED'): ?>
+                    <span><strong><?= e($period['name']) ?> grades are confirmed</strong> and released to students. If one must change, ask the registrar to return them to you.</span>
+                <?php else: ?>
+                    <span><strong><?= e($period['name']) ?> is closed.</strong> Its grades are locked. If one must change, ask the registrar to reopen the period.</span>
+                <?php endif; ?>
             </p>
         <?php endif; ?>
 
@@ -65,8 +84,7 @@ $valueOf = static function (?array $entry): string {
             <?php if ($sheet === []): ?>
                 <?= component('empty-state', ['title' => 'No students enlisted yet']) ?>
             <?php else: ?>
-                <form method="POST" action="<?= e(url('/teacher/classes/' . $class['id'] . '/grades')) ?>" novalidate
-                      data-confirm="Every change is recorded in the audit log. You can still change them while <?= e($period['name']) ?> is open." data-confirm-title="Save <?= e($period['name']) ?> grades?" data-confirm-tone="success">
+                <form method="POST" action="<?= e(url('/teacher/classes/' . $class['id'] . '/grades')) ?>" novalidate>
                     <?= csrf_field() ?>
                     <input type="hidden" name="period_id" value="<?= e($period['id']) ?>">
                     <div class="table-scroll">
@@ -114,7 +132,10 @@ $valueOf = static function (?array $entry): string {
                     </div>
                     <?php if ($open): ?>
                         <div class="flex flex-wrap items-center gap-3 border-t border-slate-200 px-5 py-4">
-                            <button type="submit" class="btn-primary">Save <?= e($period['name']) ?> grades</button>
+                            <button type="submit" class="btn-secondary"
+                                    data-confirm-click="Every change is recorded in the audit log. You can still change them until you submit the grades to the registrar." data-confirm-title="Save <?= e($period['name']) ?> grades?" data-confirm-tone="success">Save <?= e($period['name']) ?> grades</button>
+                            <button type="submit" class="btn-primary" formaction="<?= e(url('/teacher/classes/' . $class['id'] . '/grades/submit')) ?>"
+                                    data-confirm-click="Your grades are saved and sent to the registrar. They are locked until the registrar confirms or returns them, and students cannot see them until then. Every student needs a grade or a mark." data-confirm-title="Submit <?= e($period['name']) ?> grades?" data-confirm-tone="primary" data-confirm-label="Submit to Registrar">Save and submit to Registrar</button>
                             <p class="text-xs text-brand-gray">A blank leaves that grade unchanged. Every change is recorded with its old and new value.</p>
                         </div>
                     <?php endif; ?>

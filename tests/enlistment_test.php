@@ -160,6 +160,7 @@ return [
                 }
             });
 
+            confirmGradeSheets($courseClass);
             $t->assertFalse(in_array('progress', problemTypes($enrolled['enrollment_id'], $internClass), true), '50% passed meets 50%');
         } finally {
             actingAs(null);

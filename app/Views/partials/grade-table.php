@@ -37,7 +37,7 @@ $head = $cell . ' whitespace-nowrap font-semibold';
                     <td class="<?= $cell ?> min-w-[7rem]"><?= e($class['title']) ?></td>
                     <td class="<?= $cell ?> text-center"><?= e($number($class['units'])) ?></td>
                     <?php foreach ($periods as $period): ?>
-                        <td class="<?= $cell ?> whitespace-nowrap text-center tabular-nums"><?= e($show($class['period_grades'][(int) $period['id']] ?? null)) ?></td>
+                        <td class="<?= $cell ?> whitespace-nowrap text-center tabular-nums"><?php $entry = $class['period_grades'][(int) $period['id']] ?? null; ?><?php if ($entry === null && isset($class['pending_periods'][(int) $period['id']])): ?><span class="text-xs font-normal text-brand-gray">Pending release</span><?php else: ?><?= e($show($entry)) ?><?php endif; ?></td>
                     <?php endforeach; ?>
                     <td class="<?= $cell ?> whitespace-nowrap text-center font-display font-bold tabular-nums <?= $dropped ? '' : 'text-brand-navy' ?>"><?= e($class['final']['grade'] ?? '—') ?><?php if (($class['final']['percentage'] ?? null) !== null): ?><span class="block text-xs font-normal text-brand-gray"><?= e($class['final']['percentage']) ?>%</span><?php endif; ?></td>
                     <td class="<?= $cell ?> whitespace-nowrap text-center">

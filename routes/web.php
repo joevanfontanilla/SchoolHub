@@ -384,6 +384,7 @@ $router->get('/teacher/classes/{id}/attendance',   [TeacherClasses::class, 'atte
 $router->post('/teacher/classes/{id}/attendance',  [TeacherClasses::class, 'saveAttendance'],  $teacher('attendance.record'));
 $router->get('/teacher/classes/{id}/grades',       [TeacherClasses::class, 'grades'],          $teacher('grades.record'));
 $router->post('/teacher/classes/{id}/grades',      [TeacherClasses::class, 'saveGrades'],      $teacher('grades.record'));
+$router->post('/teacher/classes/{id}/grades/submit', [TeacherClasses::class, 'submitGrades'], $teacher('grades.record'));
 
 // Announcements to the students of the teacher's own classes (docs/16).
 $router->get('/teacher/announcements',               [TeacherAnnouncements::class, 'index'],   $teacher('announcements.class'), 'teacher.announcements');
@@ -499,6 +500,11 @@ $router->post('/registrar/calendar/terms/{id}',  [AcademicCalendarController::cl
 $router->post('/registrar/calendar/years',       [AcademicCalendarController::class, 'addYear'],   $registrar('academic.manage'));
 
 $router->get('/registrar/grading',                     [GradingController::class, 'index'],   $registrar('grade_periods.manage'), 'registrar.grading');
+$router->get('/registrar/grading/submissions',         [GradingController::class, 'submissions'],       $registrar('grade_periods.manage'), 'registrar.grading.submissions');
+$router->post('/registrar/grading/submissions/confirm', [GradingController::class, 'confirmMany'],       $registrar('grade_periods.manage'));
+$router->get('/registrar/grading/submissions/{id}',     [GradingController::class, 'showSubmission'],    $registrar('grade_periods.manage'));
+$router->post('/registrar/grading/submissions/{id}/confirm', [GradingController::class, 'confirmSubmission'], $registrar('grade_periods.manage'));
+$router->post('/registrar/grading/submissions/{id}/return',  [GradingController::class, 'returnSubmission'],  $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/periods/{id}/open',  [GradingController::class, 'open'],    $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/periods/{id}/close', [GradingController::class, 'close'],   $registrar('grade_periods.manage'));
 $router->post('/registrar/grading/terms/{id}/weights', [GradingController::class, 'weights'], $registrar('grade_periods.manage'));

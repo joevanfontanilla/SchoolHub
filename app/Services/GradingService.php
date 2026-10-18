@@ -166,9 +166,8 @@ final class GradingService
             if ($period === null || (int) $period['term_id'] !== (int) $class['term_id']) {
                 throw HttpException::notFound('That grading period was not found for this class.');
             }
-            if ((int) $period['is_open'] !== 1) {
-                throw ValidationException::withMessage("{$period['name']} grading is closed. Ask the registrar to reopen it if a grade must change.");
-            }
+            // Open and still a draft, or returned to the teacher; a submitted or confirmed sheet is locked (docs/27).
+            GradeSubmissionService::assertEditable(GradeSubmissionService::statusOf((int) $class['id'], $periodId), $period);
 
             $enlisted = [];
             foreach (Database::select("SELECT id FROM class_enlistments WHERE class_schedule_id = ? AND status = 'ENLISTED'", [$class['id']]) as $row) {
@@ -201,6 +200,10 @@ final class GradingService
             $saved = 0;
             $changed = 0;
             $now = date('Y-m-d H:i:s');
+            if ($parsed !== []) {
+                // From the first save the grades are held back from students until the registrar confirms them.
+                GradeSubmissionService::ensureDraft((int) $class['id'], $periodId);
+            }
 
             foreach ($parsed as $enlistmentId => $grade) {
                 $existing = Database::selectOne(
@@ -311,20 +314,7 @@ final class GradingService
                 $registrar->role_name
             );
 
-            if (!$open) {
-                // Grades for this period are now final until reopened: tell the students who have one.
-                $students = Database::select(
-                    'SELECT DISTINCT s.user_id FROM grades g
-                       JOIN class_enlistments ce ON ce.id = g.class_enlistment_id
-                       JOIN enrollments e        ON e.id = ce.enrollment_id
-                       JOIN students s           ON s.id = e.student_id
-                      WHERE g.grade_period_id = ?',
-                    [$periodId]
-                );
-                foreach ($students as $student) {
-                    NotificationService::notify((int) $student['user_id'], 'grades.released', "{$period['name']} grades are available", null, '/student/grades');
-                }
-            }
+            // Closing a period only locks its drafts. Grades reach students when the registrar confirms them (GradeSubmissionService).
         });
     }
 

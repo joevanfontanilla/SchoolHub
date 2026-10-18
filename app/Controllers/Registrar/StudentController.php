@@ -51,7 +51,7 @@ final class StudentController extends Controller
             'withdrawn'    => $withdrawn,
             'balance'      => $assessment['balance'] ?? null,
             'enrollment'   => $enrollment,
-            'classes'      => $enrollmentId === null ? [] : AcademicRecordService::classesForEnrollment($enrollmentId),
+            'classes'      => $enrollmentId === null ? [] : AcademicRecordService::classesForEnrollment($enrollmentId, true),
             'notEnlisted'  => $enrollmentId === null ? [] : EnlistmentService::notEnlisted($enrollmentId),
             'addable'      => $enrollmentId === null ? [] : ClassSchedule::addableFor($enrollmentId),
             'unitLimit'    => $enrollment === null ? null : EnlistmentService::unitLimit($enrollment),
