@@ -101,13 +101,19 @@ final class EIdService
             return true;
         }
 
+        return self::enrolledNow($user->id);
+    }
+
+    /** Whether this student is enrolled in the active school year, which has not ended. */
+    public static function enrolledNow(int $userId): bool
+    {
         return (int) Database::scalar(
             "SELECT COUNT(*) FROM enrollments en
                JOIN students s ON s.id = en.student_id
                JOIN terms t ON t.id = en.term_id
                JOIN academic_years ay ON ay.id = t.academic_year_id
               WHERE s.user_id = ? AND en.status = 'ENROLLED' AND ay.is_active = 1 AND ay.end_date >= CURDATE()",
-            [$user->id]
+            [$userId]
         ) > 0;
     }
 

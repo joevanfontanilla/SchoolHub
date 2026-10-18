@@ -46,6 +46,7 @@ final class AdminReport
                     (SELECT COUNT(*) FROM password_reset_tokens prt
                       WHERE prt.user_id = u.id AND prt.purpose = 'SETUP' AND prt.used_at IS NULL AND prt.expires_at > NOW()) AS open_setup_links
                FROM users u JOIN roles r ON r.id = u.role_id
+              WHERE u.status <> '" . User::STATUS_DELETED . "'
               ORDER BY r.id, u.last_name, u.first_name, u.username"
         );
 

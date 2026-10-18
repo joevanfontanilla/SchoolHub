@@ -15,6 +15,7 @@ $statusBadge = static fn (string $status) => component('status-badge', match ($s
     User::STATUS_ACTIVE   => ['status' => 'APPROVED', 'label' => 'Active'],
     User::STATUS_PENDING  => ['status' => 'SCHEDULED', 'label' => 'Pending setup'],
     User::STATUS_LOCKED   => ['status' => 'REJECTED', 'label' => 'Locked'],
+    User::STATUS_DELETED  => ['status' => 'CANCELLED', 'label' => 'Deleted'],
     default               => ['status' => 'ARCHIVED', 'label' => 'Disabled'],
 });
 ?>
@@ -53,8 +54,8 @@ $statusBadge = static fn (string $status) => component('status-badge', match ($s
             <label for="users-status" class="field-label">Status</label>
             <select id="users-status" name="status" class="field-input">
                 <option value="">All</option>
-                <?php foreach ([User::STATUS_ACTIVE, User::STATUS_PENDING, User::STATUS_LOCKED, User::STATUS_DISABLED] as $status): ?>
-                    <option value="<?= e($status) ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= e($status) ?></option>
+                <?php foreach ([User::STATUS_ACTIVE, User::STATUS_PENDING, User::STATUS_LOCKED, User::STATUS_DISABLED, User::STATUS_DELETED] as $status): ?>
+                    <option value="<?= e($status) ?>" <?= $filters['status'] === $status ? 'selected' : '' ?>><?= e($status === User::STATUS_DELETED && ($counts[User::STATUS_DELETED] ?? 0) > 0 ? $status . ' (' . $counts[User::STATUS_DELETED] . ')' : $status) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

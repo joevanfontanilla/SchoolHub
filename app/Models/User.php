@@ -21,6 +21,7 @@ final class User
     public const STATUS_ACTIVE   = 'Active';
     public const STATUS_DISABLED = 'Disabled';
     public const STATUS_LOCKED   = 'Locked';
+    public const STATUS_DELETED  = 'Deleted';
 
     public int $id;
     public int $role_id;
@@ -37,6 +38,8 @@ final class User
     public ?string $locked_until;
     public ?string $last_login_at;
     public ?string $role_name;
+    public ?string $deleted_at = null;
+    public ?string $delete_reason = null;
 
     public static function fromRow(array $row): self
     {
@@ -56,6 +59,8 @@ final class User
         $user->locked_until          = $row['locked_until'] ?? null;
         $user->last_login_at         = $row['last_login_at'] ?? null;
         $user->role_name             = isset($row['role_name']) ? (string) $row['role_name'] : null;
+        $user->deleted_at            = $row['deleted_at'] ?? null;
+        $user->delete_reason         = $row['delete_reason'] ?? null;
 
         return $user;
     }
@@ -103,9 +108,13 @@ final class User
             $where[] = 'r.name = ?';
             $bindings[] = $filters['role'];
         }
-        if (in_array($filters['status'] ?? '', [self::STATUS_ACTIVE, self::STATUS_PENDING, self::STATUS_DISABLED, self::STATUS_LOCKED], true)) {
+        if (in_array($filters['status'] ?? '', [self::STATUS_ACTIVE, self::STATUS_PENDING, self::STATUS_DISABLED, self::STATUS_LOCKED, self::STATUS_DELETED], true)) {
             $where[] = 'u.status = ?';
             $bindings[] = $filters['status'];
+        } else {
+            // Deleted accounts show only under their own filter.
+            $where[] = 'u.status <> ?';
+            $bindings[] = self::STATUS_DELETED;
         }
         $sqlWhere = implode(' AND ', $where);
         $limit = max(1, $limit);
@@ -114,7 +123,7 @@ final class User
         return [
             'rows' => Database::select(
                 "SELECT u.id, u.username, u.email, u.first_name, u.middle_name, u.last_name, u.suffix, u.status, u.failed_login_attempts,
-                        u.locked_until, u.last_login_at, u.created_at, r.name AS role_name
+                        u.locked_until, u.last_login_at, u.created_at, u.deleted_at, u.delete_reason, r.name AS role_name
                    FROM users u JOIN roles r ON r.id = u.role_id
                   WHERE {$sqlWhere}
                   ORDER BY (u.status = 'Locked') DESC, u.last_name, u.first_name

@@ -52,6 +52,7 @@ while this document defines a `Pending` state. They are reconciled as follows:
 | `Pending` | Super Admin creates a staff account (Teacher, Registrar, Cashier) before its first login | Yes, but forced to change password |
 | `Disabled` | An administrator deactivates the account | No |
 | `Locked` | Failed login attempts exceeded the limit | No, until `locked_until` passes or an administrator unlocks it |
+| `Deleted` | The Super Admin deletes the account (below) | No, and the username and email are freed |
 
 A self-registered student is `Active` immediately and can reach only their own profile
 and their own enrollment application. No approval gate is needed before login, because
@@ -121,6 +122,24 @@ nothing (`default-src 'none'`). The HTTP crawl checks these headers.
   classes keeps the Teacher role.
 - The Super Admin cannot disable their own account, and the last active Super Admin can be
   neither disabled nor moved to another role.
+
+### Deleting an account (`UserAdminService::delete`, `restore`, `erase`)
+Two levels, because payments, receipts, grades, enrollments, and the audit log all point to accounts.
+- **Delete account** (the default). Status becomes `Deleted`. A required reason (5+ characters) and typing the
+  account's username confirm it. The username and email are replaced by `deleted-{id}` and
+  `deleted-{id}@deleted.invalid`, so the person cannot sign in and the login is free to reuse; the originals are kept
+  in `deleted_username` / `deleted_email` for a restore. The name stays, so old receipts, grades, and logs still
+  read correctly. All sessions and open links end, photos and signatures stay with the records they appear on, and a
+  student's e-ID stops verifying (the public page says Not valid).
+- **Restore.** The Super Admin can restore a deleted account at any time before it is erased. The original username and
+  email return if still free; otherwise the restore is refused with a message. It comes back `Disabled`, never
+  `Active`, so an administrator enables it on purpose.
+- **Erase permanently.** Only for an account that nothing refers to (a mistake or a test account): the database
+  refuses it otherwise, and the account stays deleted. Students never qualify (their student record refers to them).
+- **Refused** for: your own account; the last active Super Admin; a student who is currently enrolled (withdraw
+  them or wait for the term to end); a teacher who still teaches active classes or advises a section.
+- Audited: `user.deleted`, `user.restored`, `user.erased`, with the reason. The deleted accounts are listed under the
+  Users filter **Deleted** and are left out of every other list, picker, and count of active people.
 
 ### Security settings
 `max_login_attempts`, `lockout_minutes`, `ip_max_attempts`, `ip_window_minutes`,

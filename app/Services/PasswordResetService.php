@@ -72,7 +72,7 @@ final class PasswordResetService
             return null;
         }
         $user = User::find((int) $row['user_id']);
-        if ($user === null || $user->status === User::STATUS_DISABLED) {
+        if ($user === null || in_array($user->status, [User::STATUS_DISABLED, User::STATUS_DELETED], true)) {
             return null;
         }
         return ['user' => $user, 'purpose' => (string) $row['purpose'], 'expires_at' => (string) $row['expires_at']];

@@ -241,7 +241,7 @@ final class DeploymentCheck
         $in = implode(', ', array_fill(0, count(self::DEMO_USERNAMES), '?'));
         return array_column(Database::select(
             "SELECT username FROM users
-              WHERE status <> '" . User::STATUS_DISABLED . "'
+              WHERE status NOT IN ('" . User::STATUS_DISABLED . "', '" . User::STATUS_DELETED . "')
                 AND (username IN ({$in}) OR email LIKE '%@schoolhub.test' OR username LIKE '\\_\\_test\\_%' OR username LIKE 'perf\\_%')
               ORDER BY username",
             self::DEMO_USERNAMES

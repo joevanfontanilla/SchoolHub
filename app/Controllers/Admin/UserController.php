@@ -70,6 +70,8 @@ final class UserController extends Controller
             'aboutThem'   => AuditLog::search(['target_type' => 'User', 'target_id' => (string) $account->id], 10),
             'self'        => $account->id === Auth::id(),
             'hasSignature' => SignatureService::has($account->id),
+            'deleteProblem' => UserAdminService::deleteProblem(Auth::user(), $account),
+            'deletedInfo'  => $account->status === User::STATUS_DELETED ? UserAdminService::deletedInfo($account->id) : null,
         ]);
     }
 
@@ -107,6 +109,30 @@ final class UserController extends Controller
     {
         $account = $this->account($request);
         $this->act($account, static fn () => UserAdminService::unlock(Auth::user(), $account->id), 'Account unlocked. The user can sign in again.');
+    }
+
+    public function delete(Request $request): void
+    {
+        $account = $this->account($request);
+        $this->act($account, static fn () => UserAdminService::delete(Auth::user(), $account->id, (string) $request->input('reason', ''), (string) $request->input('confirm_username', '')), 'Account deleted. It can no longer sign in, and its records stay. You can restore it from here.');
+    }
+
+    public function restore(Request $request): void
+    {
+        $account = $this->account($request);
+        $this->act($account, static fn () => UserAdminService::restore(Auth::user(), $account->id), 'Account restored. It is Disabled until you enable it.');
+    }
+
+    public function erase(Request $request): void
+    {
+        $account = $this->account($request);
+        try {
+            UserAdminService::erase(Auth::user(), $account->id, (string) $request->input('confirm_username', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], "/admin/users/{$account->id}");
+            return;
+        }
+        $this->success('The account was erased for good.', '/admin/users?status=Deleted');
     }
 
     /** Remove someone's e-signature, for example when they leave. The administrator never sees or creates one. */

@@ -48,7 +48,11 @@ Super Admin implicitly holds every permission and needs no rows here.
 | `last_login_at` | DATETIME | nullable |
 | `privacy_consented_at` | DATETIME | nullable — when a self-registered student accepted the data privacy notice (RA 10173) |
 
-Index `(status)`. Users are **disabled, never deleted**.
+Index `(status)`. Users are **disabled or soft-deleted**, never erased while records refer to them.
+
+> Migration 038 adds the soft-delete columns, all nullable: `deleted_at` DATETIME, `deleted_by` BIGINT UNSIGNED (the
+> administrator), `delete_reason` VARCHAR(255), `deleted_username` VARCHAR(50), `deleted_email` VARCHAR(150), and
+> `status` gains the value `Deleted`. See docs/07, "Deleting an account".
 
 Self-registered students do not choose a username: it is generated from the local part of
 their email, with a numeric suffix on collision. They may sign in with their email.

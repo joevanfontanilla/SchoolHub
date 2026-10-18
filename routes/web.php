@@ -157,6 +157,9 @@ $router->post('/admin/users/{id}/edit',       [AdminUsers::class, 'update'],    
 $router->post('/admin/users/{id}/disable',    [AdminUsers::class, 'disable'],   $admin('users.manage'));
 $router->post('/admin/users/{id}/enable',     [AdminUsers::class, 'enable'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/unlock',     [AdminUsers::class, 'unlock'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/delete',     [AdminUsers::class, 'delete'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/restore',    [AdminUsers::class, 'restore'],   $admin('users.manage'));
+$router->post('/admin/users/{id}/erase',      [AdminUsers::class, 'erase'],     $admin('users.manage'));
 $router->post('/admin/users/{id}/signature/remove', [AdminUsers::class, 'removeSignature'], $admin('users.manage'));
 $router->get('/admin/users/{id}/e-id',         [EIdController::class, 'staff'],        $admin('users.manage'));
 $router->get('/admin/users/{id}/e-id/print',   [EIdController::class, 'staffPrint'],   $admin('users.manage'));

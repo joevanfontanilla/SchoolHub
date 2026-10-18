@@ -19,7 +19,7 @@
 ## Important Events
 - Login success/failure
 - Password change
-- User creation/disable
+- User creation/disable/delete/restore/erase
 - Role/permission changes
 - Enrollment status changes
 - Requirement verification

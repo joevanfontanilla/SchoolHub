@@ -69,7 +69,7 @@ function deleteTestUsers(): void
     deleteTestCatalog();
 
     $ids = array_column(
-        Database::select('SELECT id FROM users WHERE username LIKE ?', [testPrefixPattern()]),
+        Database::select('SELECT id FROM users WHERE username LIKE ? OR deleted_username LIKE ?', [testPrefixPattern(), testPrefixPattern()]),
         'id'
     );
 

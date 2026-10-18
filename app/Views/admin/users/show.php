@@ -8,6 +8,8 @@
  * @var array           $aboutThem  audit entries about this account
  * @var bool            $self
  * @var bool            $hasSignature whether the user has saved an e-signature (never shown here)
+ * @var ?string         $deleteProblem why the account cannot be deleted, or null when it can
+ * @var ?array          $deletedInfo   original username, when and by whom, and why (deleted accounts only)
  */
 use App\Models\User;
 use App\Services\UserAdminService;
@@ -16,8 +18,11 @@ $statusBadge = match ($account->status) {
     User::STATUS_ACTIVE  => ['status' => 'APPROVED', 'label' => 'Active'],
     User::STATUS_PENDING => ['status' => 'SCHEDULED', 'label' => 'Pending setup'],
     User::STATUS_LOCKED  => ['status' => 'REJECTED', 'label' => 'Locked'],
+    User::STATUS_DELETED => ['status' => 'CANCELLED', 'label' => 'Deleted'],
     default              => ['status' => 'ARCHIVED', 'label' => 'Disabled'],
 };
+$deleted = $account->status === User::STATUS_DELETED;
+$confirmError = error_for('confirm_username');
 $lastSuperAdmin = $account->isSuperAdmin() && UserAdminService::otherActiveSuperAdmins($account->id) === 0;
 $reasonError = error_for('reason');
 $auditRows = static function (array $entries): string {
@@ -43,10 +48,12 @@ $auditRows = static function (array $entries): string {
         </div>
         <div class="flex flex-wrap items-center gap-2">
             <?= component('status-badge', $statusBadge + ['size' => 'md']) ?>
-            <?php if (!$account->isStudent()): ?>
-                <a href="<?= e(url('/admin/users/' . $account->id . '/e-id')) ?>" class="btn-secondary"><?= icon('shield', 'h-5 w-5') ?> E-ID</a>
+            <?php if (!$deleted): ?>
+                <?php if (!$account->isStudent()): ?>
+                    <a href="<?= e(url('/admin/users/' . $account->id . '/e-id')) ?>" class="btn-secondary"><?= icon('shield', 'h-5 w-5') ?> E-ID</a>
+                <?php endif; ?>
+                <a href="<?= e(url('/admin/users/' . $account->id . '/edit')) ?>" class="btn-secondary"><?= icon('pencil', 'h-5 w-5') ?> Edit</a>
             <?php endif; ?>
-            <a href="<?= e(url('/admin/users/' . $account->id . '/edit')) ?>" class="btn-secondary"><?= icon('pencil', 'h-5 w-5') ?> Edit</a>
         </div>
     </div>
 
@@ -108,6 +115,42 @@ $auditRows = static function (array $entries): string {
         </div>
 
         <aside class="space-y-4" aria-label="Account actions">
+            <?php if ($deleted): ?>
+                <section class="card p-5">
+                    <h3 class="text-base">Deleted account</h3>
+                    <dl class="mt-2 space-y-1 text-sm">
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Original username</dt><dd class="font-medium"><?= e((string) ($deletedInfo['deleted_username'] ?? '')) ?></dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">Deleted</dt><dd class="font-medium"><?= e(!empty($deletedInfo['deleted_at']) ? dt($deletedInfo['deleted_at']) : '') ?></dd></div>
+                        <div class="flex justify-between gap-3"><dt class="text-slate-500">By</dt><dd class="font-medium"><?= e(trim((string) ($deletedInfo['first_name'] ?? '') . ' ' . (string) ($deletedInfo['last_name'] ?? ''))) ?></dd></div>
+                        <div><dt class="text-slate-500">Reason</dt><dd class="mt-0.5 font-medium"><?= e((string) ($deletedInfo['delete_reason'] ?? '')) ?></dd></div>
+                    </dl>
+                    <p class="mt-3 text-sm text-slate-600">It cannot sign in. Its name and records stay on payments, grades, and logs.</p>
+                </section>
+                <section class="card p-5">
+                    <h3 class="text-base">Restore</h3>
+                    <p class="mt-1 text-sm text-slate-600">Brings the account back with its original username and email. It starts Disabled until you enable it.</p>
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/restore')) ?>" class="mt-3"
+                          data-confirm="The original username and email return, if they are still free. The account stays Disabled until you enable it." data-confirm-title="Restore this account?" data-confirm-tone="success" data-confirm-label="Restore">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn-primary w-full">Restore account</button>
+                    </form>
+                </section>
+                <section class="card p-5">
+                    <h3 class="text-base">Erase for good</h3>
+                    <p class="mt-1 text-sm text-slate-600">Only works when nothing refers to this account. If payments, grades, enrollments, or logged activity do, it stays deleted.</p>
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/erase')) ?>" class="mt-3 space-y-3" novalidate
+                          data-confirm="This cannot be undone." data-confirm-title="Erase this account for good?" data-confirm-tone="danger" data-confirm-label="Erase for good"
+                          data-confirm-requires="#erase-confirm" data-confirm-requires-message="Type the original username to confirm.">
+                        <?= csrf_field() ?>
+                        <div>
+                            <label for="erase-confirm" class="field-label">Type <strong><?= e((string) ($deletedInfo['deleted_username'] ?? '')) ?></strong> to confirm</label>
+                            <input id="erase-confirm" name="confirm_username" class="field-input <?= $confirmError ? 'field-input-error' : '' ?>" autocomplete="off">
+                            <?php if ($confirmError): ?><p class="field-error"><span><?= e($confirmError) ?></span></p><?php endif; ?>
+                        </div>
+                        <button type="submit" class="btn-danger w-full">Erase for good</button>
+                    </form>
+                </section>
+            <?php else: ?>
             <?php if ($account->status !== User::STATUS_DISABLED): ?>
                 <section class="card p-5">
                     <h3 class="text-base"><?= $account->status === User::STATUS_PENDING ? 'Set-up link' : 'Password reset link' ?></h3>
@@ -162,6 +205,32 @@ $auditRows = static function (array $entries): string {
                         <button type="submit" class="btn-danger w-full">Disable account</button>
                     </form>
                 </section>
+            <?php endif; ?>
+
+            <section class="card p-5">
+                <h3 class="text-base">Delete account</h3>
+                <?php if ($deleteProblem !== null): ?>
+                    <p class="mt-1 text-sm text-slate-600"><?= e($deleteProblem) ?></p>
+                <?php else: ?>
+                    <p class="mt-1 text-sm text-slate-600">The person can no longer sign in, and their username and email are freed. Payments, grades, and logs stay, still showing their name. You can restore it later.</p>
+                    <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/delete')) ?>" class="mt-3 space-y-3" novalidate
+                          data-confirm="The person is signed out everywhere and can no longer sign in. Their records stay. You can restore the account later." data-confirm-title="Delete this account?" data-confirm-tone="danger" data-confirm-label="Delete account"
+                          data-confirm-requires="#delete-reason" data-confirm-requires-message="Write the reason for deleting the account first. It is recorded in the audit log.">
+                        <?= csrf_field() ?>
+                        <div>
+                            <label for="delete-reason" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>
+                            <input id="delete-reason" name="reason" class="field-input <?= $reasonError ? 'field-input-error' : '' ?>" maxlength="255" placeholder="e.g. Created by mistake">
+                            <?php if ($reasonError): ?><p class="field-error"><span><?= e($reasonError) ?></span></p><?php endif; ?>
+                        </div>
+                        <div>
+                            <label for="delete-confirm" class="field-label">Type <strong><?= e($account->username) ?></strong> to confirm</label>
+                            <input id="delete-confirm" name="confirm_username" class="field-input <?= $confirmError ? 'field-input-error' : '' ?>" autocomplete="off">
+                            <?php if ($confirmError): ?><p class="field-error"><span><?= e($confirmError) ?></span></p><?php endif; ?>
+                        </div>
+                        <button type="submit" class="btn-danger w-full">Delete account</button>
+                    </form>
+                <?php endif; ?>
+            </section>
             <?php endif; ?>
         </aside>
     </div>

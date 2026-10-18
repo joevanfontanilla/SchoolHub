@@ -21,6 +21,7 @@ use App\Models\User;
  *   account, never away from the last active Super Admin, and not for a teacher who
  *   still teaches classes.
  * - An administrator cannot disable their own account or the last active Super Admin.
+ * - An account can be deleted (anonymised, records kept), restored, or, when nothing refers to it, erased.
  *
  * Every action is audited. Passwords never pass through here.
  */
@@ -235,6 +236,144 @@ final class UserAdminService
         );
     }
 
+    // -- Deleting an account (docs/07) -------------------------------------------------
+
+    /** @return array<string,mixed>|null the original username, when, by whom, and why a deleted account was deleted */
+    public static function deletedInfo(int $userId): ?array
+    {
+        return Database::selectOne(
+            'SELECT u.deleted_username, u.deleted_at, u.delete_reason, d.first_name, d.last_name FROM users u LEFT JOIN users d ON d.id = u.deleted_by WHERE u.id = ?',
+            [$userId]
+        );
+    }
+
+    /** Why an account cannot be deleted, or null when it can. */
+    public static function deleteProblem(User $admin, User $user): ?string
+    {
+        return match (true) {
+            $user->status === User::STATUS_DELETED
+                => 'This account is already deleted.',
+            $user->id === $admin->id
+                => 'You cannot delete your own account.',
+            $user->isSuperAdmin() && $user->status === User::STATUS_ACTIVE && self::otherActiveSuperAdmins($user->id) === 0
+                => 'This is the last active Super Admin. Create or enable another Super Admin first.',
+            $user->isStudent() && EIdService::enrolledNow($user->id)
+                => 'This student is currently enrolled. Withdraw them first, or wait until the school year ends.',
+            $user->isTeacher() && (int) Database::scalar("SELECT COUNT(*) FROM class_schedules WHERE teacher_user_id = ? AND status = 'ACTIVE'", [$user->id]) > 0
+                => 'This teacher still teaches classes. Assign those classes to another teacher first.',
+            (int) Database::scalar('SELECT COUNT(*) FROM sections WHERE adviser_user_id = ? AND is_active = 1', [$user->id]) > 0
+                => 'This person advises an active section. Choose another adviser first.',
+            default => null,
+        };
+    }
+
+    /**
+     * Delete an account: it can no longer sign in, its username and email are freed, and its name and records stay.
+     * Reversible with restore() until it is erased.
+     */
+    public static function delete(User $admin, int $userId, string $reason, string $confirmUsername): void
+    {
+        self::assertAdmin($admin);
+        $user = self::user($userId);
+        $problem = self::deleteProblem($admin, $user);
+        if ($problem !== null) {
+            throw ValidationException::withMessage($problem);
+        }
+
+        $reason = trim($reason);
+        $errors = [];
+        if (mb_strlen($reason) < 5) {
+            $errors['reason'] = ['Give the reason for deleting this account (at least 5 characters).'];
+        }
+        if (trim($confirmUsername) !== $user->username) {
+            $errors['confirm_username'] = ['Type the username exactly as shown to confirm.'];
+        }
+        if ($errors !== []) {
+            throw ValidationException::withErrors($errors);
+        }
+
+        Database::transaction(static function () use ($admin, $user, $reason): void {
+            Database::update('users', [
+                'status'                => User::STATUS_DELETED,
+                'username'              => 'deleted-' . $user->id,
+                'email'                 => 'deleted-' . $user->id . '@deleted.invalid',
+                'deleted_at'            => date('Y-m-d H:i:s'),
+                'deleted_by'            => $admin->id,
+                'delete_reason'         => mb_substr($reason, 0, 255),
+                'deleted_username'      => $user->username,
+                'deleted_email'         => $user->email,
+                'failed_login_attempts' => 0,
+                'locked_until'          => null,
+                'must_change_password'  => 0,
+            ], ['id' => $user->id]);
+            PasswordResetService::invalidateFor($user->id);
+            Database::query('DELETE FROM sessions WHERE user_id = ?', [$user->id]);
+            AuditService::log('user.deleted', 'administration', 'User', $user->id,
+                ['status' => $user->status, 'username' => $user->username, 'role' => $user->role_name], ['status' => User::STATUS_DELETED],
+                'SUCCESS', $reason, $admin->id, $admin->role_name);
+        });
+    }
+
+    /** Bring a deleted account back, Disabled, with its original username and email if they are still free. */
+    public static function restore(User $admin, int $userId): void
+    {
+        self::assertAdmin($admin);
+        $user = self::user($userId);
+        if ($user->status !== User::STATUS_DELETED) {
+            throw ValidationException::withMessage('Only a deleted account can be restored.');
+        }
+        $row = Database::selectOne('SELECT deleted_username, deleted_email FROM users WHERE id = ?', [$user->id]);
+        $username = (string) ($row['deleted_username'] ?? '');
+        $email = (string) ($row['deleted_email'] ?? '');
+        if ($username === '' || $email === '') {
+            throw ValidationException::withMessage('The original sign-in details of this account were not kept, so it cannot be restored.');
+        }
+        foreach (['username' => $username, 'email' => $email] as $field => $value) {
+            if (Database::scalar("SELECT id FROM users WHERE {$field} = ? AND id <> ?", [$value, $user->id]) !== null) {
+                throw ValidationException::withMessage("The original {$field} now belongs to another account, so this account cannot be restored.");
+            }
+        }
+
+        Database::transaction(static function () use ($admin, $user, $username, $email): void {
+            Database::update('users', [
+                'status' => User::STATUS_DISABLED, 'username' => $username, 'email' => $email,
+                'deleted_at' => null, 'deleted_by' => null, 'delete_reason' => null, 'deleted_username' => null, 'deleted_email' => null,
+            ], ['id' => $user->id]);
+            AuditService::log('user.restored', 'administration', 'User', $user->id, ['status' => User::STATUS_DELETED],
+                ['status' => User::STATUS_DISABLED, 'username' => $username], 'SUCCESS', null, $admin->id, $admin->role_name);
+        });
+    }
+
+    /**
+     * Erase a deleted account for good. Possible only when nothing refers to it: the database refuses otherwise, and the
+     * account stays deleted.
+     */
+    public static function erase(User $admin, int $userId, string $confirmUsername): void
+    {
+        self::assertAdmin($admin);
+        $user = self::user($userId);
+        if ($user->status !== User::STATUS_DELETED) {
+            throw ValidationException::withMessage('Delete the account first. Only a deleted account can be erased.');
+        }
+        $original = (string) Database::scalar('SELECT deleted_username FROM users WHERE id = ?', [$user->id]);
+        if (trim($confirmUsername) !== $original) {
+            throw ValidationException::withErrors(['confirm_username' => ['Type the original username exactly as shown to confirm.']]);
+        }
+        $refused = 'Records still refer to this account (payments, grades, enrollments, or logged activity), so it can only stay deleted.';
+        if ((int) Database::scalar('SELECT COUNT(*) FROM audit_logs WHERE user_id = ?', [$user->id]) > 0) {
+            throw ValidationException::withMessage($refused);
+        }
+
+        try {
+            Database::transaction(static function () use ($admin, $user, $original): void {
+                Database::query('DELETE FROM users WHERE id = ?', [$user->id]);
+                AuditService::log('user.erased', 'administration', 'User', $user->id, ['username' => $original, 'role' => $user->role_name], null,
+                    'SUCCESS', null, $admin->id, $admin->role_name);
+            });
+        } catch (\PDOException $e) {
+            throw ValidationException::withMessage($refused);
+        }
+    }
     // -- Internals --------------------------------------------------------------------
 
     private static function neverSetUp(int $userId): bool
