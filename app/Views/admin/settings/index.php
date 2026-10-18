@@ -6,6 +6,7 @@
  * @var array  $groups  SettingsService::GROUPS
  * @var array  $values  key => stored value
  * @var bool   $hasLogo
+ * @var ?string $presidentSignatureUri the President's signature as a data URI, or null
  */
 use App\Services\SettingsService;
 
@@ -82,6 +83,26 @@ $enumLabels = [
                             <p id="field-logo-help" class="text-xs text-brand-gray">Square JPG or PNG, up to 1 MB. Used on every page and printout.</p>
                             <?php if ($hasLogo): ?>
                                 <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="remove_logo" value="1" class="h-4 w-4 rounded border-slate-300 text-brand-600"> Go back to the built-in seal</label>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="rounded-xl border border-brand-100 p-4">
+                    <legend class="px-1 font-display text-sm font-bold text-brand-navy">President's signature</legend>
+                    <div class="flex flex-wrap items-center gap-4" data-image-field>
+                        <?php if ($presidentSignatureUri !== null): ?>
+                            <img data-image-preview-target src="<?= e($presidentSignatureUri) ?>" alt="Current signature of the President" class="h-16 max-w-[10rem] rounded bg-white object-contain ring-2 ring-brand-100">
+                        <?php else: ?>
+                            <img data-image-preview-target src="" alt="" class="h-16 max-w-[10rem] rounded bg-white object-contain ring-2 ring-brand-100" hidden>
+                        <?php endif; ?>
+                        <div class="min-w-0 flex-1 space-y-2">
+                            <label for="field-president-signature" class="field-label">Upload the signature</label>
+                            <input id="field-president-signature" type="file" name="president_signature" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-max-bytes="<?= SettingsService::LOGO_MAX_BYTES ?>"
+                                   class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100" aria-describedby="field-president-signature-help">
+                            <p id="field-president-signature-help" class="text-xs text-brand-gray">Optional. A PNG or JPG of the signature on a plain background, up to 1 MB. Printed on the back of every e-ID card; without it only the name and title print.</p>
+                            <?php if ($presidentSignatureUri !== null): ?>
+                                <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="remove_president_signature" value="1" class="h-4 w-4 rounded border-slate-300 text-brand-600"> Remove the signature</label>
                             <?php endif; ?>
                         </div>
                     </div>

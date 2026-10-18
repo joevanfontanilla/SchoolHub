@@ -87,6 +87,7 @@ $select = static function (string $name, string $label, array $options, bool $re
                 <?= $select('civil_status', 'Civil status', $civilStatus) ?>
                 <?= component('field', ['name' => 'nationality', 'label' => 'Nationality', 'required' => true, 'value' => $value('nationality') ?: 'Filipino']) ?>
                 <?= component('field', ['name' => 'religion', 'label' => 'Religion', 'value' => $value('religion')]) ?>
+                <?= partial('blood-type-select', ['current' => $value('blood_type')]) ?>
             </div>
             <p data-civil-note="Married" class="mt-3 rounded-lg border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text" role="note" <?= (string) old('civil_status', $profile['civil_status'] ?? '') === 'Married' ? '' : 'hidden' ?>>You will need to upload your <strong>marriage certificate</strong> (PSA) with your enrollment application.</p>
         </fieldset>

@@ -16,12 +16,12 @@
     <title><?= e($title ?? 'E-ID') ?></title>
     <link rel="stylesheet" href="<?= e(asset('assets/app.css')) ?>">
     <style>
-        @page { size: 85.6mm 54mm; margin: 0; }
+        @page { size: 54mm 85.6mm; margin: 0; }
         @media print {
             html, body { margin: 0; padding: 0; background: #fff !important; }
             .card-page { page-break-after: always; break-after: page; margin: 0 !important; padding: 0 !important; }
             .card-page:last-child { page-break-after: auto; break-after: auto; }
-            .no-print { display: none !important; }
+            .no-print, .screen-only { display: none !important; }
         }
         .card-page svg { display: block; width: 100%; height: 100%; }
     </style>

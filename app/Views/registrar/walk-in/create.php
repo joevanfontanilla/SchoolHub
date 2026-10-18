@@ -137,6 +137,7 @@ $guardianValue = static fn (string $name) => (string) ((old('guardians', [[]])[0
                     <?= $select('civil_status', 'Civil status', $civilStatus) ?>
                     <?= component('field', ['name' => 'nationality', 'label' => 'Nationality', 'required' => true, 'value' => old('nationality', 'Filipino')]) ?>
                     <?= component('field', ['name' => 'religion', 'label' => 'Religion', 'value' => old('religion', '')]) ?>
+                    <?= partial('blood-type-select', ['current' => old('blood_type', '')]) ?>
                 </div>
                 <p data-civil-note="Married" class="mt-3 rounded-lg border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-text" role="note" <?= (string) old('civil_status', '') === 'Married' ? '' : 'hidden' ?>>A married student must upload their <strong>marriage certificate</strong> (PSA) with the application. It appears in the document list.</p>
             </fieldset>

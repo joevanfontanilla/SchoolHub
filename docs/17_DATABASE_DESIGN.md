@@ -477,6 +477,9 @@ withdrawals are append-only. The ledger account `3020 Opening Cash Balances` tak
 > `enrollments.withdrawn_at` DATETIME, `withdrawn_by` FK users, `withdraw_reason` VARCHAR(500), all nullable (migration 039);
 > `status` gains `WITHDRAWN`. See docs/26, "Withdrawal".
 
+> `student_profiles.blood_type` VARCHAR(5) nullable (migration 046): printed on the e-ID card back (docs/29). Migration 046 also adds the settings
+> `president_name`, `president_title`, and `president_signature`.
+
 > `requirement_types.applies_to_civil_status` VARCHAR(60) nullable (migration 045): civil statuses (comma-separated) a document is limited to, or NULL for all.
 > Migration 045 also adds the `marriage_certificate` type and adds it to open applications of married students. See docs/10.
 

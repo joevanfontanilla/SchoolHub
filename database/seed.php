@@ -126,6 +126,9 @@ const SETTINGS = [
     ['payment_instructions', "GCash: 0917 000 0000 (Lyceum of the East Aurora)\nBank deposit: Landbank, Account No. 0000-0000-00, Lyceum of the East Aurora\nKeep your reference number and a screenshot or photo of the receipt.", 'string', 'finance', 'Where students send online payments. SAMPLE details: replace with the school\'s real accounts.', 0],
     ['enrollment_open_message', 'Enrollment for the coming semester is now open.', 'string', 'enrollment', 'Shown on the public enrollment page', 1],
     ['school_logo', '', 'string', 'school', 'Stored logo file (set from System Settings); empty uses the built-in seal', 1],
+    ['president_name', 'Engr. Jaime S. Gose', 'string', 'school', 'The President named on the e-ID card', 0],
+    ['president_title', 'President & CEO', 'string', 'school', 'The President\'s title on the e-ID card', 0],
+    ['president_signature', '', 'string', 'school', 'Stored signature image of the President (set from System Settings)', 0],
     // Security (docs/07). These take over from config security.* once seeded.
     ['max_login_attempts', '5', 'int', 'security', 'Failed sign-ins before an account is locked', 0],
     ['lockout_minutes', '15', 'int', 'security', 'How long a locked account stays locked', 0],

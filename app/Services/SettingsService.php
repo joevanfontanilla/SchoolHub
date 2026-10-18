@@ -37,6 +37,8 @@ final class SettingsService
             'school_email'   => ['Contact email', 'email', null],
             'school_phone'   => ['Contact number', 'text:50', null],
             'office_hours'   => ['Office hours', 'text:150', null],
+            'president_name'  => ['President\'s name', 'text:100', 'Printed on the e-ID card.'],
+            'president_title' => ['President\'s title', 'text:100', 'Printed under the name on the e-ID card.'],
         ]],
         'enrollment' => ['Enrollment', 'How enrollment is confirmed (docs/26).', [
             'enrollment_payment_policy'   => ['Payment needed to enroll', 'enum:MINIMUM_DOWNPAYMENT,FULL,NONE', 'Down payment, full payment, or none before a student is officially enrolled.'],
@@ -70,7 +72,7 @@ final class SettingsService
      * @param array<string,mixed> $input
      * @return array<string,array{0:?string,1:string}> changed key => [old, new]
      */
-    public static function update(User $admin, string $group, array $input, ?UploadedFile $logo = null): array
+    public static function update(User $admin, string $group, array $input, ?UploadedFile $logo = null, ?UploadedFile $presidentSignature = null): array
     {
         if (!$admin->isSuperAdmin()) {
             throw HttpException::forbidden('Only the Super Admin changes system settings.');
@@ -153,6 +155,20 @@ final class SettingsService
             $values['school_logo'] = '';
         }
 
+        // The President's signature image for the e-ID card (docs/29), kept the same way as the logo.
+        $newSignature = null;
+        if ($group === 'school' && $presidentSignature !== null && $presidentSignature->error() !== UPLOAD_ERR_NO_FILE) {
+            $extension = DocumentUploadService::assertGenuineFile($presidentSignature, self::LOGO_EXTENSIONS, self::LOGO_MAX_BYTES, 'the President\'s signature');
+            $newSignature = 'uploads/branding/president-' . bin2hex(random_bytes(8)) . '.' . ($extension === 'jpeg' ? 'jpg' : $extension);
+            $presidentSignature->moveTo(STORAGE_PATH . '/' . $newSignature);
+        }
+        $oldSignature = (string) SystemSetting::get('president_signature', '');
+        if ($newSignature !== null) {
+            $values['president_signature'] = $newSignature;
+        } elseif ($group === 'school' && !empty($input['remove_president_signature'])) {
+            $values['president_signature'] = '';
+        }
+
         $all = SystemSetting::all();
         $changed = [];
         foreach ($values as $key => $value) {
@@ -178,6 +194,9 @@ final class SettingsService
             if ($newLogo !== null) {
                 @unlink(STORAGE_PATH . '/' . $newLogo);
             }
+            if ($newSignature !== null) {
+                @unlink(STORAGE_PATH . '/' . $newSignature);
+            }
             throw $e;
         }
 
@@ -185,7 +204,23 @@ final class SettingsService
             @unlink(STORAGE_PATH . '/' . $oldLogo);
         }
 
+        if (isset($changed['president_signature']) && $oldSignature !== '' && str_starts_with($oldSignature, 'uploads/branding/')) {
+            @unlink(STORAGE_PATH . '/' . $oldSignature);
+        }
+
         return $changed;
+    }
+
+    /** The President's signature as a data URI to print on the e-ID card, or null when none is set. */
+    public static function presidentSignatureUri(): ?string
+    {
+        $path = (string) SystemSetting::get('president_signature', '');
+        if ($path === '' || !str_starts_with($path, 'uploads/branding/') || !is_file(STORAGE_PATH . '/' . $path)) {
+            return null;
+        }
+        $bytes = (string) @file_get_contents(STORAGE_PATH . '/' . $path);
+
+        return $bytes === '' ? null : 'data:' . (str_ends_with($path, '.png') ? 'image/png' : 'image/jpeg') . ';base64,' . base64_encode($bytes);
     }
 
     /** The stored logo file, if one is set and still present. */

@@ -18,6 +18,7 @@ final class StudentProfileService
 {
     public const SEXES           = ['Male', 'Female'];
     public const CIVIL_STATUSES  = ['Single', 'Married', 'Widowed', 'Separated'];
+    public const BLOOD_TYPES     = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
     /** A profile photo: a small JPG or PNG, stored under storage/ and served only through a route. */
     public const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png'];
@@ -37,7 +38,7 @@ final class StudentProfileService
 
     private const PROFILE_FIELDS = [
         'birthdate', 'sex', 'civil_status', 'mobile', 'telephone', 'street', 'barangay',
-        'city_municipality', 'province', 'postal_code', 'nationality', 'religion',
+        'city_municipality', 'province', 'postal_code', 'nationality', 'religion', 'blood_type',
     ];
 
     /**
@@ -124,6 +125,7 @@ final class StudentProfileService
             'birthdate'         => 'required|date|before_today',
             'sex'               => 'required|in:' . implode(',', self::SEXES),
             'civil_status'      => 'required|in:' . implode(',', self::CIVIL_STATUSES),
+            'blood_type'        => 'nullable|in:' . implode(',', self::BLOOD_TYPES),
             'mobile'            => 'required|ph_mobile',
             'telephone'         => 'nullable|max:20',
             'street'            => 'nullable|max:150',

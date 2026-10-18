@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Core\HttpException;
+use App\Models\SystemSetting;
 use App\Models\User;
 
 /**
@@ -46,7 +47,7 @@ final class EIdService
         $details = self::details($user, $eid);
         $url = absolute_url('/verify/' . $eid['code']);
 
-        return $details + [
+        return $details + self::cardExtras($user, $details) + [
             'code'         => $eid['code'],
             'verifyUrl'    => $url,
             'qrSvg'        => QrCode::svg($url, 4, 'QR code to verify ' . $user->fullName() . '\'s e-ID'),
@@ -222,6 +223,88 @@ final class EIdService
             'programCode' => $student['program_code'] ?? null,
             'yearLevel' => $student['year_level'] ?? null,
         ];
+    }
+
+    /**
+     * What is printed on the card and shown only to the holder and the registrar (docs/29): the name as on the ribbon, the President, and for a
+     * student the address, birthday, blood type, emergency contact, and the school-year grid. Never part of the public verification page.
+     *
+     * @param array<string,mixed> $details details()
+     * @return array<string,mixed>
+     */
+    private static function cardExtras(User $user, array $details): array
+    {
+        $middle = trim((string) Database::scalar('SELECT middle_name FROM users WHERE id = ?', [$user->id]));
+        $ribbon = mb_strtoupper($user->last_name . ', ' . $user->first_name . ($middle !== '' ? ' ' . mb_substr($middle, 0, 1) . '.' : '') . ($user->suffix ? ' ' . $user->suffix : ''));
+        $extras = [
+            'ribbonName' => $ribbon,
+            'president'  => [
+                'name'         => (string) SystemSetting::get('president_name', ''),
+                'title'        => (string) SystemSetting::get('president_title', ''),
+                'signatureUri' => SettingsService::presidentSignatureUri(),
+            ],
+        ];
+        if (!$user->isStudent()) {
+            return $extras;
+        }
+
+        $profile = Database::selectOne(
+            'SELECT sp.street, sp.barangay, sp.city_municipality, sp.province, sp.birthdate, sp.blood_type
+               FROM student_profiles sp JOIN students s ON s.id = sp.student_id WHERE s.user_id = ?',
+            [$user->id]
+        ) ?? [];
+        $guardian = Database::selectOne(
+            'SELECT g.full_name, g.address, g.mobile FROM guardians g JOIN students s ON s.id = g.student_id
+              WHERE s.user_id = ? ORDER BY g.is_emergency_contact DESC, g.id LIMIT 1',
+            [$user->id]
+        );
+
+        return $extras + [
+            'address'   => mb_strtoupper(implode(', ', array_filter(array_map('trim', [$profile['street'] ?? '', $profile['barangay'] ?? '', $profile['city_municipality'] ?? '', $profile['province'] ?? ''])))),
+            'birthday'  => !empty($profile['birthdate']) ? mb_strtoupper(date('F j, Y', strtotime((string) $profile['birthdate']))) : '',
+            'bloodType' => (string) ($profile['blood_type'] ?? ''),
+            'emergency' => $guardian === null ? null : ['name' => (string) $guardian['full_name'], 'address' => mb_strtoupper((string) ($guardian['address'] ?? '')), 'mobile' => (string) $guardian['mobile']],
+            'grid'      => self::schoolYearGrid($user->id, (string) ($details['schoolYear'] ?? '')),
+        ];
+    }
+
+    /**
+     * Four school years from the student's first one, with the 1st and 2nd semesters they are enrolled in marked (docs/29).
+     *
+     * @return array<int,array{year:string,marks:array<int,bool>}>
+     */
+    private static function schoolYearGrid(int $userId, string $currentYear): array
+    {
+        $enrolled = [];
+        $first = null;
+        foreach (Database::select(
+            "SELECT ay.code, ay.start_date, t.sequence, e.status
+               FROM enrollments e
+               JOIN students s ON s.id = e.student_id
+               JOIN terms t ON t.id = e.term_id
+               JOIN academic_years ay ON ay.id = t.academic_year_id
+              WHERE s.user_id = ?",
+            [$userId]
+        ) as $row) {
+            if ($first === null || $row['start_date'] < $first['start_date']) {
+                $first = $row;
+            }
+            if ($row['status'] === 'ENROLLED') {
+                $enrolled[(string) $row['code']][(int) $row['sequence']] = true;
+            }
+        }
+
+        $startCode = $first['code'] ?? $currentYear;
+        if (!preg_match('/^(\d{4})-(\d{4})$/', (string) $startCode, $m)) {
+            return [];
+        }
+        $grid = [];
+        for ($i = 0; $i < 4; $i++) {
+            $code = ((int) $m[1] + $i) . '-' . ((int) $m[2] + $i);
+            $grid[] = ['year' => $code, 'marks' => [1 => isset($enrolled[$code][1]), 2 => isset($enrolled[$code][2])]];
+        }
+
+        return $grid;
     }
 
     /** @return array<string,mixed> the e-ID row, created (with a staff number for staff) when missing */

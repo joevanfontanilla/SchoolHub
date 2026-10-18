@@ -416,6 +416,7 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
                 <?= $select('civil_status', 'Civil status', $civilStatus) ?>
                 <?= component('field', ['name' => 'nationality', 'label' => 'Nationality', 'required' => true, 'value' => $value('nationality')]) ?>
                 <?= component('field', ['name' => 'religion', 'label' => 'Religion', 'value' => $value('religion')]) ?>
+                <?= partial('blood-type-select', ['current' => $value('blood_type')]) ?>
                 <?= component('field', ['name' => 'mobile', 'label' => 'Mobile number', 'type' => 'tel', 'required' => true, 'value' => $value('mobile')]) ?>
                 <?= component('field', ['name' => 'telephone', 'label' => 'Telephone', 'type' => 'tel', 'value' => $value('telephone')]) ?>
                 <?= component('field', ['name' => 'street', 'label' => 'House no. and street', 'value' => $value('street')]) ?>

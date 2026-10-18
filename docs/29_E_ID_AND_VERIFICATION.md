@@ -10,10 +10,24 @@ It is a convenience for checking a card against a person, not a government or le
   first time the e-ID is issued, `EMP-yyyy-nnnnn` (`SequenceService`, key `staff_id`).
 
 ## The card
-CR80 size (85.6 x 54 mm), printed one card per page, front then back.
-- **Front:** school seal and name, photo, full name, ID number, program and year level (students) or role (staff),
-  and the school year it is valid for.
-- **Back:** the QR code, "Scan to verify", the school's address and phone, and the holder's e-signature if they have one.
+Portrait CR80, **54 x 85.6 mm**, like the school's printed ID, printed one card side per page: front, then back (the page size is the card).
+
+**Front.** A blue wave header with the school seal, the school name, and its address. The middle half of the front is **the photo of the school's building** (the campus picture used on the landing page,
+`public/assets/images/campus.jpg`), with the photo of the holder (initials when there is none) over its left and a label with
+**Student ID. No.** in red (a staff member's ID number) and the school year over its right. The name on a blue ribbon as `LAST, FIRST M.`, the program in capitals
+(a staff member's role), and the holder's e-signature above a "SIGNATURE" line.
+
+**Back, student.** Address, Birthday, and Blood Type (when filled in) on a blue block; "In case of emergency, please notify" with the emergency
+contact's name, address, and number (the guardian marked as the emergency contact); a school-year by semester grid of four rows from the student's first
+school year, printed blank for hand validation, and on screen with a check mark in each semester the student is enrolled in; the **QR code** with
+"Scan to verify" beside "If found, please return to" the school and its address; the President's name, title, and signature; and a blue
+**NON-TRANSFERABLE** bar. The personal details are on the printed card and on the holder's and registrar's screen only; the public page is unchanged.
+
+**Back, staff.** The QR, the return line, the President, and the bar; no personal details and no grid (staff have no such profile data).
+
+The President's name and title, and an optional signature image, are System Settings (School profile). The QR holds the same address as before, so a card
+printed earlier still verifies.
+- **Blood type** is an optional profile field (migration 046): A+, A-, B+, B-, AB+, AB-, O+, or O-.
 - A person without a photo gets initials in place of one. The card prints even then; the registrar is told to add a photo.
 
 ## Who can open and print it
