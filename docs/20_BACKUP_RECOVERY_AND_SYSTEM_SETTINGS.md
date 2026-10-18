@@ -102,3 +102,8 @@ shows anything that is not OK.
 ### Not built
 Theme settings and notification settings (nothing yet reads them), email or off-site copies
 of backups, and restoring a single table or file.
+
+
+### School profile: the signers (migrations 046 and 047)
+`president_name`, `president_title` and `president_signature` appear on the e-ID card (docs/29). `registrar_name` and `registrar_signature` appear on the Certificate of
+Registration and the other forms the registrar signs (docs/15). The signatures are optional PNG or JPG images of up to 1 MB under `storage/uploads/branding/`.

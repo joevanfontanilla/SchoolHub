@@ -144,3 +144,9 @@ above the name when they have one.
 
 **Payment Breakdown** (Cashier reports): collections by fee line, by payment method, and by day, with the allocation
 rule in docs/14 (Payment breakdown).
+
+## Forms the registrar signs (migration 047)
+The **Certificate of Registration** (printed from the registrar's student record and from the student's own account) and the **class grade sheet** ("Received by the
+Registrar") end with the **school Registrar's name** printed on the signature line, taken from System Settings (School profile, "Registrar's name"), with an optional
+uploaded signature image above it (`registrar_signature`). The name is the same whoever prints the form, so a student's own copy is never blank; a staff member's personal
+e-signature is not used on these forms. With no name set, the line stays blank as before. The partial is `partials/registrar-signature.php`.

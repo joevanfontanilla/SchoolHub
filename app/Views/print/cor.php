@@ -131,8 +131,6 @@ $dayNames = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'S
 
     <div class="flex items-end justify-between gap-6 pt-8">
         <p class="text-xs text-slate-500">This certifies that the student named above is officially enrolled for the term shown.</p>
-        <div class="text-center">
-            <div class="mt-6 w-56 border-t border-slate-400 pt-1 text-xs text-slate-600">Registrar</div>
-        </div>
+        <div class="w-56"><?= partial('registrar-signature', ['label' => 'Registrar']) ?></div>
     </div>
 </section>

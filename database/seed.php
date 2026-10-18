@@ -129,6 +129,8 @@ const SETTINGS = [
     ['president_name', 'Engr. Jaime S. Gose', 'string', 'school', 'The President named on the e-ID card', 0],
     ['president_title', 'President & CEO', 'string', 'school', 'The President\'s title on the e-ID card', 0],
     ['president_signature', '', 'string', 'school', 'Stored signature image of the President (set from System Settings)', 0],
+    ['registrar_name', 'Jury Grace Dela Cruz-Nortez', 'string', 'school', 'The Registrar named on the Certificate of Registration and the other forms the registrar signs', 0],
+    ['registrar_signature', '', 'string', 'school', 'Stored signature image of the Registrar (set from System Settings)', 0],
     // Security (docs/07). These take over from config security.* once seeded.
     ['max_login_attempts', '5', 'int', 'security', 'Failed sign-ins before an account is locked', 0],
     ['lockout_minutes', '15', 'int', 'security', 'How long a locked account stays locked', 0],

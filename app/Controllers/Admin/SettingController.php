@@ -27,6 +27,7 @@ final class SettingController extends Controller
             'values'   => array_map(static fn ($row) => $row['value'], SystemSetting::all()),
             'hasLogo'  => SettingsService::logoPath() !== null,
             'presidentSignatureUri' => SettingsService::presidentSignatureUri(),
+            'registrarSignatureUri' => SettingsService::registrarSignatureUri(),
         ]);
     }
 
@@ -34,7 +35,7 @@ final class SettingController extends Controller
     {
         $group = (string) $request->param('group');
         try {
-            $changed = SettingsService::update(Auth::user(), $group, $request->all(), $group === 'school' ? UploadedFile::fromRequest($_FILES['logo'] ?? []) : null, $group === 'school' ? UploadedFile::fromRequest($_FILES['president_signature'] ?? []) : null);
+            $changed = SettingsService::update(Auth::user(), $group, $request->all(), $group === 'school' ? UploadedFile::fromRequest($_FILES['logo'] ?? []) : null, $group === 'school' ? UploadedFile::fromRequest($_FILES['president_signature'] ?? []) : null, $group === 'school' ? UploadedFile::fromRequest($_FILES['registrar_signature'] ?? []) : null);
         } catch (ValidationException $e) {
             $this->failWith($e, $request->all(), '/admin/settings?group=' . rawurlencode($group));
             return;

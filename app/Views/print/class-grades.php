@@ -58,7 +58,7 @@ $remarks = array_count_values(array_map(static fn (array $row) => $row['final'][
                 <?= partial('signature-image', ['userId' => $user->id, 'name' => $user->fullName()]) ?>
                 <p class="border-t border-slate-400 pt-1">Instructor's signature over printed name<?= $user->isTeacher() ? ' · ' . e($user->fullName()) : '' ?></p>
             </div>
-            <p class="border-t border-slate-400 pt-1 text-center">Received by the Registrar</p>
+            <?= partial('registrar-signature', ['label' => 'Received by the Registrar']) ?>
         </div>
     <?php endif; ?>
 </section>
