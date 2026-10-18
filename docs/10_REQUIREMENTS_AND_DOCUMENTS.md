@@ -99,3 +99,13 @@ the page (`partials/preview-dialog.php`, opened by links made with `partials/pre
   Open in new tab, and Close. Images are shown directly; PDFs use the browser's own viewer.
   Some phone browsers cannot show a PDF inside a page, which the window says, pointing to
   Open in new tab and Download. Without JavaScript the link opens the file in a new tab.
+
+## The upload checklist follows the school's list (migration 049)
+Only College is enrolled in this system, so the documents an applicant uploads match the school's printed list for their student type:
+- **New (first-year College):** Form 138 / Report Card, PSA Birth Certificate, Certificate of Good Moral Character, and the Medical Clearance.
+- **Transferee:** Transfer Credential (Honorable Dismissal), Transcript of Records (certified photocopy), PSA Birth Certificate, Certificate of Good Moral Character, and the Medical Clearance.
+- **Married (any type):** plus the PSA Marriage Certificate (see above).
+- **Old and Summer** students are already admitted and are asked for no admission documents.
+- The **Medical Clearance from an Accredited Medical Clinic** is optional to submit the application: it is submitted within 30 days, and the Registrar can verify it when it arrives.
+- The **2x2 ID photograph** and **valid ID** are no longer asked (inactive, not deleted). Documents already uploaded keep their place and nothing already verified is removed.
+The public list shown on the website is separate and editable by the Super Admin (docs/06).

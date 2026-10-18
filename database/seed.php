@@ -165,9 +165,8 @@ const REQUIREMENT_TYPES = [
     'good_moral'          => ['Certificate of Good Moral Character', 'Issued by your previous school.', 1, 'New,Transferee', 30],
     'transfer_credential' => ['Transfer Credential (Honorable Dismissal)', 'Issued by the school you are transferring from.', 1, 'Transferee', 40],
     'transcript'          => ['Transcript of Records', 'Copy of your transcript from your previous school.', 1, 'Transferee', 50],
-    'id_photo'            => ['2x2 ID Photograph', 'Recent photo with a plain white background.', 1, 'All', 60],
-    'valid_id'            => ['Valid Government or School ID', 'Any valid ID showing your name and photo.', 0, 'All', 70],
-    'medical_certificate' => ['Medical Certificate', 'Issued by a licensed physician within the last six months.', 0, 'New,Transferee', 80],
+    // The school's printed list (docs/10): the 2x2 photo and valid ID are no longer asked, and the medical clearance is due within 30 days.
+    'medical_certificate' => ['Medical Clearance from Accredited Medical Clinic', 'Submit within 30 days after enrollment.', 0, 'New,Transferee', 80],
     // The sixth value limits a document to a civil status (docs/10): this one is asked of married students.
     'marriage_certificate' => ['PSA Marriage Certificate', 'Clear copy of your PSA-issued marriage certificate. Asked of married students.', 1, 'All', 25, 'Married'],
 ];

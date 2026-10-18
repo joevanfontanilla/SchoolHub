@@ -19,14 +19,15 @@ return [
         $t->assertEquals(Student::TYPES, array_keys(Student::TYPE_LABELS), 'The list and the labels never drift apart');
     },
 
-    'an Old or a Summer application is accepted without a previous school, and gets the documents every applicant needs' => function (TestRunner $t): void {
+    'an Old or a Summer application is accepted without a previous school, and is asked for no admission documents' => function (TestRunner $t): void {
         try {
             foreach (['Old', 'Summer'] as $type) {
                 $student = makeStudent();
                 $id = Applications::createDraft($student, applicationInput($type));
                 $t->assertEquals($type, Application::find($id)['student_type']);
                 $codes = array_column(Application::requirements($id), 'code');
-                $t->assertTrue(in_array('id_photo', $codes, true), "{$type} brings a photo");
+                $t->assertFalse(in_array('id_photo', $codes, true), "{$type} is asked for no photo");
+                $t->assertEquals([], $codes, "{$type} is already admitted, so no admission documents");
                 $t->assertFalse(in_array('transcript', $codes, true), "{$type} needs no transcript");
                 $t->assertFalse(in_array('report_card', $codes, true), "{$type} needs no report card");
             }

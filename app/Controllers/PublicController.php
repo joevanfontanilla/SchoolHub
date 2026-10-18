@@ -52,7 +52,7 @@ final class PublicController extends Controller
     {
         $this->publicView('public/requirements', [
             'title'        => 'Requirements',
-            'requirements' => RequirementType::active(),
+            'requirementGroups' => \App\Services\PublicRequirementsService::groups(),
         ]);
     }
 

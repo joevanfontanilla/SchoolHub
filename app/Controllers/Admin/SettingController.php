@@ -31,6 +31,23 @@ final class SettingController extends Controller
         ]);
     }
 
+    /** The public admission requirements list (docs/06), edited here instead of in the generic settings form. */
+    public function requirements(Request $request): void
+    {
+        $this->appView('admin/settings/requirements', ['title' => 'System Settings', 'groups' => SettingsService::GROUPS, 'requirementGroups' => \App\Services\PublicRequirementsService::groups()]);
+    }
+
+    public function saveRequirements(Request $request): void
+    {
+        try {
+            $count = \App\Services\PublicRequirementsService::save(Auth::user(), $request->all());
+        } catch (ValidationException $e) {
+            $this->failWith($e, $request->all(), '/admin/settings/requirements');
+            return;
+        }
+        $this->success('The admission requirements were published (' . $count . ' group' . ($count === 1 ? '' : 's') . ').', '/admin/settings/requirements');
+    }
+
     public function update(Request $request): void
     {
         $group = (string) $request->param('group');

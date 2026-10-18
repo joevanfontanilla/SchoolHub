@@ -188,6 +188,8 @@ $router->get('/admin/bank-accounts/{id}/edit',  [CashierBanks::class, 'edit'],  
 $router->post('/admin/bank-accounts/{id}/edit', [CashierBanks::class, 'save'],   $admin('settings.manage'));
 $router->post('/admin/bank-accounts/{id}/toggle', [CashierBanks::class, 'toggle'], $admin('settings.manage'));
 $router->get('/admin/settings',          [AdminSettings::class, 'index'],  $admin('settings.manage'), 'admin.settings');
+$router->get('/admin/settings/requirements',  [AdminSettings::class, 'requirements'],     $admin('settings.manage'), 'admin.settings.requirements');
+$router->post('/admin/settings/requirements', [AdminSettings::class, 'saveRequirements'], $admin('settings.manage'));
 $router->post('/admin/settings/{group}', [AdminSettings::class, 'update'], $admin('settings.manage'));
 
 $router->get('/admin/audit-logs',        [AdminAudit::class, 'index'],  $admin('audit.view'), 'admin.audit');

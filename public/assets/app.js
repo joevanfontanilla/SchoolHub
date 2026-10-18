@@ -1237,3 +1237,22 @@
         }, 4000);
     }
 })();
+
+/* Admission requirements editor (System Settings): "Add another group" copies the blank group template with the next number. */
+(function () {
+    var button = document.querySelector('[data-add-requirement-group]');
+    var template = document.querySelector('[data-requirement-template]');
+    var list = document.querySelector('[data-requirement-groups]');
+    if (!button || !template || !list) { return; }
+    button.hidden = false;
+    button.addEventListener('click', function () {
+        var next = list.querySelectorAll('[data-requirement-group]').length;
+        var holder = document.createElement('div');
+        holder.innerHTML = template.innerHTML.split('__N__').join(String(next));
+        var group = holder.firstElementChild;
+        group.querySelector('legend').textContent = 'Group ' + (next + 1);
+        list.appendChild(group);
+        var title = group.querySelector('input');
+        if (title) { title.focus(); }
+    });
+})();

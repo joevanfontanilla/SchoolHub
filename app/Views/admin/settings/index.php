@@ -33,6 +33,7 @@ $enumLabels = [
                 <a href="<?= e(url('/admin/settings?group=' . $key)) ?>" <?= $key === $group ? 'aria-current="page"' : '' ?>
                    class="block rounded-lg px-3 py-2 text-sm font-semibold <?= $key === $group ? 'bg-brand-600 text-white' : 'text-brand-navy hover:bg-brand-50' ?>"><?= e($title) ?></a>
             <?php endforeach; ?>
+            <a href="<?= e(url('/admin/settings/requirements')) ?>" class="block rounded-lg px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-50">Admission requirements</a>
         </nav>
 
         <form method="POST" action="<?= e(url('/admin/settings/' . $group)) ?>" <?= $group === 'school' ? 'enctype="multipart/form-data"' : '' ?> class="card space-y-5 p-5 sm:p-6 lg:col-span-3" novalidate
