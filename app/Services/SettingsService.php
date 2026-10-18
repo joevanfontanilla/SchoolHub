@@ -39,7 +39,7 @@ final class SettingsService
             'office_hours'   => ['Office hours', 'text:150', null],
             'president_name'  => ['President\'s name', 'text:100', 'Printed on the e-ID card.'],
             'president_title' => ['President\'s title', 'text:100', 'Printed under the name on the e-ID card.'],
-            'registrar_name'  => ['Registrar\'s name', 'text:100', 'Printed on the signature line of the Certificate of Registration and the other forms the registrar signs.'],
+            'registrar_name'  => ['Registrar\'s name', 'text:100', 'Used on the forms the registrar signs only when no Registrar is printing them and the Registrar who enrolled the student cannot be found. Otherwise the account holder\'s own name prints.'],
         ]],
         'enrollment' => ['Enrollment', 'How enrollment is confirmed (docs/26).', [
             'enrollment_payment_policy'   => ['Payment needed to enroll', 'enum:MINIMUM_DOWNPAYMENT,FULL,NONE', 'Down payment, full payment, or none before a student is officially enrolled.'],

@@ -121,3 +121,10 @@ Built by the registrar on **Sections → Classes** (`academic.assign`), through
 first, with each class, its period grades, and the final grade computed by the grading
 policy (docs/27). Past terms stay readable. Students see their own at `/student/history`;
 the registrar sees it on the student record.
+
+## Which classes a student can be given (the registrar's Add a class)
+Only a class whose subject belongs to **the student's own curriculum** is offered, or a **general** subject (one with no curriculum). A BSA student's list holds BSA
+classes only, never another program's. A student with no curriculum yet is offered the classes of their program. The same rule is checked when the class is added
+(`EnlistmentService::addClass`), so a request for another program's class is refused with a message, and it cannot be overridden: it is not a prerequisite or a unit
+limit but the wrong program. Classes a student is already enlisted in are never dropped by this rule, and a shifter follows the curriculum they are given at
+enrollment (docs/28). The student's own subject selection on the application already offered only their program's curriculum for the year and term.

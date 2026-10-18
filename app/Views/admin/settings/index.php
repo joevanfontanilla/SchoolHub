@@ -121,7 +121,7 @@ $enumLabels = [
                             <label for="field-registrar-signature" class="field-label">Upload the signature</label>
                             <input id="field-registrar-signature" type="file" name="registrar_signature" accept=".jpg,.jpeg,.png,image/jpeg,image/png" data-max-bytes="<?= SettingsService::LOGO_MAX_BYTES ?>"
                                    class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700 hover:file:bg-brand-100" aria-describedby="field-registrar-signature-help">
-                            <p id="field-registrar-signature-help" class="text-xs text-brand-gray">Optional. A PNG or JPG of the signature on a plain background, up to 1 MB. Printed above the Registrar's name on the Certificate of Registration and the other forms the registrar signs; without it only the name prints.</p>
+                            <p id="field-registrar-signature-help" class="text-xs text-brand-gray">Optional. A PNG or JPG of the signature on a plain background, up to 1 MB. Used with the Registrar's name above, as the fallback for the forms the registrar signs; each Registrar's own e-signature is used when they print.</p>
                             <?php if ($registrarSignatureUri !== null): ?>
                                 <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" name="remove_registrar_signature" value="1" class="h-4 w-4 rounded border-slate-300 text-brand-600"> Remove the signature</label>
                             <?php endif; ?>

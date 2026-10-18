@@ -111,6 +111,11 @@ final class EnlistmentService
             if ((int) $class['term_id'] !== (int) $enrollment['term_id']) {
                 throw ValidationException::withMessage("{$class['code']} is not offered in this student's term.");
             }
+            // Another program's subject is the wrong class for this student, not a rule to override (docs/13).
+            $wrongProgram = \App\Models\ClassSchedule::programProblem($enrollmentId, $classId);
+            if ($wrongProgram !== null) {
+                throw ValidationException::withMessage($wrongProgram);
+            }
 
             $existing = Database::selectOne(
                 'SELECT * FROM class_enlistments WHERE enrollment_id = ? AND class_schedule_id = ?',

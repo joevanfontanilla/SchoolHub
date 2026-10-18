@@ -145,8 +145,16 @@ above the name when they have one.
 **Payment Breakdown** (Cashier reports): collections by fee line, by payment method, and by day, with the allocation
 rule in docs/14 (Payment breakdown).
 
-## Forms the registrar signs (migration 047)
+## Forms the registrar signs (migrations 046 and 047)
 The **Certificate of Registration** (printed from the registrar's student record and from the student's own account) and the **class grade sheet** ("Received by the
-Registrar") end with the **school Registrar's name** printed on the signature line, taken from System Settings (School profile, "Registrar's name"), with an optional
-uploaded signature image above it (`registrar_signature`). The name is the same whoever prints the form, so a student's own copy is never blank; a staff member's personal
-e-signature is not used on these forms. With no name set, the line stays blank as before. The partial is `partials/registrar-signature.php`.
+Registrar") end with a Registrar's name on the signature line, `RegistrarSignerService::resolve`:
+1. **The Registrar who is signed in and printing it**, by their own account name, with their own e-signature above it when they have saved one on My Account. Another
+   Registrar who prints it gets their own name, and the other way round. Their personal signature is never put under another person's name.
+2. Otherwise, a **student's own copy** names the Registrar who confirmed that student's enrollment (`enrollments.enrolled_by`), or who reviewed the application, with
+   that Registrar's e-signature if they have one.
+3. Otherwise (a teacher printing the class grade sheet, or no Registrar can be found) the **school Registrar** in System Settings ("Registrar's name" and an optional
+   signature image, `registrar_name` / `registrar_signature`).
+With no name anywhere the line is blank as before. The partial is `partials/registrar-signature.php`.
+
+The Certificate of Registration also carries a **dry seal notice** (`partials/dry-seal-note.php`): a printed copy is **not legitimate without the school's dry seal**, and
+the notice marks a place for it.

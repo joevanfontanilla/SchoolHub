@@ -105,5 +105,5 @@ of backups, and restoring a single table or file.
 
 
 ### School profile: the signers (migrations 046 and 047)
-`president_name`, `president_title` and `president_signature` appear on the e-ID card (docs/29). `registrar_name` and `registrar_signature` appear on the Certificate of
-Registration and the other forms the registrar signs (docs/15). The signatures are optional PNG or JPG images of up to 1 MB under `storage/uploads/branding/`.
+`president_name`, `president_title` and `president_signature` appear on the e-ID card (docs/29). `registrar_name` and `registrar_signature` are only the fallback for the forms the
+registrar signs (docs/15): each Registrar's own name and e-signature print when they print, and a student's own copy names the Registrar who enrolled them. The signatures are optional PNG or JPG images of up to 1 MB under `storage/uploads/branding/`.

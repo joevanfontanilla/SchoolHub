@@ -1,16 +1,17 @@
 <?php
 /**
- * The Registrar's signature block at the foot of a form the registrar signs (docs/15): the school Registrar's name from System Settings, printed on
- * the signature line, with the signature image above it when one is uploaded. Without a name it is the blank line it used to be.
+ * The Registrar's signature block at the foot of a form the registrar signs (docs/15): the name of the Registrar who prints it (or, for a student's own copy,
+ * the one who enrolled them, or the school Registrar in System Settings), with their signature image above when there is one. Without a name it is the blank line it was.
  *
- * @var string $label what is printed under the name, "Registrar" by default
+ * @var string $label        what is printed under the name, "Registrar" by default
+ * @var ?int   $enrollmentId the enrollment the form is about, when it is about one (a student's own copy then names the registrar who enrolled them)
  */
-use App\Models\SystemSetting;
-use App\Services\SettingsService;
+use App\Services\RegistrarSignerService;
 
 $label = $label ?? 'Registrar';
-$name = trim((string) SystemSetting::get('registrar_name', ''));
-$signature = SettingsService::registrarSignatureUri();
+$signer = RegistrarSignerService::resolve(auth_user(), $enrollmentId ?? null);
+$name = $signer['name'];
+$signature = $signer['signatureUri'];
 ?>
 <div class="text-center">
     <?php if ($signature !== null): ?>

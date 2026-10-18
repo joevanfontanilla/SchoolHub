@@ -70,12 +70,42 @@ final class ClassSchedule
     {
         return self::withMeetings(Database::select(
             'SELECT ' . self::CLASS_COLUMNS . ' ' . self::CLASS_JOINS . "
-              WHERE cs.term_id = (SELECT term_id FROM enrollments WHERE id = ?)
+              JOIN enrollments enr ON enr.id = ?
+              JOIN students stu    ON stu.id = enr.student_id
+              WHERE cs.term_id = enr.term_id
                 AND cs.status = 'ACTIVE'
-                AND NOT EXISTS (SELECT 1 FROM class_enlistments ce WHERE ce.class_schedule_id = cs.id AND ce.enrollment_id = ? AND ce.status = 'ENLISTED')
+                AND (sub.curriculum_id IS NULL
+                     OR sub.curriculum_id = stu.curriculum_id
+                     OR (stu.curriculum_id IS NULL AND sub.program_id = stu.program_id))
+                AND NOT EXISTS (SELECT 1 FROM class_enlistments ce WHERE ce.class_schedule_id = cs.id AND ce.enrollment_id = enr.id AND ce.status = 'ENLISTED')
               ORDER BY sub.code, sec.code",
-            [$enrollmentId, $enrollmentId]
+            [$enrollmentId]
         ));
+    }
+
+    /**
+     * Why this student cannot be given this class because of its subject's program, or null when it is one of their own curriculum's, a general subject, or
+     * (with no curriculum yet) one of their program's. The same rule as addableFor() (docs/13).
+     */
+    public static function programProblem(int $enrollmentId, int $classId): ?string
+    {
+        $row = Database::selectOne(
+            'SELECT sub.code, sub.curriculum_id AS subject_curriculum, sub.program_id AS subject_program, stu.curriculum_id AS student_curriculum, stu.program_id AS student_program
+               FROM class_schedules cs
+               JOIN subjects sub ON sub.id = cs.subject_id
+               JOIN enrollments enr ON enr.id = ?
+               JOIN students stu ON stu.id = enr.student_id
+              WHERE cs.id = ?',
+            [$enrollmentId, $classId]
+        );
+        if ($row === null || $row['subject_curriculum'] === null) {
+            return null;
+        }
+        $own = $row['student_curriculum'] !== null
+            ? (int) $row['subject_curriculum'] === (int) $row['student_curriculum']
+            : ($row['subject_program'] !== null && (int) $row['subject_program'] === (int) $row['student_program']);
+
+        return $own ? null : "{$row['code']} belongs to another program's curriculum, so it cannot be added for this student.";
     }
 
     /** The student an enlistment belongs to, or null if there is no such enlistment. */
