@@ -6,6 +6,13 @@ UPDATE requirement_types
    SET name = 'Medical Clearance from Accredited Medical Clinic', description = 'Submit within 30 days after enrollment.', is_required = 0
  WHERE code = 'medical_certificate';
 
+-- An application still open that was given those two as empty placeholders is not asked for them (a file already uploaded is kept, as are all verified ones).
+DELETE er FROM enrollment_requirements er JOIN requirement_types rt ON rt.id = er.requirement_type_id
+  JOIN enrollment_applications ea ON ea.id = er.application_id
+ WHERE rt.code IN ('id_photo', 'valid_id') AND er.status = 'NOT_SUBMITTED'
+   AND ea.application_status IN ('DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'REQUIREMENTS_INCOMPLETE', 'CORRECTION_REQUIRED')
+   AND NOT EXISTS (SELECT 1 FROM enrollment_requirement_files f WHERE f.enrollment_requirement_id = er.id);
+
 -- The public Requirements page (docs/06), editable by the Super Admin in System Settings; starts with the school's flyer.
 INSERT INTO system_settings (`key`, `value`, `type`, `group`, description, is_public) VALUES
     ('public_requirements', '[{"title":"For Basic Education","items":["Report Card","PSA Birth Certificate"]},{"title":"For Senior High School (Grade 11 & 12)","items":["PSA Birth Certificate","Grade 10 Report Card (with Learner Reference Number or LRN)","Certificate of Junior High School Completion","Certificate of Good Moral Character","ESC Certificate from Junior High School Principal format available through the ESC IMS (ESC Grantees Only)","QVR Certificate (Qualified Voucher Receipt) for ESC only","Medical from Accredited Medical Clinic (submit after 30 days)"]},{"title":"For College: First Year College","items":["Form 138/Report Card from Senior High School","PSA Birth Certificate (Photocopy)","Certificate of Good Moral Character","Medical Clearance from Accredited Medical Clinic (submit after 30 days)"]},{"title":"For College: Transferees","items":["Honorable Dismissal","Transcript of Records (Certified Photocopy)","PSA Birth Certificate","Certificate of Good Moral Character","Medical Clearance from Accredited Medical Clinic (submit after 30 days)"]},{"title":"If Married","items":["Marriage Contract"]}]', 'json', 'enrollment', 'Admission requirements shown on the public Requirements page (edited in System Settings > Admission requirements)', 0)
