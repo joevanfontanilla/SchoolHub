@@ -7,18 +7,24 @@
  * @var array  $periods
  * @var ?array $period  the period being entered
  * @var array  $sheet   ClassSchedule::gradeSheet()
- * @var array  $steps   valid numeric grades
  */
 use App\Services\GradeCalculator;
 
 $failed = errors() !== [];
 $old = (array) old('grades', []);
 $open = $period !== null && (int) $period['is_open'] === 1;
+// What goes back in the box: a mark, or the percentage (so saving the sheet again changes nothing), or the equivalent of an old grade.
 $valueOf = static function (?array $entry): string {
     if ($entry === null) {
         return '';
     }
-    return (string) ($entry['remark'] ?? $entry['grade'] ?? '');
+    if (!empty($entry['remark'])) {
+        return (string) $entry['remark'];
+    }
+    if (($entry['percentage'] ?? null) !== null) {
+        return rtrim(rtrim(number_format((float) $entry['percentage'], 2, '.', ''), '0'), '.');
+    }
+    return (string) ($entry['grade'] ?? '');
 };
 ?>
 <div class="space-y-6">
@@ -28,7 +34,7 @@ $valueOf = static function (?array $entry): string {
         <p class="eyebrow"><?= e($class['section_code']) ?> · <?= e($class['term_name']) ?> <?= e($class['academic_year_code']) ?></p>
         <h2 class="mt-1 text-2xl">Grade sheet · <?= e($class['code']) ?></h2>
         <p class="mt-1 text-sm text-slate-600">
-            1.00 is the highest grade and 3.00 the lowest passing grade; 5.00 is failing. INC is incomplete, DRP dropped.
+            Type each grade as a <strong>percentage</strong> (such as 92.4), a grade from the <a href="<?= e(url('/grading-system')) ?>" class="font-semibold text-brand-600 hover:underline" target="_blank" rel="noopener">Official Grading System</a> (such as 1.40), or a mark: INC, OW, UW, NGA. The equivalent shows beside the box. Below 75 is 5.00, failed.
             The final is the weighted average of <?= e(implode(', ', array_map(static fn ($p) => $p['name'] . ' ' . rtrim(rtrim((string) $p['weight'], '0'), '.') . '%', $periods))) ?>.
         </p>
     </div>
@@ -90,21 +96,16 @@ $valueOf = static function (?array $entry): string {
                                                 <?php if ((int) $column['id'] === (int) $period['id'] && $open): ?>
                                                     <?php $current = $failed ? (string) ($old[$eid] ?? '') : $stored; ?>
                                                     <label for="grade-<?= $eid ?>" class="sr-only"><?= e($period['name']) ?> grade for <?= e($row['first_name'] . ' ' . $row['last_name']) ?></label>
-                                                    <select id="grade-<?= $eid ?>" name="grades[<?= $eid ?>]" class="field-input w-24 text-center <?= $error ? 'field-input-error' : '' ?>">
-                                                        <option value="">—</option>
-                                                        <?php foreach ([...$steps, GradeCalculator::INC, GradeCalculator::DRP] as $value): ?>
-                                                            <option value="<?= e($value) ?>" <?= $current !== '' && $current === $value ? 'selected' : '' ?>><?= e($value) ?></option>
-                                                        <?php endforeach; ?>
-                                                        <?php if ($current !== '' && !in_array($current, [...$steps, 'INC', 'DRP'], true)): ?>
-                                                            <option value="<?= e($current) ?>" selected><?= e($current) ?> (not valid)</option>
-                                                        <?php endif; ?>
-                                                    </select>
+                                                    <input id="grade-<?= $eid ?>" name="grades[<?= $eid ?>]" type="text" inputmode="decimal" autocomplete="off" maxlength="6" placeholder="—"
+                                                           value="<?= e($current) ?>" data-grade-input data-preview="grade-preview-<?= $eid ?>"
+                                                           class="field-input w-24 text-center <?= $error ? 'field-input-error' : '' ?>">
+                                                    <span id="grade-preview-<?= $eid ?>" class="mt-1 block min-h-[1rem] text-xs text-brand-gray" aria-live="polite"></span>
                                                 <?php else: ?>
-                                                    <?= e($stored === '' ? '—' : $stored) ?>
+                                                    <?= e(GradeCalculator::display($row['period_grades'][(int) $column['id']] ?? null)) ?>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endforeach; ?>
-                                        <td class="whitespace-nowrap px-4 py-3 text-center font-display font-bold text-brand-navy tabular-nums"><?= e($row['final']['grade'] ?? '—') ?></td>
+                                        <td class="whitespace-nowrap px-4 py-3 text-center font-display font-bold text-brand-navy tabular-nums"><?= e($row['final']['grade'] ?? '—') ?><?php if (($row['final']['percentage'] ?? null) !== null): ?><span class="block text-xs font-normal text-brand-gray"><?= e($row['final']['percentage']) ?>%</span><?php endif; ?></td>
                                         <td class="whitespace-nowrap px-4 py-3"><?= component('status-badge', ['status' => $row['final']['remark'], 'label' => GradeCalculator::remarkLabel($row['final']['remark'])]) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -122,3 +123,4 @@ $valueOf = static function (?array $entry): string {
         </section>
     <?php endif; ?>
 </div>
+<script type="application/json" id="grade-scale"><?= json_encode(GradeCalculator::TABLE, JSON_HEX_TAG | JSON_HEX_AMP) ?></script>

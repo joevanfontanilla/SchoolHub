@@ -1095,3 +1095,61 @@
     select.addEventListener('change', apply);
     apply();
 })();
+
+/* Grade sheet: type a percentage, an equivalent, or a mark, and see what it becomes. The server decides again on save; this only
+   mirrors GradeCalculator so the teacher sees the result before saving. */
+(function () {
+    var inputs = document.querySelectorAll('[data-grade-input]');
+    var scaleNode = document.getElementById('grade-scale');
+    if (!inputs.length || !scaleNode) { return; }
+    var table;
+    try { table = JSON.parse(scaleNode.textContent); } catch (e) { return; }
+    var marks = { INC: 'Incomplete', OW: 'Officially withdrawn', UW: 'Unofficially withdrawn', NGA: 'No grade due to absences' };
+
+    function descriptor(eq) {
+        var v = parseFloat(eq);
+        if (v >= 5) { return 'Failed'; }
+        if (v >= 3) { return 'Passed'; }
+        if (v >= 2.5) { return 'Satisfactorily'; }
+        if (v >= 2) { return 'Good'; }
+        if (v >= 1.5) { return 'Very good'; }
+        return 'Excellent';
+    }
+    function equivalentFor(percentage) {
+        var tenths = Math.round(percentage * 10 + 1e-9);
+        for (var i = 0; i < table.length; i++) {
+            if (tenths >= Math.round(parseFloat(table[i][1]) * 10)) { return table[i][0]; }
+        }
+        return '5.00';
+    }
+    function describe(raw) {
+        var text = raw.trim().toUpperCase().replace(/%$/, '');
+        if (text === '') { return { text: '' }; }
+        if (marks[text]) { return { text: marks[text] }; }
+        if (!/^\d{1,3}(\.\d{1,2})?$/.test(text)) { return { text: 'Not a valid grade', bad: true }; }
+        var n = parseFloat(text);
+        if (n > 100) { return { text: 'Not a valid grade', bad: true }; }
+        if (n < 6) {
+            var formatted = n.toFixed(2);
+            if (formatted === '5.00') { return { text: '5.00 · Failed' }; }
+            for (var i = 0; i < table.length; i++) {
+                if (table[i][0] === formatted) { return { text: '= ' + parseFloat(table[i][1]) + '% · ' + descriptor(formatted) }; }
+            }
+            return { text: 'Not in the grading system', bad: true };
+        }
+        var eq = equivalentFor(n);
+        return { text: '→ ' + eq + ' · ' + descriptor(eq) };
+    }
+    inputs.forEach(function (input) {
+        var out = document.getElementById(input.getAttribute('data-preview'));
+        if (!out) { return; }
+        function update() {
+            var result = describe(input.value);
+            out.textContent = result.text;
+            out.classList.toggle('text-danger-text', !!result.bad);
+            out.classList.toggle('text-brand-gray', !result.bad);
+        }
+        input.addEventListener('input', update);
+        update();
+    });
+})();

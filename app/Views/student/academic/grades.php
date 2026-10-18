@@ -48,6 +48,7 @@ $cardTitle = 'flex items-center gap-3 font-display text-lg font-bold text-brand-
                 <?= component('empty-state', ['title' => 'No classes yet', 'message' => 'The registrar is still setting up your section\'s classes.']) ?>
             <?php else: ?>
                 <?= partial('grade-table', ['periods' => $periods, 'classes' => $classes, 'summary' => $summary, 'caption' => 'Grades for ' . $enrollment['term_name']]) ?>
+                <p class="mt-3 text-xs text-brand-gray">Each grade shows its equivalent and, in brackets, its percentage. <a href="<?= e(url('/grading-system')) ?>" class="font-semibold text-brand-600 hover:underline">See the Official Grading System</a>.</p>
             <?php endif; ?>
         </section>
 

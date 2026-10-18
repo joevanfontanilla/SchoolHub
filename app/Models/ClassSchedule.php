@@ -167,12 +167,12 @@ final class ClassSchedule
 
         $grades = [];
         foreach (Database::select(
-            'SELECT g.class_enlistment_id, g.grade_period_id, g.grade, g.remark FROM grades g
+            'SELECT g.class_enlistment_id, g.grade_period_id, g.grade, g.percentage, g.remark FROM grades g
                JOIN class_enlistments ce ON ce.id = g.class_enlistment_id
               WHERE ce.class_schedule_id = ?',
             [$classId]
         ) as $row) {
-            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
         }
 
         return array_map(static function (array $student) use ($grades, $weights): array {

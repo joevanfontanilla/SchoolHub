@@ -50,10 +50,10 @@ final class CreditedSubjectService
             $errors['subject_id'] = ['The student has already passed that subject here, so it does not need crediting.'];
         }
 
-        // An optional recorded grade must be a numeric mark on the 1.00-5.00 scale (not INC/DRP).
+        // An optional recorded grade must be an equivalent from the Official Grading System (not a mark).
         $grade = trim((string) ($input['grade'] ?? ''));
-        if ($grade !== '' && (!is_numeric($grade) || !GradeCalculator::isValid($grade))) {
-            $errors['grade'] = ['Leave the grade blank, or enter a mark like 1.75.'];
+        if ($grade !== '' && (!is_numeric($grade) || !in_array(number_format((float) $grade, 2, '.', ''), GradeCalculator::equivalents(), true))) {
+            $errors['grade'] = ['Leave the grade blank, or enter a grade from the Official Grading System, like 1.40.'];
         }
 
         $source = trim((string) ($input['source'] ?? ''));

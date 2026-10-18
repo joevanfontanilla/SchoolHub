@@ -146,7 +146,6 @@ final class ClassController extends Controller
             'periods' => $periods,
             'period'  => $period,
             'sheet'   => ClassSchedule::gradeSheet((int) $class['id'], (int) $class['term_id']),
-            'steps'   => GradeCalculator::STEPS,
         ]);
     }
 

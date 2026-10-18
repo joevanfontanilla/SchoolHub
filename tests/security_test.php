@@ -70,6 +70,8 @@ return [
             '/^\$policy === PaymentPolicy::FULL \?/',
             // The e-ID QR: an SVG QrCode::svg() builds from integers and an escaped label, never from raw input.
             '/^\$card\[\'qrSvg\'\]$/',
+            // The Official Grading System: constant data from GradeCalculator::TABLE, encoded for a JSON script block with tags and ampersands escaped.
+            '/^json_encode\(GradeCalculator::TABLE, JSON_HEX_TAG \| JSON_HEX_AMP\)$/',
         ];
         $safeCalls = ['e', 'component', 'partial', 'icon', 'csrf_field', 'count', 'number_format', 'round', 'money', 'signed_money'];
         $unreviewed = [];

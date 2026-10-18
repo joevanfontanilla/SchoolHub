@@ -15,6 +15,25 @@ use App\Models\User;
 use App\Services\GradingService as Grading;
 
 /**
+ * A class in the current term, taught by a fixture teacher, with one enrolled student.
+ *
+ * @return array{teacher:User,registrar:User,class_id:int,enlistment_id:int,enrollment_id:int,student:User,term_id:int,section_id:int}
+ */
+function semiGradedClass(): array
+{
+    $enrolled = enrolledStudent(currentTermId());
+    $teacher = makeUser(User::ROLE_TEACHER);
+    $classId = makeClass($enrolled['registrar'], $enrolled['section_id'], makeSubject(), $teacher->id, [meeting(1, '08:00', '09:00'), meeting(3, '08:00', '09:00')]);
+
+    return $enrolled + [
+        'teacher'       => $teacher,
+        'class_id'      => $classId,
+        'enlistment_id' => (int) enlistmentIdFor($enrolled['enrollment_id'], $classId),
+        'term_id'       => currentTermId(),
+    ];
+}
+
+/**
  * Run a callback on the current term turned into the old three-period scheme (Prelim 30, Midterm 30, Finals 40), and put the
  * real periods back afterwards, with their original ids.
  */
@@ -51,14 +70,14 @@ return [
     'adding Semi-Finals puts it between Midterm and Finals, closed, at 20/20/20/40, and leaves grades alone' => function (TestRunner $t): void {
         $c = null;
         try {
-            $c = gradedClass();
+            $c = semiGradedClass();
             withThreePeriods($c['term_id'], static function () use ($t, $c): void {
                 $periods = GradePeriod::forTerm($c['term_id']);
                 $t->assertEquals(['Prelim', 'Midterm', 'Finals'], array_column($periods, 'name'));
                 $prelim = (int) $periods[0]['id'];
 
                 openPeriodForTest($prelim);
-                Grading::recordGrades($c['teacher'], $c['class_id'], $prelim, [$c['enlistment_id'] => '1.75']);
+                Grading::recordGrades($c['teacher'], $c['class_id'], $prelim, [$c['enlistment_id'] => '1.70']);
 
                 Grading::addSemiFinals($c['registrar'], $c['term_id']);
 
@@ -67,7 +86,7 @@ return [
                 $t->assertEquals([1, 2, 3, 4], array_map('intval', array_column($after, 'sequence')));
                 $t->assertEquals([20.0, 20.0, 20.0, 40.0], array_map('floatval', array_column($after, 'weight')), 'The standard weights');
                 $t->assertEquals(0, (int) $after[2]['is_open'], 'Starts closed');
-                $t->assertEquals('1.75', Database::scalar('SELECT grade FROM grades WHERE class_enlistment_id = ? AND grade_period_id = ?', [$c['enlistment_id'], $prelim]), 'The grade already entered stays');
+                $t->assertEquals('1.70', Database::scalar('SELECT grade FROM grades WHERE class_enlistment_id = ? AND grade_period_id = ?', [$c['enlistment_id'], $prelim]), 'The grade already entered stays');
 
                 $audit = Database::selectOne("SELECT old_values, new_values FROM audit_logs WHERE action = 'grading.period_added' AND target_id = ? ORDER BY id DESC LIMIT 1", [$c['term_id']]);
                 $t->assertNotNull($audit, 'Audited');
@@ -83,7 +102,7 @@ return [
 
     'it is refused when a student already has a complete final, and when the periods are custom' => function (TestRunner $t): void {
         try {
-            $c = gradedClass();
+            $c = semiGradedClass();
             withThreePeriods($c['term_id'], static function () use ($t, $c): void {
                 $periods = GradePeriod::forTerm($c['term_id']);
                 foreach ($periods as $period) {
@@ -108,7 +127,7 @@ return [
 
     'only the registrar can add it, and a term without periods is a 404' => function (TestRunner $t): void {
         try {
-            $c = gradedClass();
+            $c = semiGradedClass();
             withThreePeriods($c['term_id'], static function () use ($t, $c): void {
                 foreach ([User::ROLE_CASHIER, User::ROLE_SUPER_ADMIN, User::ROLE_TEACHER, User::ROLE_STUDENT] as $role) {
                     $t->assertEquals(403, statusOf(static fn () => Grading::addSemiFinals(makeUser($role), $c['term_id'])), "{$role} cannot");

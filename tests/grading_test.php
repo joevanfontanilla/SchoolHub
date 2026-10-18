@@ -38,12 +38,12 @@ return [
             $c = gradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
                 Database::update('grade_periods', ['is_open' => 0], ['id' => $periods['Prelim']]);
-                $t->assertThrows(static fn () => Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '1.75']), 'grading is closed');
+                $t->assertThrows(static fn () => Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '1.70']), 'grading is closed');
 
                 openPeriodForTest((int) $periods['Prelim']);
-                $result = Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '1.75']);
+                $result = Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '1.70']);
                 $t->assertEquals(1, $result['saved']);
-                $t->assertEquals('1.75', Database::scalar('SELECT grade FROM grades WHERE class_enlistment_id = ?', [$c['enlistment_id']]));
+                $t->assertEquals('1.70', Database::scalar('SELECT grade FROM grades WHERE class_enlistment_id = ?', [$c['enlistment_id']]));
             });
         } finally {
             actingAs(null);
@@ -56,7 +56,7 @@ return [
             $c = gradedClass();
             withGradePeriods($c['term_id'], static function (array $periods) use ($t, $c): void {
                 openPeriodForTest((int) $periods['Prelim']);
-                $entry = [$c['enlistment_id'] => '1.75'];
+                $entry = [$c['enlistment_id'] => '1.70'];
 
                 $t->assertEquals(404, statusOf(static fn () => Grading::recordGrades(makeUser(User::ROLE_TEACHER), $c['class_id'], (int) $periods['Prelim'], $entry)));
                 foreach ([User::ROLE_REGISTRAR, User::ROLE_CASHIER, User::ROLE_SUPER_ADMIN] as $role) {
@@ -85,8 +85,8 @@ return [
                 openPeriodForTest((int) $periods['Prelim']);
 
                 try {
-                    Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '2.30']);
-                    $t->assertTrue(false, '2.30 should be refused');
+                    Grading::recordGrades($c['teacher'], $c['class_id'], (int) $periods['Prelim'], [$c['enlistment_id'] => '2.35']);
+                    $t->assertTrue(false, '2.35 should be refused');
                 } catch (ValidationException $e) {
                     $t->assertContains('not a valid grade', $e->errors()["grades.{$c['enlistment_id']}"][0]);
                 }
@@ -212,7 +212,7 @@ return [
                 openPeriodForTest($last);
                 Grading::recordGrades($c['teacher'], $c['class_id'], $last, [$c['enlistment_id'] => '2.00']);
                 // Every period is 2.00, so the weighted average is 2.00 whatever the weights.
-                $t->assertEquals(['grade' => '2.00', 'remark' => 'PASSED'], $record());
+                $t->assertEquals(['grade' => '2.00', 'percentage' => '85.0', 'remark' => 'PASSED'], $record());
             });
         } finally {
             actingAs(null);

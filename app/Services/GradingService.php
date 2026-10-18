@@ -153,7 +153,7 @@ final class GradingService
      * Record grades for one period of one class. All-or-nothing: if any entry is
      * invalid, nothing is saved and the errors are keyed by enlistment.
      *
-     * @param array<int|string,mixed> $entries enlistment id => value ('1.75', 'INC', or '' to leave unchanged)
+     * @param array<int|string,mixed> $entries enlistment id => value ('92.4', '1.40', 'INC', or '' to leave unchanged)
      * @return array{saved:int,changed:int}
      */
     public static function recordGrades(User $teacher, int $classId, int $periodId, array $entries): array
@@ -188,7 +188,7 @@ final class GradingService
                 }
                 $grade = GradeCalculator::parse($value);
                 if ($grade === null) {
-                    $errors["grades.{$enlistmentId}"] = ['"' . mb_substr((string) $value, 0, 10) . '" is not a valid grade. Use 1.00–3.00 in steps of 0.25, 5.00, INC, or DRP.'];
+                    $errors["grades.{$enlistmentId}"] = ['"' . mb_substr((string) $value, 0, 10) . '" is not a valid grade. Type a percentage (such as 92.4), a grade from the Official Grading System (such as 1.40), or INC, OW, UW, or NGA.'];
                     continue;
                 }
                 $parsed[$enlistmentId] = $grade;
@@ -213,24 +213,26 @@ final class GradingService
                         'class_enlistment_id' => $enlistmentId,
                         'grade_period_id'     => $periodId,
                         'grade'               => $grade['grade'],
+                        'percentage'          => $grade['percentage'],
                         'remark'              => $grade['remark'],
                         'recorded_by'         => $teacher->id,
                         'recorded_at'         => $now,
                     ]);
                     AuditService::log('grade.recorded', 'grades', 'Grade', $gradeId, null, [
                         'enlistment_id' => $enlistmentId, 'period' => $period['name'],
-                        'grade' => $grade['grade'], 'remark' => $grade['remark'],
+                        'grade' => $grade['grade'], 'percentage' => $grade['percentage'], 'remark' => $grade['remark'],
                     ], 'SUCCESS', null, $teacher->id, $teacher->role_name);
                     $saved++;
                     continue;
                 }
 
-                if ($existing['grade'] === $grade['grade'] && $existing['remark'] === $grade['remark']) {
+                if ($existing['grade'] === $grade['grade'] && $existing['remark'] === $grade['remark'] && $existing['percentage'] === $grade['percentage']) {
                     continue; // unchanged
                 }
 
                 Database::update('grades', [
                     'grade'      => $grade['grade'],
+                    'percentage' => $grade['percentage'],
                     'remark'     => $grade['remark'],
                     'changed_by' => $teacher->id,
                     'changed_at' => $now,
@@ -238,10 +240,10 @@ final class GradingService
 
                 // docs/12: grade changes are auditable — old and new value.
                 AuditService::log('grade.changed', 'grades', 'Grade', (int) $existing['id'], [
-                    'grade' => $existing['grade'], 'remark' => $existing['remark'],
+                    'grade' => $existing['grade'], 'percentage' => $existing['percentage'], 'remark' => $existing['remark'],
                 ], [
                     'enlistment_id' => $enlistmentId, 'period' => $period['name'],
-                    'grade' => $grade['grade'], 'remark' => $grade['remark'],
+                    'grade' => $grade['grade'], 'percentage' => $grade['percentage'], 'remark' => $grade['remark'],
                 ], 'SUCCESS', null, $teacher->id, $teacher->role_name);
                 $changed++;
             }

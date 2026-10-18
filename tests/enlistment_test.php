@@ -183,7 +183,7 @@ return [
             $t->assertEquals(0.0, (float) Database::scalar('SELECT total_units FROM enrollments WHERE id = ?', [$enrolled['enrollment_id']]));
 
             $t->assertEquals(1, count(App\Services\AcademicRecordService::classesForEnrollment($enrolled['enrollment_id'])), 'The dropped class stays in the record');
-            $t->assertEquals('DRP', App\Services\AcademicRecordService::classesForEnrollment($enrolled['enrollment_id'])[0]['final']['remark']);
+            $t->assertEquals('OW', App\Services\AcademicRecordService::classesForEnrollment($enrolled['enrollment_id'])[0]['final']['remark']);
 
             $t->assertEquals([], Enlistment::problems(Database::selectOne('SELECT * FROM enrollments WHERE id = ?', [$enrolled['enrollment_id']]), $classId));
             Enlistment::addClass($registrar, $enrolled['enrollment_id'], $classId, null);

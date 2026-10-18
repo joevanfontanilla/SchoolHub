@@ -41,10 +41,10 @@ $icons = [
     // Classes, grades, and attendance (docs/12, docs/27)
     'PASSED', 'PRESENT', 'ENLISTED', 'OPEN'                  => ['success', 'check'],
     'FAILED', 'ABSENT'                                       => ['danger', 'x'],
-    'INC', 'LATE'                                           => ['warning', 'alert'],
+    'INC', 'LATE', 'NGA'                                    => ['warning', 'alert'],
     'IN_PROGRESS'                                            => ['info', 'clock'],
     'EXCUSED'                                                => ['info', 'minus'],
-    'DRP', 'DROPPED', 'CLOSED'                              => ['neutral', 'x'],
+    'DRP', 'OW', 'UW', 'DROPPED', 'CLOSED'                  => ['neutral', 'x'],
     // Announcements and notifications (docs/16)
     'PUBLISHED'                                              => ['success', 'send'],
     'SCHEDULED', 'UNREAD'                                    => ['info', 'clock'],

@@ -16,7 +16,9 @@ $statusMeta = [
     'IN_PROGRESS' => ['In progress', 'bg-warning-bg text-warning-text'],
     'FAILED'      => ['Failed', 'bg-danger-bg text-danger-text'],
     'INC'         => ['Incomplete', 'bg-warning-bg text-warning-text'],
-    'DRP'         => ['Dropped', 'bg-slate-100 text-slate-600'],
+    'OW'          => ['Officially withdrawn', 'bg-slate-100 text-slate-600'],
+    'UW'          => ['Unofficially withdrawn', 'bg-slate-100 text-slate-600'],
+    'NGA'         => ['No grade due to absences', 'bg-warning-bg text-warning-text'],
     'NOT_TAKEN'   => ['Not yet taken', 'bg-slate-100 text-slate-500'],
 ];
 $c = $prospectus['curriculum'];

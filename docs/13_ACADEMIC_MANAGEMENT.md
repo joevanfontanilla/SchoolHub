@@ -111,7 +111,7 @@ Built by the registrar on **Sections → Classes** (`academic.assign`), through
   progress, and load problems can be overridden with a **reason**, which is stored on the
   enlistment and in the audit log. **A time conflict can never be overridden.**
 - The registrar can **drop** a class, with a required reason. The enlistment is kept as
-  DROPPED, its final shows DRP, and re-adding the class revives the same row. Block
+  DROPPED, its final shows OW, and re-adding the class revives the same row. Block
   enlistment never re-adds a class the registrar dropped.
 - Every add, drop, and close recomputes `enrollments.total_units`.
 

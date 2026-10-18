@@ -356,7 +356,7 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
                         </select>
                         <?php if ($m = error_for('subject_id')): ?><p class="field-error"><span><?= e($m) ?></span></p><?php endif; ?>
                     </div>
-                    <?= component('field', ['name' => 'grade', 'label' => 'Grade (optional)', 'value' => old('grade'), 'help' => 'A mark like 1.75, if known. Crediting counts as passed regardless.']) ?>
+                    <?= component('field', ['name' => 'grade', 'label' => 'Grade (optional)', 'value' => old('grade'), 'help' => 'A grade from the Official Grading System like 1.40, if known. Crediting counts as passed regardless.']) ?>
                     <?= component('field', ['name' => 'source', 'label' => 'Source (optional)', 'value' => old('source'), 'help' => 'e.g. Transferred from ABC College.']) ?>
                     <div class="sm:col-span-2">
                         <?= component('field', ['name' => 'remarks', 'label' => 'Note (optional)', 'value' => old('remarks')]) ?>

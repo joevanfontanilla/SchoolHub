@@ -65,8 +65,8 @@ final class AcademicRecordService
         if ($classes !== []) {
             $enlistmentIds = array_map(static fn ($c) => (int) $c['enlistment_id'], $classes);
             $in = implode(',', array_fill(0, count($enlistmentIds), '?'));
-            foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, remark FROM grades WHERE class_enlistment_id IN ({$in})", $enlistmentIds) as $row) {
-                $gradesByEnlistment[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+            foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, percentage, remark FROM grades WHERE class_enlistment_id IN ({$in})", $enlistmentIds) as $row) {
+                $gradesByEnlistment[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
             }
         }
 
@@ -76,7 +76,7 @@ final class AcademicRecordService
             $class['period_grades'] = $grades;
 
             if ($class['enlistment_status'] === EnlistmentService::DROPPED) {
-                $class['final'] = ['grade' => null, 'remark' => GradeCalculator::REMARK_DRP];
+                $class['final'] = ['grade' => null, 'percentage' => null, 'remark' => GradeCalculator::REMARK_OW];
             } elseif ($weights === []) {
                 $class['final'] = ['grade' => null, 'remark' => GradeCalculator::REMARK_IN_PROGRESS];
             } else {
@@ -203,8 +203,8 @@ final class AcademicRecordService
 
         $in = implode(',', array_fill(0, count($classes), '?'));
         $grades = [];
-        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
-            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, percentage, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
+            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
         }
 
         $weightsByTerm = [];
@@ -291,7 +291,7 @@ final class AcademicRecordService
         $earned = 0.0;
         $total = 0.0;
         $gwaClasses = [];
-        $counts = ['PASSED' => 0, 'CREDITED' => 0, 'IN_PROGRESS' => 0, 'FAILED' => 0, 'INC' => 0, 'DRP' => 0, 'NOT_TAKEN' => 0];
+        $counts = ['PASSED' => 0, 'CREDITED' => 0, 'IN_PROGRESS' => 0, 'FAILED' => 0, 'INC' => 0, 'OW' => 0, 'UW' => 0, 'NGA' => 0, 'NOT_TAKEN' => 0];
 
         foreach ($groups as &$group) {
             foreach ($group['subjects'] as &$subject) {
@@ -362,8 +362,8 @@ final class AcademicRecordService
 
         $in = implode(',', array_fill(0, count($classes), '?'));
         $grades = [];
-        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
-            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'remark' => $row['remark']];
+        foreach (Database::select("SELECT class_enlistment_id, grade_period_id, grade, percentage, remark FROM grades WHERE class_enlistment_id IN ({$in})", array_column($classes, 'enlistment_id')) as $row) {
+            $grades[(int) $row['class_enlistment_id']][(int) $row['grade_period_id']] = ['grade' => $row['grade'], 'percentage' => $row['percentage'], 'remark' => $row['remark']];
         }
 
         // A pass is the best outcome to show; otherwise show the current attempt.
@@ -371,8 +371,10 @@ final class AcademicRecordService
             GradeCalculator::REMARK_PASSED      => 5,
             GradeCalculator::REMARK_IN_PROGRESS => 4,
             GradeCalculator::REMARK_INC         => 3,
+            GradeCalculator::REMARK_NGA         => 3,
             GradeCalculator::REMARK_FAILED      => 2,
-            GradeCalculator::REMARK_DRP         => 1,
+            GradeCalculator::REMARK_UW          => 1,
+            GradeCalculator::REMARK_OW          => 1,
         ];
 
         $weightsByTerm = [];
@@ -439,6 +441,9 @@ final class AcademicRecordService
             $taken === []                                                   => null,
             in_array(GradeCalculator::REMARK_IN_PROGRESS, $remarks, true)   => GradeCalculator::REMARK_IN_PROGRESS,
             in_array(GradeCalculator::REMARK_FAILED, $remarks, true)        => GradeCalculator::REMARK_FAILED,
+            in_array(GradeCalculator::REMARK_OW, $remarks, true)            => GradeCalculator::REMARK_OW,
+            in_array(GradeCalculator::REMARK_UW, $remarks, true)            => GradeCalculator::REMARK_UW,
+            in_array(GradeCalculator::REMARK_NGA, $remarks, true)           => GradeCalculator::REMARK_NGA,
             in_array(GradeCalculator::REMARK_INC, $remarks, true)           => GradeCalculator::REMARK_INC,
             default                                                         => GradeCalculator::REMARK_PASSED,
         };

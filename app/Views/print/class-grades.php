@@ -38,9 +38,9 @@ $remarks = array_count_values(array_map(static fn (array $row) => $row['final'][
                         <th scope="row" class="<?= $cell ?> text-left font-normal"><?= e($row['last_name'] . ', ' . $row['first_name']) ?><span class="block text-slate-500"><?= e($row['student_number']) ?></span></th>
                         <?php foreach ($periods as $period): ?>
                             <?php $entry = $row['period_grades'][(int) $period['id']] ?? null; ?>
-                            <td class="<?= $cell ?> text-center tabular-nums"><?= e($entry === null ? '—' : ($entry['remark'] ?? $entry['grade'] ?? '—')) ?></td>
+                            <td class="<?= $cell ?> text-center tabular-nums"><?= e(GradeCalculator::display($entry)) ?></td>
                         <?php endforeach; ?>
-                        <td class="<?= $cell ?> text-center font-semibold tabular-nums"><?= e($row['final']['grade'] ?? '—') ?></td>
+                        <td class="<?= $cell ?> text-center font-semibold tabular-nums"><?= e($row['final']['grade'] ?? '—') ?><?= ($row['final']['percentage'] ?? null) !== null ? e(' (' . $row['final']['percentage'] . '%)') : '' ?></td>
                         <td class="<?= $cell ?>"><?= e(GradeCalculator::remarkLabel($row['final']['remark'])) ?></td>
                     </tr>
                 <?php endforeach; ?>

@@ -33,7 +33,7 @@ return [
             $t->assertFalse(AcademicRecordService::hasPassed($studentId, $subjectId), 'Not passed before crediting');
 
             CreditedSubjectService::add($registrar, $studentId, [
-                'subject_id' => $subjectId, 'grade' => '1.75', 'source' => 'Transferred from ABC College',
+                'subject_id' => $subjectId, 'grade' => '1.70', 'source' => 'Transferred from ABC College',
             ]);
 
             $t->assertTrue(AcademicRecordService::hasPassed($studentId, $subjectId), 'Credited subject counts as passed');
@@ -41,7 +41,7 @@ return [
 
             $list = CreditedSubject::forStudent($studentId);
             $t->assertEquals(1, count($list), 'One credit listed');
-            $t->assertEquals('1.75', $list[0]['grade']);
+            $t->assertEquals('1.70', $list[0]['grade']);
             $t->assertEquals('Transferred from ABC College', $list[0]['source']);
             $t->assertEquals('3.0', (string) $list[0]['units'], 'The units are snapshotted from the subject');
 

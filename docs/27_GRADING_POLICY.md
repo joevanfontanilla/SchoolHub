@@ -5,17 +5,100 @@ the system SchoolHub implements, confirmed for Lyceum of the East Aurora (colleg
 grade arithmetic lives in one place, `App\Services\GradeCalculator`, and is covered by
 `tests/grade_calculator_test.php`.
 
-## Scale
+## Scale: the Official Grading System
 
-| Entry | Meaning |
+This is the Registrar's **Official Grading System** sheet (Lyceum of the East - Aurora, Inc., Office of the Registrar). It is the single
+source for every grade in the system: `GradeCalculator::TABLE`.
+
+A **percentage** becomes the equivalent of the **highest row whose percentage is at or below it**: 92.0 is 1.44, 91.9 is 1.45, 75.0 to
+75.9 is 3.00, and **below 75 is 5.00 (failed)**. 100 is the highest; above 100 is refused.
+
+| Equivalent | Lowest percentage | Descriptor |
+|---|---|---|
+| 1.00 | 100 | Excellent |
+| 1.01 | 99.8 | Excellent |
+| 1.02 | 99.7 | Excellent |
+| 1.03 | 99.6 | Excellent |
+| 1.04 | 99.5 | Excellent |
+| 1.05 | 99.4 | Excellent |
+| 1.06 | 99.3 | Excellent |
+| 1.07 | 99.2 | Excellent |
+| 1.08 | 99.1 | Excellent |
+| 1.09 | 99.0 | Excellent |
+| 1.10 | 98.4 | Excellent |
+| 1.11 | 98.3 | Excellent |
+| 1.12 | 98.2 | Excellent |
+| 1.13 | 98.1 | Excellent |
+| 1.14 | 98.0 | Excellent |
+| 1.15 | 97.4 | Excellent |
+| 1.16 | 97.3 | Excellent |
+| 1.17 | 97.2 | Excellent |
+| 1.18 | 97.1 | Excellent |
+| 1.19 | 97.0 | Excellent |
+| 1.20 | 96.4 | Excellent |
+| 1.21 | 96.3 | Excellent |
+| 1.22 | 96.2 | Excellent |
+| 1.23 | 96.1 | Excellent |
+| 1.24 | 96.0 | Excellent |
+| 1.25 | 95.4 | Excellent |
+| 1.26 | 95.3 | Excellent |
+| 1.27 | 95.2 | Excellent |
+| 1.28 | 95.1 | Excellent |
+| 1.29 | 95.0 | Excellent |
+| 1.30 | 94.4 | Excellent |
+| 1.31 | 94.3 | Excellent |
+| 1.32 | 94.2 | Excellent |
+| 1.33 | 94.1 | Excellent |
+| 1.34 | 94.0 | Excellent |
+| 1.35 | 93.4 | Excellent |
+| 1.36 | 93.3 | Excellent |
+| 1.37 | 93.2 | Excellent |
+| 1.38 | 93.1 | Excellent |
+| 1.39 | 93.0 | Excellent |
+| 1.40 | 92.4 | Excellent |
+| 1.41 | 92.3 | Excellent |
+| 1.42 | 92.2 | Excellent |
+| 1.43 | 92.1 | Excellent |
+| 1.44 | 92.0 | Excellent |
+| 1.45 | 91.4 | Excellent |
+| 1.46 | 91.3 | Excellent |
+| 1.47 | 91.2 | Excellent |
+| 1.48 | 91.1 | Excellent |
+| 1.49 | 91.0 | Excellent |
+| 1.50 | 90 | Very good |
+| 1.60 | 89 | Very good |
+| 1.70 | 88 | Very good |
+| 1.80 | 87 | Very good |
+| 1.90 | 86 | Very good |
+| 2.00 | 85 | Good |
+| 2.10 | 84 | Good |
+| 2.20 | 83 | Good |
+| 2.30 | 82 | Good |
+| 2.40 | 81 | Good |
+| 2.50 | 80 | Satisfactorily |
+| 2.60 | 79 | Satisfactorily |
+| 2.70 | 78 | Satisfactorily |
+| 2.80 | 77 | Satisfactorily |
+| 2.90 | 76 | Satisfactorily |
+| 3.00 | 75 | Passed |
+| 5.00 | below 75 | Failed |
+
+| Mark | Meaning |
 |---|---|
-| `1.00` – `3.00`, in steps of 0.25 | Passing. 1.00 is the highest grade, 3.00 the lowest pass. |
-| `5.00` | Failed. |
-| `INC` | Incomplete. |
-| `DRP` | Dropped. |
+| `INC` | Incomplete |
+| `OW` | Officially withdrawn |
+| `UW` | Unofficially withdrawn |
+| `NGA` | No grade due to absences |
 
-Nothing else is accepted: 2.30, 4.00, 0.75, and 3.25 are refused. `1.5` and `2` are
-accepted and stored as 1.50 and 2.00.
+### What the teacher types
+A **text box**, not a dropdown. The teacher may type:
+- a **percentage**, 6 to 100 with up to two decimals (`92.4`): the equivalent (1.40) appears beside the box as they type;
+- an **equivalent** from the table (`1.40`, `2.10`, `3.00`, `5.00`): it is stored with the table's percentage (1.40 is 92.4). A typed `5.00`
+  carries no percentage, so it counts as **74** in the weighted average (the highest failing percentage);
+- a **mark**: `INC`, `OW`, `UW`, or `NGA`.
+
+Anything else (2.30 is fine, 2.35 is not; 101; 3.5) is refused and named. A grade is stored as its equivalent (`grades.grade`) and
+its percentage (`grades.percentage`); a mark is stored alone (`grades.remark`).
 
 ## Periods and weights
 
@@ -45,30 +128,22 @@ add it on **Registrar → Grading periods** ("Add Semi-Finals period", `GradingS
 
 ## The final grade
 
-The final grade is **computed, never stored**, so a corrected period grade can never
-leave a stale final behind.
+The final grade is **computed, never stored**, so a corrected period grade can never leave a stale final behind.
 
-1. If any period is `DRP`, the final is **DRP**.
-2. Otherwise, if any period is `INC`, the final is **INC**.
-3. Otherwise, if any period has no grade yet, the final is blank: **In progress**.
-4. Otherwise it is the weighted average of the period grades:
-   - an average **above 3.00 is 5.00 (Failed)**. It is never rounded down into a pass;
-     3.10 fails.
-   - an average of **3.00 or better** is rounded to the nearest 0.25 step. A value exactly
-     halfway between two steps goes to the **higher (worse) number**: 1.625 becomes 1.75.
-     The result is **Passed**.
+1. If any period is a mark, the final is that mark. The order of precedence is **OW, then UW, then NGA, then INC**.
+2. Otherwise, if any period has no grade yet, the final is blank: **In progress**.
+3. Otherwise it is the **weighted average of the period percentages**, rounded to **one decimal** (half up), then looked up in the table
+   above: that gives the final equivalent, and its percentage is shown with it. An equivalent of 3.00 or better is **Passed**; 5.00 is
+   **Failed**.
 
-The average is first rounded to the hundredth (so 3.004 counts as 3.00, and 3.005 as
-3.01, which fails); the step rounding is then done in whole hundredths, not floating
-point.
+Example: Prelim 92.4, Midterm 88, Semi-Finals 90, Finals 85 with weights 20/20/20/40 gives
+0.20 x 92.4 + 0.20 x 88 + 0.20 x 90 + 0.40 x 85 = 88.08, which is 88.1 to one decimal, so the final is **1.70 (88.1%), Passed**.
 
-Example: Prelim 1.75, Midterm 2.00, Semi-Finals 1.75, Finals 1.50 gives
-0.20 × 1.75 + 0.20 × 2.00 + 0.20 × 1.75 + 0.40 × 1.50 = 1.70, which rounds to **1.75, Passed**.
+A grade saved before percentages existed has none: the table's percentage for its equivalent is used (migration 042 also fills it in).
 
-A class the registrar dropped shows **DRP** as its final, whatever grades it had.
+A class the registrar dropped shows **OW** as its final, whatever grades it had.
 
-"Passed" for prerequisites and curriculum progress (docs/28) means a final of Passed. A
-Failed, INC, DRP, or in-progress final does not count.
+"Passed" for prerequisites and curriculum progress (docs/28) means a final of Passed. A Failed, mark, or in-progress final does not count.
 
 ## Who does what
 
@@ -98,8 +173,8 @@ registrar, cashier, or Super Admin calling the grade service gets **403**.
 
 | Event | Audit action | Recorded |
 |---|---|---|
-| First grade for a student and period | `grade.recorded` | enlistment, period, grade or remark |
-| A grade changed | `grade.changed` | **old and new** grade and remark |
+| First grade for a student and period | `grade.recorded` | enlistment, period, equivalent, percentage, or mark |
+| A grade changed | `grade.changed` | **old and new** equivalent, percentage, and mark |
 | Period opened or closed | `grading.period_opened` / `grading.period_closed` | period, term |
 | Weights changed | `grading.weights_changed` | old and new weights |
 
@@ -116,7 +191,14 @@ An unchanged re-save writes nothing.
 Shown to the student per term and cumulatively (Academic Records). **School policy to confirm.**
 
 - GWA = Σ(final grade × units) ÷ Σ(units), rounded half up to two decimals.
-- Counted: classes with a numeric final — passing grades and 5.00 failures.
-- Not counted: INC, DRP, and classes still in progress; and **NSTP** (including CWTS, LTS,
+- Counted: classes with a numeric final (the equivalent) — passing grades and 5.00 failures.
+- Not counted: INC, OW, UW, NGA, and classes still in progress; and **NSTP** (including CWTS, LTS,
   ROTC) and **physical education** (PATH-FIT, PE, PED), which by common Philippine college
   practice carry no weight in the GWA. `GradeCalculator::countsTowardGwa()` holds that rule.
+
+## Official Grading System: how it came in (migration 042)
+- `grades.percentage` DECIMAL(5,2) is new. The old remark `DRP` became `OW`.
+- Grades saved on the earlier 0.25 scale got a percentage: 1.00, 1.25, 1.50, 2.00, 2.50, 3.00 and 5.00 take the table's (5.00 takes 74); the three
+  that are not official equivalents take the midpoint of their neighbours and are moved to the equivalent that percentage falls in:
+  1.75 became 1.80 (87.5), 2.25 became 2.30 (82.5), 2.75 became 2.80 (77.5). Nothing else changed.
+- The final of a class is now computed from percentages, so a final computed before and after can differ by a step.

@@ -10,12 +10,7 @@
 use App\Services\GradeCalculator;
 
 $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 1, '.', ''), '0'), '.');
-$show = static function (?array $entry): string {
-    if ($entry === null) {
-        return '—';
-    }
-    return (string) ($entry['remark'] ?? $entry['grade'] ?? '—');
-};
+$show = static fn (?array $entry): string => GradeCalculator::display($entry);
 $cell = 'border-b border-brand-100 px-3 py-3';
 $head = $cell . ' whitespace-nowrap font-semibold';
 ?>
@@ -44,7 +39,7 @@ $head = $cell . ' whitespace-nowrap font-semibold';
                     <?php foreach ($periods as $period): ?>
                         <td class="<?= $cell ?> whitespace-nowrap text-center tabular-nums"><?= e($show($class['period_grades'][(int) $period['id']] ?? null)) ?></td>
                     <?php endforeach; ?>
-                    <td class="<?= $cell ?> whitespace-nowrap text-center font-display font-bold tabular-nums <?= $dropped ? '' : 'text-brand-navy' ?>"><?= e($class['final']['grade'] ?? '—') ?></td>
+                    <td class="<?= $cell ?> whitespace-nowrap text-center font-display font-bold tabular-nums <?= $dropped ? '' : 'text-brand-navy' ?>"><?= e($class['final']['grade'] ?? '—') ?><?php if (($class['final']['percentage'] ?? null) !== null): ?><span class="block text-xs font-normal text-brand-gray"><?= e($class['final']['percentage']) ?>%</span><?php endif; ?></td>
                     <td class="<?= $cell ?> whitespace-nowrap text-center">
                         <?= component('status-badge', ['status' => $class['final']['remark'], 'label' => GradeCalculator::remarkLabel($class['final']['remark'])]) ?>
                     </td>

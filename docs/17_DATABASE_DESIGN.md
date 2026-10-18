@@ -289,7 +289,7 @@ registrar opens and closes periods.
 
 ### `grades`
 `class_enlistment_id` FK, `grade_period_id` FK,
-`grade` DECIMAL(3,2) nullable, `remark` VARCHAR(10) nullable (`INC`, `DRP`) — exactly one of
+`grade` DECIMAL(3,2) nullable (the equivalent), `percentage` DECIMAL(5,2) nullable (migration 042), `remark` VARCHAR(10) nullable (`INC`, `OW`, `UW`, `NGA`) — exactly one of
 the two is set, `recorded_by` FK, `recorded_at` DATETIME,
 `changed_by` FK nullable, `changed_at` DATETIME nullable.
 The final grade is **not stored**; it is computed from the period grades (docs/27).

@@ -107,14 +107,15 @@ final class ReportController extends Controller
         $this->audit('grades', $class, count($sheet));
 
         CsvExport::send($this->filename($class, 'grades'),
-            ['Student No.', 'Last name', 'First name', ...array_map(static fn (array $p) => $p['name'], $periods), 'Final grade', 'Remark'],
+            ['Student No.', 'Last name', 'First name', ...array_map(static fn (array $p) => $p['name'], $periods), 'Final grade', 'Final %', 'Remark'],
             array_map(static fn (array $row): array => [
                 $row['student_number'], $row['last_name'], $row['first_name'],
                 ...array_map(static function (array $period) use ($row): string {
                     $entry = $row['period_grades'][(int) $period['id']] ?? null;
-                    return $entry === null ? '' : (string) ($entry['remark'] ?? $entry['grade'] ?? '');
+                    return $entry === null ? '' : GradeCalculator::display($entry);
                 }, $periods),
                 $row['final']['grade'] ?? '',
+                $row['final']['percentage'] ?? '',
                 GradeCalculator::remarkLabel($row['final']['remark']),
             ], $sheet)
         );
