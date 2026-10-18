@@ -50,7 +50,7 @@ $tabs = ['PENDING' => 'To verify', 'APPROVED' => 'Verified', 'REJECTED' => 'Reje
                                     <span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? $row['application_number']) ?> · <?= e($row['assessment_number']) ?></span>
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3 font-display font-bold text-brand-navy"><?= e(money($row['amount'])) ?></td>
-                                <td class="px-4 py-3"><?= e($row['method']) ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span></td>
+                                <td class="px-4 py-3"><?= e(method_text($row, 'method')) ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e(d($row['paid_on'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-slate-600"><?= e(dt($status === 'PENDING' ? $row['submitted_at'] : $row['reviewed_at'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right">

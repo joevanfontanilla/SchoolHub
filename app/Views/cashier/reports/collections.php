@@ -103,7 +103,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-4 py-3"><a href="<?= e(url('/cashier/accounts/' . $row['fee_assessment_id'])) ?>" class="font-semibold text-brand-navy hover:underline"><?= e($row['last_name'] . ', ' . $row['first_name']) ?></a><span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? $row['assessment_number']) ?></span></td>
-                                <td class="whitespace-nowrap px-4 py-3"><?= e($row['payment_method']) ?><?php if ($row['reference_number']): ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span><?php endif; ?></td>
+                                <td class="whitespace-nowrap px-4 py-3"><?= e(method_text($row)) ?><?php if ($row['reference_number']): ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span><?php endif; ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums <?= $reversal ? 'text-danger-text' : 'text-brand-navy' ?>"><?= e($reversal ? signed_money(FinanceService::signedCents($row['amount'])) : money($row['amount'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3"><?= e($row['cashier_name']) ?></td>
                             </tr>

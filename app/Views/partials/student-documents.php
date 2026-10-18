@@ -64,7 +64,7 @@ $action = 'inline-flex items-center gap-1.5 rounded-lg border border-brand-100 b
                         <li class="<?= $row ?>">
                             <div class="min-w-0">
                                 <p class="font-semibold text-brand-navy"><?= e($receipt['receipt_number']) ?> · <?= e(money($receipt['amount'])) ?></p>
-                                <p class="text-xs text-brand-gray"><?= e(d($receipt['paid_at'])) ?> · <?= e($receipt['payment_method']) ?> · <?= e($receipt['assessment_number']) ?></p>
+                                <p class="text-xs text-brand-gray"><?= e(d($receipt['paid_at'])) ?> · <?= e(method_text($receipt)) ?> · <?= e($receipt['assessment_number']) ?></p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <?php if ($receipt['reversal_id'] !== null): ?><?= component('status-badge', ['status' => 'CANCELLED', 'label' => 'Reversed']) ?><?php endif; ?>

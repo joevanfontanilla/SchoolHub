@@ -130,7 +130,8 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'value' => old('reference_number'), 'help' => 'For non-cash payments.']) ?>
+                    <?= partial('bank-account-select', ['bankAccounts' => $bankAccounts, 'suffix' => '']) ?>
+                    <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'value' => old('reference_number'), 'help' => 'For non-cash payments. Required for a bank deposit or transfer.']) ?>
                     <?= component('field', ['name' => 'remarks', 'label' => 'Remarks', 'value' => old('remarks')]) ?>
                     <div class="sm:col-span-2">
                         <button type="submit" class="btn-primary w-full sm:w-auto" data-busy-label="Recording…"><?= icon('receipt', 'h-5 w-5') ?> Record and issue receipt</button>
@@ -164,7 +165,7 @@ $todayTotal = array_sum(array_map(static fn ($p) => FinanceService::cents($p['am
                             <tr>
                                 <td class="whitespace-nowrap px-4 py-3 font-semibold text-brand-navy"><?= e($row['receipt_number']) ?><span class="block text-xs font-normal text-brand-gray"><?= e(dt($row['paid_at'], 'g:i A')) ?></span></td>
                                 <td class="px-4 py-3"><?= e($row['last_name'] . ', ' . $row['first_name']) ?><span class="block text-xs text-brand-gray"><?= e($row['student_number'] ?? $row['assessment_number']) ?></span></td>
-                                <td class="whitespace-nowrap px-4 py-3"><?= e($row['payment_method']) ?><?php if (!empty($row['reference_number'])): ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span><?php endif; ?></td>
+                                <td class="whitespace-nowrap px-4 py-3"><?= e(method_text($row)) ?><?php if (!empty($row['reference_number'])): ?><span class="block text-xs text-brand-gray">Ref. <?= e($row['reference_number']) ?></span><?php endif; ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums"><?= e(money($row['amount'])) ?></td>
                                 <td class="whitespace-nowrap px-4 py-3 text-right"><a href="<?= e(url('/receipts/' . $row['id'])) ?>" target="_blank" rel="noopener" class="font-semibold text-brand-600 hover:underline">Print<span class="sr-only"> receipt <?= e($row['receipt_number']) ?></span></a></td>
                             </tr>

@@ -214,6 +214,12 @@ function confirmGradeSheets(int $classId): void
     Database::query("UPDATE grade_submissions SET status = 'CONFIRMED', confirmed_at = NOW() WHERE class_schedule_id = ?", [$classId]);
 }
 
+/** Remove the fixture bank accounts (call after the fixture payments that name them are gone). */
+function dropTestBankAccounts(): void
+{
+    Database::query("DELETE FROM school_bank_accounts WHERE bank_name LIKE 'ZZ Test Bank%'");
+}
+
 /** Remove the grade submissions matching a WHERE fragment, with the "submitted" notices they sent to registrars. @param array<int,mixed> $bindings */
 function dropGradeSubmissions(string $where, array $bindings): void
 {

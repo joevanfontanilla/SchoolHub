@@ -59,6 +59,7 @@ final class WalkInPaymentController extends Controller
             'plan'      => $plan,
             'split'     => $account !== null ? PaymentBreakdownService::forAssessment((int) $account['id']) : null,
             'methods'   => FinanceService::METHODS_CASHIER,
+            'bankAccounts' => \App\Services\BankAccountService::active(),
             'received'  => $paid > 0 ? Finance::payment($paid) : null,
             'today'     => Finance::counterPaymentsOn(date('Y-m-d')),
         ]);

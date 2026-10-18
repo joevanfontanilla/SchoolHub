@@ -89,7 +89,7 @@ final class ReportController extends Controller
                 $row['student_number'] ?? '',
                 $row['last_name'] . ', ' . $row['first_name'],
                 $row['assessment_number'],
-                $row['payment_method'],
+                method_text($row),
                 $row['reference_number'] ?? '',
                 FinanceService::signedMoney(FinanceService::signedCents($row['amount'])),
                 $row['cashier_name'],

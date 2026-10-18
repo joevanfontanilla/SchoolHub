@@ -39,7 +39,7 @@ $row = 'flex justify-between gap-4 border-b border-slate-100 py-2';
             <div class="<?= $row ?>"><dt class="text-slate-500">Program / Year</dt><dd class="font-semibold"><?= e($payment['program_code'] . ' · ' . $payment['year_level_name']) ?></dd></div>
         </dl>
         <dl class="text-sm">
-            <div class="<?= $row ?>"><dt class="text-slate-500">Payment method</dt><dd class="font-semibold"><?= e($payment['payment_method']) ?></dd></div>
+            <div class="<?= $row ?>"><dt class="text-slate-500">Payment method</dt><dd class="font-semibold"><?= e(method_text($payment)) ?></dd></div>
             <div class="<?= $row ?>"><dt class="text-slate-500">Reference No.</dt><dd class="font-semibold"><?= e($payment['reference_number'] ?? '—') ?></dd></div>
             <div class="<?= $row ?>"><dt class="text-slate-500">Assessment</dt><dd class="font-semibold"><?= e($payment['assessment_number']) ?></dd></div>
         </dl>

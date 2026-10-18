@@ -64,6 +64,23 @@ upload, stored outside the web root under a random name). The amount may not exc
 balance less the payments still waiting for verification. Where to pay is the
 `payment_instructions` setting (**sample details, to be replaced**).
 
+### Paying by bank: the school's bank accounts (migration 044)
+The cashier (permission `fees.manage`, **Payment Accounts**) or the Super Admin (`settings.manage`) keeps a list of the school's bank accounts in
+`school_bank_accounts`: bank, account name, account number, branch, and a note, each active or not (never deleted, since payments refer to them).
+- **Student.** Under Pay Online, a **Pay by bank** section shows each active account as a card with a Copy button. Choosing **Bank deposit**
+  (over the counter) or **Bank transfer** (online) makes **the bank account paid into** required, along with the usual amount, reference
+  number, date, and proof. The chosen account is kept on the submission (`payment_submissions.bank_account_id`). Before any account is set up,
+  a bank payment is accepted without one. GCash, Maya and the others still use the free-text `payment_instructions`.
+- **Cashier at the window.** Recording a Bank deposit or Bank transfer needs the school bank account and a reference number
+  (`payments.bank_account_id`).
+- **One reference, once.** The same reference number for the same bank account is refused if a pending or verified submission, or a recorded
+  payment, already has it (a rejected submission does not count, so it can be sent again). The check runs when the student submits, when the
+  cashier records at the window, and again when the cashier verifies.
+- **Verification** shows the account the student paid into, with its details, to check against the bank statement. The official receipt, the
+  receipts and collections reports, and the payment lists show the bank name beside the method. The ledger is unchanged: bank methods already
+  post to Cash in Bank and E-wallets (docs/15, the Cash Book).
+- Audited: `finance.bank_account_created`, `finance.bank_account_updated`, `finance.bank_account_activated`, `finance.bank_account_deactivated`.
+
 ### Verification (`/cashier/payments`, `payments.record`)
 The cashier sees the proof next to the account and either:
 - **verifies** it: a `payments` row with a transaction number (`PAY-YYYY-NNNNN`) and an

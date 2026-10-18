@@ -11,6 +11,7 @@
  * @var array  $submissions
  * @var int    $required     centavos needed before enrollment
  * @var string $policy
+ * @var array  $bankAccounts   the school's active bank accounts
  * @var string $instructions
  * @var array  $methods
  */
@@ -158,14 +159,14 @@ $failed = errors() !== [];
                                 <?php continue; ?>
                             <?php endif; ?>
                             <li class="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-                                <span><span class="font-semibold text-brand-navy"><?= e(money($payment['amount'])) ?></span> · <?= e($payment['payment_method']) ?> at the cashier · <?= e(d($payment['paid_at'])) ?></span>
+                                <span><span class="font-semibold text-brand-navy"><?= e(money($payment['amount'])) ?></span> · <?= e(method_text($payment)) ?> at the cashier · <?= e(d($payment['paid_at'])) ?></span>
                                 <span class="flex items-center gap-2"><?= component('status-badge', $payment['reversal_id'] !== null ? ['status' => 'CANCELLED', 'label' => 'Reversed'] : ['status' => 'PAID', 'label' => 'Received']) ?> <?= partial('preview-link', ['path' => '/receipts/' . $payment['id'], 'kind' => 'page', 'title' => 'Official receipt ' . $payment['receipt_number'], 'label' => 'Receipt ' . $payment['receipt_number'], 'group' => 'account-receipts']) ?></span>
                             </li>
                         <?php endforeach; ?>
                         <?php foreach ($submissions as $submission): ?>
                             <li class="py-3 text-sm">
                                 <div class="flex flex-wrap items-center justify-between gap-3">
-                                    <span><span class="font-semibold text-brand-navy"><?= e(money($submission['amount'])) ?></span> · <?= e($submission['method']) ?> · Ref. <?= e($submission['reference_number']) ?> · paid <?= e(d($submission['paid_on'])) ?></span>
+                                    <span><span class="font-semibold text-brand-navy"><?= e(money($submission['amount'])) ?></span> · <?= e(method_text($submission, 'method')) ?> · Ref. <?= e($submission['reference_number']) ?> · paid <?= e(d($submission['paid_on'])) ?></span>
                                     <span class="flex items-center gap-2">
                                         <?= component('status-badge', match ($submission['status']) {
                                             'APPROVED' => $submission['reversal_id'] !== null ? ['status' => 'CANCELLED', 'label' => 'Reversed'] : ['status' => 'PAID', 'label' => 'Verified'],
@@ -205,6 +206,24 @@ $failed = errors() !== [];
                             <p class="whitespace-pre-line"><?= e($instructions) ?></p>
                         </div>
                     <?php endif; ?>
+                    <?php if ($bankAccounts !== []): ?>
+                        <div class="mb-4" aria-labelledby="bank-heading">
+                            <p id="bank-heading" class="mb-2 text-sm font-semibold text-brand-navy">Pay by bank (deposit or online transfer)</p>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <?php foreach ($bankAccounts as $bank): ?>
+                                    <div class="rounded-xl border border-brand-100 bg-white px-4 py-3 text-sm">
+                                        <p class="font-display font-bold text-brand-navy"><?= e($bank['bank_name']) ?></p>
+                                        <?php if ($bank['branch']): ?><p class="text-xs text-brand-gray"><?= e($bank['branch']) ?></p><?php endif; ?>
+                                        <p class="mt-1"><?= e($bank['account_name']) ?></p>
+                                        <p class="mt-0.5 flex items-center gap-2"><span class="font-semibold tabular-nums" id="acct-<?= e($bank['id']) ?>"><?= e($bank['account_number']) ?></span>
+                                            <button type="button" class="rounded-md border border-slate-200 px-2 py-0.5 text-xs font-semibold text-brand-600 hover:bg-brand-50" data-copy-text="<?= e($bank['account_number']) ?>" data-copy-done="Copied">Copy<span class="sr-only"> account number of <?= e($bank['bank_name']) ?></span></button></p>
+                                        <?php if ($bank['note']): ?><p class="mt-1 text-xs text-slate-600"><?= e($bank['note']) ?></p><?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <p class="mt-2 text-xs text-brand-gray">After paying, choose Bank deposit (over the counter) or Bank transfer (online) below, and pick the bank you paid into.</p>
+                        </div>
+                    <?php endif; ?>
                     <p class="mb-3 text-sm font-semibold text-brand-navy">2. Tell us about it:</p>
                     <form method="POST" action="<?= e(url('/student/account/' . $assessment['id'] . '/payments')) ?>" enctype="multipart/form-data" class="space-y-4" novalidate
                           data-confirm="Send this payment to the cashier for verification?">
@@ -219,7 +238,8 @@ $failed = errors() !== [];
                             </select>
                             <?php if ($error = error_for('method')): ?><p class="field-error"><span><?= e($error) ?></span></p><?php endif; ?>
                         </div>
-                        <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'required' => true, 'value' => old('reference_number'), 'help' => 'From the GCash or Maya confirmation, or the deposit slip.']) ?>
+                        <?= partial('bank-account-select', ['bankAccounts' => $bankAccounts, 'suffix' => '']) ?>
+                        <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'required' => true, 'value' => old('reference_number'), 'help' => 'From the GCash or Maya confirmation, or the bank deposit slip or transfer receipt.']) ?>
                         <?= component('field', ['name' => 'paid_on', 'label' => 'Date paid', 'type' => 'date', 'required' => true, 'value' => old('paid_on', date('Y-m-d'))]) ?>
                         <div data-image-field>
                             <label for="field-proof" class="field-label">Proof of payment <span class="text-brand-alert" aria-hidden="true">*</span></label>
@@ -237,7 +257,7 @@ $failed = errors() !== [];
             <section class="card p-5" aria-labelledby="how-heading">
                 <h2 id="how-heading" class="<?= $cardTitle ?> mb-3"><span class="text-brand-600"><?= icon('info', 'h-7 w-7') ?></span> How it works</h2>
                 <ol class="list-decimal space-y-1.5 pl-5 text-sm text-slate-700">
-                    <li>Pay through GCash, Maya, or a bank deposit.</li>
+                    <li>Pay through GCash, Maya, or the school's bank account (deposit or transfer).</li>
                     <li>Send the amount, reference number, and proof here.</li>
                     <li>The cashier verifies it and issues your official receipt.</li>
                     <li>Once your down payment is verified, you are officially enrolled and your schedule is ready to print.</li>

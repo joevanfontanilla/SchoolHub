@@ -129,7 +129,7 @@ final class Finance
     public static function payments(int $assessmentId): array
     {
         return Database::select(
-            "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name,
+            "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name, (SELECT bank_name FROM school_bank_accounts WHERE id = pay.bank_account_id) AS bank_name,
                     r.id AS reversal_id, r.created_at AS reversed_at, r.remarks AS reversal_reason,
                     orig.receipt_number AS reversed_receipt_number
                FROM payments pay
@@ -156,7 +156,7 @@ final class Finance
     public static function submissions(int $assessmentId): array
     {
         return Database::select(
-            'SELECT ps.*, pay.receipt_number, pay.id AS payment_id, r.id AS reversal_id
+            'SELECT ps.*, (SELECT bank_name FROM school_bank_accounts WHERE id = ps.bank_account_id) AS bank_name, pay.receipt_number, pay.id AS payment_id, r.id AS reversal_id
                FROM payment_submissions ps
           LEFT JOIN payments pay ON pay.payment_submission_id = ps.id
           LEFT JOIN payments r ON r.reversed_payment_id = pay.id
@@ -174,7 +174,7 @@ final class Finance
     {
         $status = in_array($status, ['PENDING', 'APPROVED', 'REJECTED'], true) ? $status : 'PENDING';
         return Database::select(
-            "SELECT ps.*, fa.assessment_number, fa.balance, fa.total_amount, ea.application_number,
+            "SELECT ps.*, (SELECT bank_name FROM school_bank_accounts WHERE id = ps.bank_account_id) AS bank_name, fa.assessment_number, fa.balance, fa.total_amount, ea.application_number,
                     st.student_number, u.first_name, u.last_name, t.name AS term_name, ay.code AS academic_year_code
                FROM payment_submissions ps
                JOIN fee_assessments fa ON fa.id = ps.fee_assessment_id
@@ -194,7 +194,7 @@ final class Finance
     public static function submission(int $id): ?array
     {
         return Database::selectOne(
-            "SELECT ps.*, pay.receipt_number, pay.id AS payment_id, CONCAT(r.first_name, ' ', r.last_name) AS reviewer_name,
+            "SELECT ps.*, (SELECT bank_name FROM school_bank_accounts WHERE id = ps.bank_account_id) AS bank_name, pay.receipt_number, pay.id AS payment_id, CONCAT(r.first_name, ' ', r.last_name) AS reviewer_name,
                     st.user_id AS owner_user_id
                FROM payment_submissions ps
                JOIN students st ON st.id = ps.student_id
@@ -209,7 +209,7 @@ final class Finance
     public static function payment(int $id): ?array
     {
         return Database::selectOne(
-            "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name,
+            "SELECT pay.*, CONCAT(c.first_name, ' ', c.last_name) AS cashier_name, (SELECT bank_name FROM school_bank_accounts WHERE id = pay.bank_account_id) AS bank_name,
                     fa.assessment_number, fa.total_amount, fa.total_adjustments, fa.total_paid, fa.balance,
                     r.id AS reversal_id, r.created_at AS reversed_at, r.remarks AS reversal_reason,
                     st.student_number, st.user_id, u.first_name, u.middle_name, u.last_name,
@@ -276,7 +276,7 @@ final class Finance
     public static function counterPaymentsOn(string $date): array
     {
         return Database::select(
-            "SELECT pay.id, pay.receipt_number, pay.amount, pay.payment_method, pay.reference_number, pay.paid_at,
+            "SELECT pay.id, pay.receipt_number, pay.amount, pay.payment_method, pay.reference_number, pay.paid_at, (SELECT bank_name FROM school_bank_accounts WHERE id = pay.bank_account_id) AS bank_name,
                     u.first_name, u.last_name, st.student_number, fa.assessment_number
                FROM payments pay
                JOIN fee_assessments fa ON fa.id = pay.fee_assessment_id

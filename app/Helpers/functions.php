@@ -246,6 +246,17 @@ if (!function_exists('money')) {
     }
 }
 
+if (!function_exists('method_text')) {
+    /** A payment method with the school bank it went to, when it went through one: "Bank transfer · Landbank". @param array<string,mixed> $row */
+    function method_text(array $row, string $key = 'payment_method'): string
+    {
+        $method = (string) ($row[$key] ?? '');
+        $bank = trim((string) ($row['bank_name'] ?? ''));
+
+        return $bank !== '' ? $method . ' · ' . $bank : $method;
+    }
+}
+
 if (!function_exists('signed_money')) {
     /** Centavos as a signed peso amount for adjustments and reversals: "+₱500.00", "−₱1,000.00". */
     function signed_money(int $cents): string

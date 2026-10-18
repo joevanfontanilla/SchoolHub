@@ -56,6 +56,7 @@ final class AccountController extends Controller
             'required'    => PaymentPolicy::requiredCents($assessment),
             'policy'      => PaymentPolicy::current(),
             'methods'     => FinanceService::METHODS_CASHIER,
+            'bankAccounts' => \App\Services\BankAccountService::active(),
         ]);
     }
 

@@ -32,6 +32,7 @@ use App\Controllers\Cashier\CashBookController as CashierCashBook;
 use App\Controllers\Cashier\DayCloseController as CashierDayClose;
 use App\Controllers\Admin\DayCloseController as AdminDayClose;
 use App\Controllers\Cashier\FeeController as CashierFees;
+use App\Controllers\Cashier\BankAccountController as CashierBanks;
 use App\Controllers\Cashier\LedgerController as CashierLedger;
 use App\Controllers\Cashier\PaymentController as CashierPayments;
 use App\Controllers\Cashier\WalkInPaymentController as CashierWalkInPayments;
@@ -171,6 +172,12 @@ $router->post('/admin/users/{id}/email-link', [AdminUsers::class, 'emailLink'], 
 $router->get('/admin/roles',                   [AdminRoles::class, 'index'],  $admin('roles.manage'), 'admin.roles');
 $router->post('/admin/roles/{id}/permissions', [AdminRoles::class, 'update'], $admin('roles.manage'));
 
+$router->get('/admin/bank-accounts',            [CashierBanks::class, 'index'],  $admin('settings.manage'), 'admin.bank-accounts');
+$router->get('/admin/bank-accounts/create',     [CashierBanks::class, 'create'], $admin('settings.manage'));
+$router->post('/admin/bank-accounts/create',    [CashierBanks::class, 'save'],   $admin('settings.manage'));
+$router->get('/admin/bank-accounts/{id}/edit',  [CashierBanks::class, 'edit'],   $admin('settings.manage'));
+$router->post('/admin/bank-accounts/{id}/edit', [CashierBanks::class, 'save'],   $admin('settings.manage'));
+$router->post('/admin/bank-accounts/{id}/toggle', [CashierBanks::class, 'toggle'], $admin('settings.manage'));
 $router->get('/admin/settings',          [AdminSettings::class, 'index'],  $admin('settings.manage'), 'admin.settings');
 $router->post('/admin/settings/{group}', [AdminSettings::class, 'update'], $admin('settings.manage'));
 
@@ -320,6 +327,12 @@ $router->post('/cashier/disbursements',              [CashierDisbursements::clas
 $router->get('/cashier/disbursements/{id}/voucher',  [CashierDisbursements::class, 'voucher'], $cashier('disbursements.manage'));
 $router->post('/cashier/disbursements/{id}/category', [CashierDisbursements::class, 'categorize'], $cashier('disbursements.manage'));
 
+$router->get('/cashier/bank-accounts',            [CashierBanks::class, 'index'],  $cashier('fees.manage'), 'cashier.bank-accounts');
+$router->get('/cashier/bank-accounts/create',     [CashierBanks::class, 'create'], $cashier('fees.manage'));
+$router->post('/cashier/bank-accounts/create',    [CashierBanks::class, 'save'],   $cashier('fees.manage'));
+$router->get('/cashier/bank-accounts/{id}/edit',  [CashierBanks::class, 'edit'],   $cashier('fees.manage'));
+$router->post('/cashier/bank-accounts/{id}/edit', [CashierBanks::class, 'save'],   $cashier('fees.manage'));
+$router->post('/cashier/bank-accounts/{id}/toggle', [CashierBanks::class, 'toggle'], $cashier('fees.manage'));
 $router->get('/cashier/fees',            [CashierFees::class, 'index'],  $cashier('fees.manage'), 'cashier.fees');
 $router->get('/cashier/fees/create',     [CashierFees::class, 'create'], $cashier('fees.manage'));
 $router->post('/cashier/fees/create',    [CashierFees::class, 'save'],   $cashier('fees.manage'));

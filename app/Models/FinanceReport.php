@@ -23,7 +23,7 @@ final class FinanceReport
     public static function collections(string $from, string $to): array
     {
         $rows = Database::select(
-            "SELECT pay.*, st.student_number, u.first_name, u.last_name, fa.assessment_number,
+            "SELECT pay.*, (SELECT bank_name FROM school_bank_accounts WHERE id = pay.bank_account_id) AS bank_name, st.student_number, u.first_name, u.last_name, fa.assessment_number,
                     CONCAT(c.first_name, ' ', c.last_name) AS cashier_name,
                     orig.receipt_number AS reversed_receipt_number
                FROM payments pay

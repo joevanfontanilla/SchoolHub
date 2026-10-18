@@ -41,6 +41,7 @@ final class PaymentController extends Controller
             'payments'   => Finance::payments((int) $assessment['id']),
             'required'   => PaymentPolicy::requiredCents($assessment),
             'policy'     => PaymentPolicy::current(),
+            'bankAccount' => $submission['bank_account_id'] !== null ? \App\Services\BankAccountService::find((int) $submission['bank_account_id']) : null,
         ]);
     }
 

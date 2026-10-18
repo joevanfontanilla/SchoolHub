@@ -123,7 +123,7 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                             <?php else: ?>
                                 <li id="payment-<?= (int) $payment['id'] ?>" class="py-2.5">
                                     <div class="flex flex-wrap items-center justify-between gap-3">
-                                        <span class="<?= $payment['reversal_id'] !== null ? 'text-brand-gray line-through' : '' ?>"><span class="font-semibold text-brand-navy"><?= e(money($payment['amount'])) ?></span> · <?= e($payment['payment_method']) ?><?= $payment['reference_number'] ? ' · Ref. ' . e($payment['reference_number']) : '' ?> · <?= e(d($payment['paid_at'])) ?> · <?= e($payment['cashier_name']) ?></span>
+                                        <span class="<?= $payment['reversal_id'] !== null ? 'text-brand-gray line-through' : '' ?>"><span class="font-semibold text-brand-navy"><?= e(money($payment['amount'])) ?></span> · <?= e(method_text($payment)) ?><?= $payment['reference_number'] ? ' · Ref. ' . e($payment['reference_number']) : '' ?> · <?= e(d($payment['paid_at'])) ?> · <?= e($payment['cashier_name']) ?></span>
                                         <span class="flex items-center gap-3">
                                             <?php if ($payment['reversal_id'] !== null): ?>
                                                 <?= component('status-badge', ['status' => 'CANCELLED', 'label' => 'Reversed']) ?>
@@ -161,7 +161,7 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                     <ul class="divide-y divide-brand-50 text-sm">
                         <?php foreach ($submissions as $submission): ?>
                             <li class="flex flex-wrap items-center justify-between gap-3 py-2.5">
-                                <span><?= e(money($submission['amount'])) ?> · <?= e($submission['method']) ?> · Ref. <?= e($submission['reference_number']) ?></span>
+                                <span><?= e(money($submission['amount'])) ?> · <?= e(method_text($submission, 'method')) ?> · Ref. <?= e($submission['reference_number']) ?></span>
                                 <span class="flex items-center gap-2">
                                     <?= component('status-badge', match ($submission['status']) { 'APPROVED' => ['status' => 'PAID', 'label' => 'Verified'], 'REJECTED' => ['status' => 'REJECTED'], default => ['status' => 'UNDER_REVIEW', 'label' => 'To verify'] }) ?>
                                     <a href="<?= e(url('/cashier/payments/' . $submission['id'])) ?>" class="font-semibold text-brand-600 hover:underline">Open</a>
@@ -191,7 +191,8 @@ $paymentCount = count(array_filter($payments, static fn ($p) => $p['reversed_pay
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'value' => old('reference_number'), 'help' => 'For non-cash payments.']) ?>
+                    <?= partial('bank-account-select', ['bankAccounts' => $bankAccounts, 'suffix' => '-account']) ?>
+                    <?= component('field', ['name' => 'reference_number', 'label' => 'Reference number', 'value' => old('reference_number'), 'help' => 'For non-cash payments. Required for a bank deposit or transfer.']) ?>
                     <?= component('field', ['name' => 'remarks', 'label' => 'Remarks', 'value' => old('remarks')]) ?>
                     <button type="submit" class="btn-primary w-full"><?= icon('receipt', 'h-5 w-5') ?> Record and issue receipt</button>
                 </form>

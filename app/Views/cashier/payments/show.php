@@ -23,8 +23,15 @@ $remarksError = error_for('review_remarks');
         <div>
             <p class="eyebrow"><?= e($assessment['assessment_number']) ?> · <?= e($assessment['term_name']) ?> <?= e($assessment['academic_year_code']) ?></p>
             <h2 class="mt-1 text-2xl"><?= e(money($submission['amount'])) ?> from <?= e($assessment['first_name'] . ' ' . $assessment['last_name']) ?></h2>
-            <p class="mt-1 text-sm text-slate-600"><?= e($submission['method']) ?> · Ref. <span class="font-semibold"><?= e($submission['reference_number']) ?></span> · paid <?= e(d($submission['paid_on'])) ?> · sent <?= e(dt($submission['submitted_at'])) ?></p>
+            <p class="mt-1 text-sm text-slate-600"><?= e(method_text($submission, 'method')) ?> · Ref. <span class="font-semibold"><?= e($submission['reference_number']) ?></span> · paid <?= e(d($submission['paid_on'])) ?> · sent <?= e(dt($submission['submitted_at'])) ?></p>
         </div>
+        <?php if (!empty($bankAccount)): ?>
+            <div class="w-full rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3 text-sm sm:w-auto" role="note">
+                <p class="font-semibold text-brand-navy">Paid into: check this against the bank statement</p>
+                <p class="mt-0.5"><?= e($bankAccount['bank_name']) ?><?= $bankAccount['branch'] ? ' · ' . e($bankAccount['branch']) : '' ?></p>
+                <p><?= e($bankAccount['account_name']) ?> · <span class="font-semibold tabular-nums"><?= e($bankAccount['account_number']) ?></span></p>
+            </div>
+        <?php endif; ?>
         <?= component('status-badge', match ($submission['status']) {
             'APPROVED' => ['status' => 'PAID', 'label' => 'Verified', 'size' => 'md'],
             'REJECTED' => ['status' => 'REJECTED', 'label' => 'Rejected', 'size' => 'md'],

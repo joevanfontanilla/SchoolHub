@@ -47,6 +47,7 @@ final class AccountController extends Controller
             'policy'       => PaymentPolicy::current(),
             'instructions' => (string) SystemSetting::get('payment_instructions', ''),
             'methods'      => FinanceService::METHODS_ONLINE,
+            'bankAccounts' => \App\Services\BankAccountService::active(),
         ]);
     }
 

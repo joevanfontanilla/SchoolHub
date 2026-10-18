@@ -67,7 +67,7 @@ $net = $report['net'] < 0 ? signed_money($report['net']) : money(FinanceService:
                         <td class="<?= $cell ?> whitespace-nowrap"><?= e(dt($row['created_at'], 'M j g:i A')) ?></td>
                         <td class="<?= $cell ?>"><?= $reversal ? 'Reversal of ' . e($row['reversed_receipt_number']) : e($row['receipt_number']) ?><span class="block text-slate-500"><?= e($row['transaction_number']) ?></span></td>
                         <td class="<?= $cell ?>"><?= e($row['last_name'] . ', ' . $row['first_name']) ?><span class="block text-slate-500"><?= e($row['student_number'] ?? $row['assessment_number']) ?></span></td>
-                        <td class="<?= $cell ?>"><?= e($row['payment_method']) ?></td>
+                        <td class="<?= $cell ?>"><?= e(method_text($row)) ?></td>
                         <td class="<?= $cell ?> whitespace-nowrap text-right tabular-nums"><?= e($reversal ? signed_money(FinanceService::signedCents($row['amount'])) : money($row['amount'])) ?></td>
                         <td class="<?= $cell ?>"><?= e($row['cashier_name']) ?></td>
                     </tr>

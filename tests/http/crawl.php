@@ -367,6 +367,8 @@ try {
         '/registrar/walk-in/{id}/link'         => [404],
         '/registrar/walk-in/student/{studentId}' => [404], // no such student: the made-up id
         '/registrar/grading/submissions/{id}'   => [404], // no such submission: the made-up id
+        '/cashier/bank-accounts/{id}/edit'      => [404], // no such bank account: the made-up id
+        '/admin/bank-accounts/{id}/edit'        => [404],
         '/cashier/disbursements/{id}/voucher'  => [404],
         '/cashier/day-close/print'             => [404], // no closed day in the crawl fixtures
         '/account/signature'                   => [404], // no crawl user has saved a signature

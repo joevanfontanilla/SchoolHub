@@ -47,7 +47,7 @@ final class StudentDocuments
         }
 
         $receipts = Database::select(
-            "SELECT pay.id, pay.receipt_number, pay.amount, pay.payment_method, pay.paid_at, fa.assessment_number,
+            "SELECT pay.id, pay.receipt_number, pay.amount, pay.payment_method, pay.paid_at, (SELECT bank_name FROM school_bank_accounts WHERE id = pay.bank_account_id) AS bank_name, fa.assessment_number,
                     (SELECT r.id FROM payments r WHERE r.reversed_payment_id = pay.id LIMIT 1) AS reversal_id
                FROM payments pay JOIN fee_assessments fa ON fa.id = pay.fee_assessment_id
               WHERE pay.student_id = ? AND pay.receipt_number IS NOT NULL

@@ -179,7 +179,7 @@ final class FinanceService
     /**
      * The student submits an online payment with its proof, for the cashier.
      *
-     * @param array<string,mixed> $input amount, method, reference_number, paid_on
+     * @param array<string,mixed> $input amount, method, reference_number, paid_on, bank_account_id (for a bank payment)
      * @return int the submission id
      */
     public static function submitPayment(User $student, int $assessmentId, array $input, ?UploadedFile $proof): int
@@ -214,6 +214,13 @@ final class FinanceService
         if ($assessment['status'] !== 'ACTIVE') {
             throw ValidationException::withMessage('This assessment is no longer active.');
         }
+        // A bank payment names the school's bank account it went to, and the same reference is used for it only once.
+        $bank = BankAccountService::chosenFor((string) ($input['method'] ?? ''), $input['bank_account_id'] ?? null);
+        if ($bank['error'] !== null) {
+            $validator->addError('bank_account_id', $bank['error']);
+        } elseif ($bank['id'] !== null && BankAccountService::referenceUsed($bank['id'], (string) ($input['reference_number'] ?? ''))) {
+            $validator->addError('reference_number', 'That reference number was already used for this bank account. Check it, or contact the cashier if it is yours.');
+        }
         if ($validator->fails()) {
             throw ValidationException::withErrors($validator->errors());
         }
@@ -232,12 +239,13 @@ final class FinanceService
         $proof->moveTo($fullPath);
 
         try {
-            return Database::transaction(static function () use ($student, $assessment, $input, $cents, $storedName, $relativePath, $meta): int {
+            return Database::transaction(static function () use ($student, $assessment, $input, $cents, $storedName, $relativePath, $meta, $bank): int {
                 $id = Database::insert('payment_submissions', [
                     'fee_assessment_id' => (int) $assessment['id'],
                     'student_id'        => (int) $assessment['student_id'],
                     'amount'            => self::money($cents),
                     'method'            => (string) $input['method'],
+                    'bank_account_id'   => $bank['id'],
                     'reference_number'  => trim((string) $input['reference_number']),
                     'paid_on'           => (string) $input['paid_on'],
                     'original_filename' => $meta['name'],
@@ -286,8 +294,13 @@ final class FinanceService
                 throw ValidationException::withMessage('This payment was already ' . strtolower($submission['status']) . '.');
             }
 
+            if ($submission['bank_account_id'] !== null && BankAccountService::referenceUsed((int) $submission['bank_account_id'], (string) $submission['reference_number'], $submissionId)) {
+                throw ValidationException::withMessage('Another payment already uses this reference number for this bank account. Reject this one, or check the reference first.');
+            }
+
             $payment = self::createPayment($cashier, (int) $submission['fee_assessment_id'], $submission['amount'], $submission['method'],
-                $submission['reference_number'], $submission['paid_on'] . ' ' . date('H:i:s'), $submissionId, $remarks);
+                $submission['reference_number'], $submission['paid_on'] . ' ' . date('H:i:s'), $submissionId, $remarks,
+                $submission['bank_account_id'] !== null ? (int) $submission['bank_account_id'] : null);
 
             Database::update('payment_submissions', [
                 'status' => 'APPROVED', 'reviewed_by' => $cashier->id, 'reviewed_at' => date('Y-m-d H:i:s'),
@@ -334,7 +347,7 @@ final class FinanceService
     /**
      * A payment made at the cashier's window.
      *
-     * @param array<string,mixed> $input amount, payment_method, reference_number, remarks
+     * @param array<string,mixed> $input amount, payment_method, reference_number, remarks, bank_account_id (for a bank payment)
      * @return array{payment_id:int,receipt_number:string,enrolled:bool}
      */
     public static function recordPayment(User $cashier, int $assessmentId, array $input): array
@@ -350,13 +363,25 @@ final class FinanceService
         if (!preg_match('/^\d+(\.\d{1,2})?$/', trim((string) ($input['amount'] ?? ''))) || self::cents((string) $input['amount']) <= 0) {
             $validator->addError('amount', 'Enter the amount received, in pesos, with at most two decimal places.');
         }
+        // A bank payment at the window names the school bank account and carries its reference number, used only once.
+        $method = (string) ($input['payment_method'] ?? '');
+        $reference = trim((string) ($input['reference_number'] ?? ''));
+        $bank = BankAccountService::chosenFor($method, $input['bank_account_id'] ?? null);
+        if (BankAccountService::isBankMethod($method) && $reference === '') {
+            $validator->addError('reference_number', 'Enter the bank reference number or the deposit slip number.');
+        }
+        if ($bank['error'] !== null) {
+            $validator->addError('bank_account_id', $bank['error']);
+        } elseif ($bank['id'] !== null && BankAccountService::referenceUsed($bank['id'], $reference)) {
+            $validator->addError('reference_number', 'That reference number was already used for this bank account.');
+        }
         if ($validator->fails()) {
             throw ValidationException::withErrors($validator->errors());
         }
 
         return Database::transaction(static fn (): array => self::createPayment(
-            $cashier, $assessmentId, self::money(self::cents((string) $input['amount'])), (string) $input['payment_method'],
-            trim((string) ($input['reference_number'] ?? '')) ?: null, date('Y-m-d H:i:s'), null, $input['remarks'] ?? null
+            $cashier, $assessmentId, self::money(self::cents((string) $input['amount'])), $method,
+            $reference !== '' ? $reference : null, date('Y-m-d H:i:s'), null, $input['remarks'] ?? null, $bank['id']
         ));
     }
 
@@ -778,7 +803,7 @@ final class FinanceService
     }
 
     /** @return array{payment_id:int,receipt_number:string,enrolled:bool} */
-    private static function createPayment(User $cashier, int $assessmentId, string $amount, string $method, ?string $reference, string $paidAt, ?int $submissionId, ?string $remarks): array
+    private static function createPayment(User $cashier, int $assessmentId, string $amount, string $method, ?string $reference, string $paidAt, ?int $submissionId, ?string $remarks, ?int $bankAccountId = null): array
     {
         DayCloseService::assertOpen();
         $assessment = Database::selectOne(
@@ -806,6 +831,7 @@ final class FinanceService
             'student_id'            => (int) $assessment['student_id'],
             'amount'                => $amount,
             'payment_method'        => $method,
+            'bank_account_id'       => $bankAccountId,
             'reference_number'      => $reference,
             'paid_at'               => $paidAt,
             'cashier_user_id'       => $cashier->id,

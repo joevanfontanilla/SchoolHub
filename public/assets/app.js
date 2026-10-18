@@ -1153,3 +1153,36 @@
         update();
     });
 })();
+
+/* Payment forms: the school bank account is asked only for a bank deposit or transfer. Without the script it is always shown, and the server
+   decides what is required. */
+(function () {
+    document.querySelectorAll('[data-bank-field]').forEach(function (field) {
+        var form = field.closest('form');
+        var method = form && form.querySelector('select[name="payment_method"], select[name="method"]');
+        if (!method) { return; }
+        function update() {
+            var isBank = method.value === 'Bank deposit' || method.value === 'Bank transfer';
+            field.style.display = isBank ? '' : 'none';
+            if (!isBank) {
+                var select = field.querySelector('select');
+                if (select) { select.value = ''; }
+            }
+        }
+        method.addEventListener('change', update);
+        update();
+    });
+})();
+
+/* Copy an account number: a button with data-copy-text puts it on the clipboard and says so for a moment. */
+(function () {
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest && event.target.closest('[data-copy-text]');
+        if (!button || !navigator.clipboard) { return; }
+        navigator.clipboard.writeText(button.getAttribute('data-copy-text')).then(function () {
+            var original = button.firstChild.textContent;
+            button.firstChild.textContent = button.getAttribute('data-copy-done') || 'Copied';
+            window.setTimeout(function () { button.firstChild.textContent = original; }, 1500);
+        });
+    });
+})();
