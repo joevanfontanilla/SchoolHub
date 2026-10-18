@@ -1186,3 +1186,17 @@
         });
     });
 })();
+
+/* Profile and walk-in forms: a note appears under the form when a civil status that needs a document is chosen (data-civil-note="Married"). */
+(function () {
+    var select = document.querySelector('select[name="civil_status"]');
+    if (!select) { return; }
+    var notes = document.querySelectorAll('[data-civil-note]');
+    function update() {
+        notes.forEach(function (note) {
+            note.hidden = note.getAttribute('data-civil-note') !== select.value;
+        });
+    }
+    select.addEventListener('change', update);
+    update();
+})();

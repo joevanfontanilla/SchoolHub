@@ -97,7 +97,8 @@ final class EnrollmentApplicationService
             ]);
 
             // Snapshot the document list for this student type and term.
-            foreach (RequirementType::forApplication((int) $term['id'], (string) $input['student_type']) as $type) {
+            $civilStatus = (string) Database::scalar('SELECT civil_status FROM student_profiles WHERE student_id = ?', [$studentId]);
+            foreach (RequirementType::forApplication((int) $term['id'], (string) $input['student_type'], $civilStatus) as $type) {
                 Database::insert('enrollment_requirements', [
                     'application_id'      => $applicationId,
                     'requirement_type_id' => (int) $type['id'],
@@ -121,6 +122,49 @@ final class EnrollmentApplicationService
 
             return $applicationId;
         });
+    }
+
+    /**
+     * Keep the document list in step with the profile's civil status (docs/10): while an application is open, a document that depends on civil status
+     * (the Marriage Certificate) is added when it applies, and removed when it no longer does, unless something was uploaded for it. Approved,
+     * rejected, and cancelled applications are left alone.
+     */
+    public static function syncCivilStatusRequirements(int $studentId, ?User $actor = null): void
+    {
+        $civilStatus = (string) Database::scalar('SELECT civil_status FROM student_profiles WHERE student_id = ?', [$studentId]);
+        $types = Database::select('SELECT * FROM requirement_types WHERE is_active = 1 AND applies_to_civil_status IS NOT NULL');
+        if ($types === []) {
+            return;
+        }
+        $open = Database::select(
+            "SELECT id, term_id, student_type FROM enrollment_applications
+              WHERE student_id = ? AND application_status IN ('DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'REQUIREMENTS_INCOMPLETE', 'CORRECTION_REQUIRED')",
+            [$studentId]
+        );
+
+        foreach ($open as $application) {
+            foreach ($types as $type) {
+                $forStatus = in_array($civilStatus, array_map('trim', explode(',', (string) $type['applies_to_civil_status'])), true);
+                $forType = $type['applies_to'] === 'All' || in_array((string) $application['student_type'], array_map('trim', explode(',', (string) $type['applies_to'])), true);
+                $applies = $forStatus && $forType;
+                $row = Database::selectOne('SELECT id, status FROM enrollment_requirements WHERE application_id = ? AND requirement_type_id = ?', [$application['id'], $type['id']]);
+
+                if ($applies && $row === null) {
+                    $required = Database::scalar('SELECT is_required FROM term_requirements WHERE term_id = ? AND requirement_type_id = ?', [$application['term_id'], $type['id']]);
+                    Database::insert('enrollment_requirements', [
+                        'application_id' => (int) $application['id'], 'requirement_type_id' => (int) $type['id'],
+                        'is_required' => (int) ($required ?? $type['is_required']), 'status' => App::REQ_NOT_SUBMITTED,
+                    ]);
+                    AuditService::log('enrollment.requirement_added', 'enrollment', 'EnrollmentApplication', (int) $application['id'], null,
+                        ['requirement' => $type['code'], 'because' => 'civil status'], 'SUCCESS', null, $actor?->id, $actor?->role_name);
+                } elseif (!$applies && $row !== null && $row['status'] === App::REQ_NOT_SUBMITTED
+                    && (int) Database::scalar('SELECT COUNT(*) FROM enrollment_requirement_files WHERE enrollment_requirement_id = ?', [$row['id']]) === 0) {
+                    Database::query('DELETE FROM enrollment_requirements WHERE id = ?', [$row['id']]);
+                    AuditService::log('enrollment.requirement_removed', 'enrollment', 'EnrollmentApplication', (int) $application['id'], ['requirement' => $type['code']], null,
+                        'SUCCESS', 'Civil status changed', $actor?->id, $actor?->role_name);
+                }
+            }
+        }
     }
 
     /**

@@ -477,6 +477,9 @@ withdrawals are append-only. The ledger account `3020 Opening Cash Balances` tak
 > `enrollments.withdrawn_at` DATETIME, `withdrawn_by` FK users, `withdraw_reason` VARCHAR(500), all nullable (migration 039);
 > `status` gains `WITHDRAWN`. See docs/26, "Withdrawal".
 
+> `requirement_types.applies_to_civil_status` VARCHAR(60) nullable (migration 045): civil statuses (comma-separated) a document is limited to, or NULL for all.
+> Migration 045 also adds the `marriage_certificate` type and adds it to open applications of married students. See docs/10.
+
 ### `grade_submissions` (migration 043)
 `class_schedule_id` FK, `grade_period_id` FK (unique together), `status` VARCHAR(12) (`DRAFT`, `SUBMITTED`, `CONFIRMED`, `RETURNED`),
 `submitted_by` / `submitted_at`, `confirmed_by` / `confirmed_at`, `returned_by` / `returned_at`, `return_reason` VARCHAR(500). Created when a

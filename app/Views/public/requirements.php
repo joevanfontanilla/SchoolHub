@@ -39,7 +39,7 @@ use App\Models\RequirementType;
                                     <span class="mt-0.5 block text-xs font-normal text-brand-gray"><?= e($requirement['description']) ?></span>
                                 <?php endif; ?>
                             </th>
-                            <td class="px-4 py-3 align-top text-slate-600"><?= e(RequirementType::appliesToLabel((string) $requirement['applies_to'])) ?></td>
+                            <td class="px-4 py-3 align-top text-slate-600"><?= e(RequirementType::appliesLabel($requirement)) ?></td>
                             <td class="px-4 py-3 align-top">
                                 <?php if ((int) $requirement['is_required'] === 1): ?>
                                     <span class="badge bg-brand-100 text-brand-700">Required</span>

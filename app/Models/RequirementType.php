@@ -23,7 +23,7 @@ final class RequirementType
      *
      * @return array<int,array<string,mixed>> each row carries an effective is_required
      */
-    public static function forApplication(int $termId, string $studentType): array
+    public static function forApplication(int $termId, string $studentType, ?string $civilStatus = null): array
     {
         return Database::select(
             "SELECT rt.*, COALESCE(tr.is_required, rt.is_required) AS effective_required
@@ -31,9 +31,21 @@ final class RequirementType
           LEFT JOIN term_requirements tr ON tr.requirement_type_id = rt.id AND tr.term_id = ?
               WHERE rt.is_active = 1
                 AND (rt.applies_to = 'All' OR FIND_IN_SET(?, rt.applies_to) > 0)
+                AND (rt.applies_to_civil_status IS NULL OR FIND_IN_SET(?, rt.applies_to_civil_status) > 0)
               ORDER BY rt.sort_order, rt.id",
-            [$termId, $studentType]
+            [$termId, $studentType, $civilStatus ?? '']
         );
+    }
+
+    /** Who a document is asked of, in words: "New and transferee students", or "Married applicants" when it depends on civil status. @param array<string,mixed> $type */
+    public static function appliesLabel(array $type): string
+    {
+        $status = trim((string) ($type['applies_to_civil_status'] ?? ''));
+        if ($status !== '') {
+            return ucfirst(strtolower(str_replace(',', ' and ', $status))) . ' applicants';
+        }
+
+        return self::appliesToLabel((string) $type['applies_to']);
     }
 
     /** "New,Transferee" -> "New and transferee students". */

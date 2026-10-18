@@ -43,6 +43,18 @@ student type and term is copied onto the application as a snapshot.
 | 2x2 ID Photograph | All | Yes |
 | Valid Government or School ID | All | No |
 | Medical Certificate | New, Transferee | No |
+| PSA Marriage Certificate | All, **married students only** | Yes |
+
+### Documents that depend on civil status (migration 045)
+`requirement_types.applies_to_civil_status` (NULL for most documents) limits a document to students whose profile civil status is in the list. The
+**PSA Marriage Certificate** carries `Married`, so it is asked of a married student of any student type, and is **required** like the others: it is
+verified before approval, and the student cannot submit without it. (Widowed and Separated are not asked for a document.)
+- It is added to the document list when an application is created for a married student, including a walk-in the registrar enters.
+- The list **follows the profile** while the application is open (draft, submitted, under review, returned for documents, or returned for
+  corrections): setting civil status to Married adds the Marriage Certificate; changing it back removes it, but only if nothing was uploaded for
+  it. An approved, rejected, or cancelled application is never changed. When it is added to an application the student can no longer upload to
+  (submitted or under review), the registrar returns it for requirements as usual.
+- The profile form (and the walk-in form) says so when Married is chosen. The public Requirements page lists it as "Married applicants".
 
 ## Upload Rules (implemented)
 - **Types:** PDF, JPG/JPEG, PNG, as allowed per requirement type.

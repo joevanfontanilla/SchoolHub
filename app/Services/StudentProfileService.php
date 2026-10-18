@@ -189,6 +189,11 @@ final class StudentProfileService
 
             Database::update('student_profiles', $profile, ['student_id' => $studentId]);
 
+            // A document that depends on civil status follows the profile while an application is open (docs/10).
+            if (($before['civil_status'] ?? null) !== $profile['civil_status']) {
+                EnrollmentApplicationService::syncCivilStatusRequirements($studentId, $user);
+            }
+
             $nameChanged = false;
             if (!$nameLocked) {
                 // The STUDENT's account, never the actor's: when the registrar corrects

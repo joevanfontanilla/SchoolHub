@@ -163,6 +163,8 @@ const REQUIREMENT_TYPES = [
     'id_photo'            => ['2x2 ID Photograph', 'Recent photo with a plain white background.', 1, 'All', 60],
     'valid_id'            => ['Valid Government or School ID', 'Any valid ID showing your name and photo.', 0, 'All', 70],
     'medical_certificate' => ['Medical Certificate', 'Issued by a licensed physician within the last six months.', 0, 'New,Transferee', 80],
+    // The sixth value limits a document to a civil status (docs/10): this one is asked of married students.
+    'marriage_certificate' => ['PSA Marriage Certificate', 'Clear copy of your PSA-issued marriage certificate. Asked of married students.', 1, 'All', 25, 'Married'],
 ];
 
 try {
@@ -301,15 +303,16 @@ function seedAcademicCalendar(): void
 
 function seedRequirementTypes(): void
 {
-    foreach (REQUIREMENT_TYPES as $code => [$name, $description, $required, $appliesTo, $sort]) {
+    foreach (REQUIREMENT_TYPES as $code => $entry) {
+        [$name, $description, $required, $appliesTo, $sort, $civilStatus] = array_pad($entry, 6, null);
         // Keyed on code. Only the wording is refreshed on re-run; whether a
         // document is required and who it applies to belong to the registrar
         // once the system is in use, so they are never overwritten here.
         Database::query(
-            'INSERT INTO requirement_types (code, name, description, is_required, applies_to, sort_order)
-             VALUES (?, ?, ?, ?, ?, ?)
+            'INSERT INTO requirement_types (code, name, description, is_required, applies_to, applies_to_civil_status, sort_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description)',
-            [$code, $name, $description, $required, $appliesTo, $sort]
+            [$code, $name, $description, $required, $appliesTo, $civilStatus, $sort]
         );
     }
     echo '  requirement types .... ' . count(REQUIREMENT_TYPES) . "\n";
