@@ -140,7 +140,7 @@ final class CatalogService
             'lab_units'            => 'nullable|numeric',
             'lecture_hours'        => 'nullable|integer',
             'lab_hours'            => 'nullable|integer',
-            'curriculum_id'        => 'nullable|integer',
+            'curriculum_id'        => 'nullable',
             'year_level_id'        => 'nullable|integer',
             'term_sequence'        => 'nullable|in:1,2,3',
             'min_progress_percent' => 'nullable|integer',
@@ -170,12 +170,32 @@ final class CatalogService
         }
 
         // Fixed after creation, whatever the form sends.
-        $curriculumId = $existing !== null
-            ? ($existing['curriculum_id'] === null ? null : (int) $existing['curriculum_id'])
-            : self::nullableInt($input['curriculum_id'] ?? null);
+        if ($existing !== null) {
+            $curriculumId = $existing['curriculum_id'] === null ? null : (int) $existing['curriculum_id'];
+        } else {
+            // On create the choice is explicit: a curriculum, or "general" on purpose. Nothing chosen is an error, never a silent general subject.
+            $chosen = trim((string) ($input['curriculum_id'] ?? ''));
+            $curriculumId = null;
+            if ($chosen === '') {
+                $validator->addError('curriculum_id', 'Choose the curriculum this subject belongs to, or General.');
+            } elseif ($chosen !== 'general') {
+                $curriculumId = self::nullableInt($chosen);
+            }
+        }
         $curriculum = $curriculumId === null ? null : Database::selectOne('SELECT * FROM curricula WHERE id = ?', [$curriculumId]);
         if ($curriculumId !== null && $curriculum === null) {
             $validator->addError('curriculum_id', 'Please choose a valid curriculum.');
+        }
+
+        // A subject in a curriculum needs a year level and a term, so it lands in the right block at once. An older subject
+        // without them may stay that way, but one that has them cannot lose them.
+        if ($curriculum !== null) {
+            foreach (['year_level_id' => 'Choose the year level this subject is taken in.', 'term_sequence' => 'Choose the term this subject is taken in.'] as $field => $message) {
+                $required = $existing === null || $existing[$field] !== null;
+                if ($required && self::nullableInt($input[$field] ?? null) === null) {
+                    $validator->addError($field, $message);
+                }
+            }
         }
 
         self::assertExists($validator, 'year_level_id', 'year_levels', $input['year_level_id'] ?? null);
@@ -459,6 +479,132 @@ final class CatalogService
     }
 
     /** @param array<string,mixed> $data */
+    // -- Deleting a subject or a curriculum (docs/28): only when nothing refers to it --------------------------------------------------
+
+    /**
+     * What stops a subject being deleted, in plain words; empty when nothing does.
+     *
+     * @param int|null $togetherWithCurriculum when the subject goes with its whole curriculum, prerequisites among that curriculum's subjects do not count
+     * @return array<int,string>
+     */
+    public static function subjectDeleteBlockers(int $subjectId, ?int $togetherWithCurriculum = null): array
+    {
+        $blockers = [];
+        $count = static fn (string $sql): int => (int) Database::scalar($sql, [$subjectId]);
+
+        if (($classes = $count('SELECT COUNT(*) FROM class_schedules WHERE subject_id = ?')) > 0) {
+            $blockers[] = $classes . ($classes === 1 ? ' class is' : ' classes are') . ' scheduled for it (with their grades and attendance).';
+        }
+        if (($selections = $count('SELECT COUNT(*) FROM application_subjects WHERE subject_id = ?')) > 0) {
+            $blockers[] = $selections . ($selections === 1 ? ' student has' : ' students have') . ' chosen it in an application.';
+        }
+        if (($credits = $count('SELECT COUNT(*) FROM credited_subjects WHERE subject_id = ?')) > 0) {
+            $blockers[] = 'It is credited to ' . $credits . ($credits === 1 ? ' student.' : ' students.');
+        }
+
+        $dependents = Database::select(
+            'SELECT s.code FROM subject_prerequisites sp JOIN subjects s ON s.id = sp.subject_id
+              WHERE sp.prerequisite_subject_id = ? AND (? IS NULL OR s.curriculum_id IS NULL OR s.curriculum_id <> ?)
+              ORDER BY s.code',
+            [$subjectId, $togetherWithCurriculum, $togetherWithCurriculum ?? 0]
+        );
+        if ($dependents !== []) {
+            $blockers[] = 'It is a prerequisite of ' . implode(', ', array_slice(array_column($dependents, 'code'), 0, 8)) . (count($dependents) > 8 ? ' and more.' : '.');
+        }
+
+        return $blockers;
+    }
+
+    /** What stops a curriculum being deleted; empty when nothing does. @return array<int,string> */
+    public static function curriculumDeleteBlockers(int $curriculumId): array
+    {
+        $blockers = [];
+        $students = (int) Database::scalar('SELECT COUNT(*) FROM students WHERE curriculum_id = ?', [$curriculumId]);
+        if ($students > 0) {
+            $blockers[] = $students . ($students === 1 ? ' student follows' : ' students follow') . ' this curriculum.';
+        }
+
+        $inUse = [];
+        foreach (Database::select('SELECT id, code FROM subjects WHERE curriculum_id = ? ORDER BY code', [$curriculumId]) as $subject) {
+            if (self::subjectDeleteBlockers((int) $subject['id'], $curriculumId) !== []) {
+                $inUse[] = $subject['code'];
+            }
+        }
+        if ($inUse !== []) {
+            $blockers[] = count($inUse) . ($inUse === [] ? '' : (count($inUse) === 1 ? ' of its subjects is' : ' of its subjects are')) . ' in use (classes, selections, credits, or a prerequisite elsewhere): '
+                . implode(', ', array_slice($inUse, 0, 8)) . (count($inUse) > 8 ? ' and more.' : '.');
+        }
+
+        return $blockers;
+    }
+
+    /** @throws ValidationException when something refers to it, or the reason or typed code is missing */
+    public static function deleteSubject(User $user, int $subjectId, string $reason, string $confirmCode): void
+    {
+        self::assertRegistrar($user);
+        $subject = Database::selectOne('SELECT s.*, c.code AS curriculum_code FROM subjects s LEFT JOIN curricula c ON c.id = s.curriculum_id WHERE s.id = ?', [$subjectId]);
+        if ($subject === null) {
+            throw HttpException::notFound('That subject was not found.');
+        }
+        self::assertDeletable(self::subjectDeleteBlockers($subjectId), $reason, $confirmCode, (string) $subject['code']);
+
+        Database::transaction(static function () use ($user, $subject, $reason): void {
+            Database::query('DELETE FROM subject_prerequisites WHERE subject_id = ?', [$subject['id']]);
+            Database::query('DELETE FROM subjects WHERE id = ?', [$subject['id']]);
+            AuditService::log('academic.subject_deleted', 'academic', 'Subject', (int) $subject['id'],
+                ['code' => $subject['code'], 'title' => $subject['title'], 'units' => $subject['units'], 'curriculum' => $subject['curriculum_code']], null,
+                'SUCCESS', trim($reason), $user->id, $user->role_name);
+        });
+    }
+
+    /**
+     * Delete a curriculum together with its subjects, when no student follows it and none of its subjects is in use.
+     *
+     * @return int how many subjects went with it
+     * @throws ValidationException
+     */
+    public static function deleteCurriculum(User $user, int $curriculumId, string $reason, string $confirmCode): int
+    {
+        self::assertRegistrar($user);
+        $curriculum = Database::selectOne('SELECT * FROM curricula WHERE id = ?', [$curriculumId]);
+        if ($curriculum === null) {
+            throw HttpException::notFound('That curriculum was not found.');
+        }
+        self::assertDeletable(self::curriculumDeleteBlockers($curriculumId), $reason, $confirmCode, (string) $curriculum['code']);
+
+        return Database::transaction(static function () use ($user, $curriculum, $reason): int {
+            $ids = array_column(Database::select('SELECT id FROM subjects WHERE curriculum_id = ?', [$curriculum['id']]), 'id');
+            if ($ids !== []) {
+                $in = implode(',', array_fill(0, count($ids), '?'));
+                Database::query("DELETE FROM subject_prerequisites WHERE subject_id IN ({$in}) OR prerequisite_subject_id IN ({$in})", [...$ids, ...$ids]);
+                Database::query("DELETE FROM subjects WHERE id IN ({$in})", $ids);
+            }
+            Database::query('DELETE FROM curricula WHERE id = ?', [$curriculum['id']]);
+            AuditService::log('academic.curriculum_deleted', 'academic', 'Curriculum', (int) $curriculum['id'],
+                ['code' => $curriculum['code'], 'name' => $curriculum['name'], 'subjects' => count($ids)], null, 'SUCCESS', trim($reason), $user->id, $user->role_name);
+
+            return count($ids);
+        });
+    }
+
+    /** @param array<int,string> $blockers */
+    private static function assertDeletable(array $blockers, string $reason, string $confirmCode, string $expectedCode): void
+    {
+        if ($blockers !== []) {
+            throw ValidationException::withMessage('It cannot be deleted. ' . implode(' ', $blockers) . ' Deactivate it instead.');
+        }
+        $errors = [];
+        if (mb_strlen(trim($reason)) < 5) {
+            $errors['reason'] = ['Give the reason for deleting it (at least 5 characters).'];
+        }
+        if (trim($confirmCode) !== $expectedCode) {
+            $errors['confirm_code'] = ['Type the code exactly as shown to confirm.'];
+        }
+        if ($errors !== []) {
+            throw ValidationException::withErrors($errors);
+        }
+    }
+
     private static function persist(User $user, string $table, string $entity, ?int $id, array $data): int
     {
         return Database::transaction(static function () use ($user, $table, $entity, $id, $data): int {

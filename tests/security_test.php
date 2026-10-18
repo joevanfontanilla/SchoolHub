@@ -140,7 +140,7 @@ return [
             'BackupService.php'         => ['$columns', '$keep', '$quoted', '$where'],
             'Catalog.php'               => ['$table'],
             'DeploymentCheck.php'       => ['$in'],
-            'CatalogService.php'        => ['$table'],
+            'CatalogService.php'        => ['$table', '$in'],
             'ClassSchedule.php'         => ['$in'],
             'CredentialRequest.php'     => ['$in', '$where'],
             'EnrollmentApplication.php' => ['$placeholders'],

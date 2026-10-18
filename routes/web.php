@@ -463,6 +463,8 @@ $router->post('/registrar/curricula/create',    [CatalogController::class, 'save
 $router->get('/registrar/curricula/{id}',       [CatalogController::class, 'showCurriculum'],   $registrar('academic.manage'));
 $router->get('/registrar/curricula/{id}/edit',  [CatalogController::class, 'editCurriculum'],   $registrar('academic.manage'));
 $router->post('/registrar/curricula/{id}/edit', [CatalogController::class, 'saveCurriculum'],   $registrar('academic.manage'));
+$router->post('/registrar/curricula/{id}/delete', [CatalogController::class, 'deleteCurriculum'], $registrar('academic.manage'));
+$router->post('/registrar/subjects/{id}/delete', [CatalogController::class, 'deleteSubject'],   $registrar('academic.manage'));
 
 $router->get('/registrar/subjects',            [CatalogController::class, 'subjects'],      $registrar('academic.manage'), 'registrar.subjects');
 $router->get('/registrar/subjects/create',     [CatalogController::class, 'createSubject'], $registrar('academic.manage'));

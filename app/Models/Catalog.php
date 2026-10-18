@@ -109,6 +109,17 @@ final class Catalog
         );
     }
 
+    /** Every subject with its curriculum, for the New subject form, which narrows the list as the curriculum is chosen. @return array<int,array<string,mixed>> */
+    public static function prerequisiteOptionsForAll(): array
+    {
+        return Database::select(
+            'SELECT s.id, s.code, s.title, s.curriculum_id
+               FROM subjects s
+          LEFT JOIN year_levels yl ON yl.id = s.year_level_id
+              ORDER BY s.curriculum_id IS NULL, s.curriculum_id, yl.sequence, s.term_sequence, s.id'
+        );
+    }
+
     /** @return array<int,int> */
     public static function prerequisiteIds(int $subjectId): array
     {

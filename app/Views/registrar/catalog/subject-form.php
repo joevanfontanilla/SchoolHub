@@ -6,6 +6,7 @@
  * @var array  $yearLevels
  * @var array  $allSubjects      subjects this one may require (same curriculum, or general)
  * @var array  $prerequisiteIds
+ * @var array  $deleteBlockers   what stops this subject being deleted (editing only)
  */
 $editing = $subject !== null;
 $action = $editing ? '/registrar/subjects/' . $subject['id'] . '/edit' : '/registrar/subjects/create';
@@ -36,30 +37,27 @@ $select = static function (string $name, string $label, array $options, string $
         <p class="mt-1 text-sm text-slate-600">
             <?= $curriculum !== null
                 ? 'In ' . e($curriculum['code']) . ' · ' . e($curriculum['program_code']) . '.'
-                : 'General subject, not part of any one curriculum.' ?>
+                : ($editing ? 'General subject, not part of any one curriculum.' : 'Choose the curriculum it belongs to below.') ?>
             <?= $editing ? 'A subject stays in the curriculum it was created in.' : '' ?>
         </p>
     </div>
 
-    <?php if (!$editing): ?>
-        <form method="GET" action="<?= e(url('/registrar/subjects/create')) ?>" class="card flex flex-wrap items-end gap-4 p-4" data-auto-submit>
-            <div class="min-w-[16rem] flex-1">
-                <label for="choose-curriculum" class="field-label">Curriculum</label>
-                <select id="choose-curriculum" name="curriculum_id" class="field-input">
-                    <option value="">General (no curriculum)</option>
-                    <?php foreach ($curricula as $option): ?>
-                        <option value="<?= e($option['id']) ?>" <?= $curriculum !== null && (int) $curriculum['id'] === (int) $option['id'] ? 'selected' : '' ?>><?= e($option['program_code'] . ' · ' . $option['code']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <noscript><button type="submit" class="btn-secondary">Use this curriculum</button></noscript>
-        </form>
-    <?php endif; ?>
-
     <form method="POST" action="<?= e(url($action)) ?>" class="card space-y-5 p-5 sm:p-6" novalidate>
         <?= csrf_field() ?>
         <?php if (!$editing): ?>
-            <input type="hidden" name="curriculum_id" value="<?= e($curriculum['id'] ?? '') ?>">
+            <div>
+                <?php $curriculumError = error_for('curriculum_id'); $picked = (string) old('curriculum_id', $curriculum !== null ? (string) $curriculum['id'] : ''); ?>
+                <label for="field-curriculum_id" class="field-label">Curriculum <span class="text-danger-text" aria-hidden="true">*</span></label>
+                <select id="field-curriculum_id" name="curriculum_id" required data-curriculum-filter class="field-input <?= $curriculumError ? 'field-input-error' : '' ?>">
+                    <option value="">Choose a curriculum…</option>
+                    <?php foreach ($curricula as $option): ?>
+                        <option value="<?= e($option['id']) ?>" <?= $picked === (string) $option['id'] ? 'selected' : '' ?>><?= e($option['program_code'] . ' · ' . $option['code']) ?></option>
+                    <?php endforeach; ?>
+                    <option value="general" <?= $picked === 'general' ? 'selected' : '' ?>>General (no curriculum)</option>
+                </select>
+                <?php if ($curriculumError): ?><p class="field-error"><span><?= e($curriculumError) ?></span></p><?php endif; ?>
+                <p class="mt-1 text-xs text-brand-gray">The subject is added to this curriculum as soon as you save, and its unit total updates. Choose General only for a subject that belongs to no curriculum.</p>
+            </div>
         <?php endif; ?>
         <div class="grid gap-5 sm:grid-cols-3">
             <?= component('field', ['name' => 'code', 'label' => 'Code', 'required' => true, 'value' => $val('code'), 'help' => 'As printed, e.g. CORE 4 or PATH-FIT 1. Unique within the curriculum.']) ?>
@@ -74,8 +72,8 @@ $select = static function (string $name, string $label, array $options, string $
             <?= component('field', ['name' => 'lab_hours', 'label' => 'Lab hrs / week', 'type' => 'number', 'value' => $val('lab_hours', '0')]) ?>
         </div>
         <div class="grid gap-5 sm:grid-cols-3">
-            <?= $select('year_level_id', 'Year level', array_column($yearLevels, 'name', 'id'), (string) $val('year_level_id'), 'Any year') ?>
-            <?= $select('term_sequence', 'Term', ['1' => '1st semester', '2' => '2nd semester', '3' => 'Summer'], (string) $val('term_sequence'), 'Any term') ?>
+            <?= $select('year_level_id', 'Year level', array_column($yearLevels, 'name', 'id'), (string) $val('year_level_id'), 'Choose…') ?>
+            <?= $select('term_sequence', 'Term', ['1' => '1st semester', '2' => '2nd semester', '3' => 'Summer'], (string) $val('term_sequence'), 'Choose…') ?>
             <?= component('field', ['name' => 'min_progress_percent', 'label' => 'Required progress (%)', 'type' => 'number', 'value' => $val('min_progress_percent'), 'help' => 'For "80% of the course". Blank if none.']) ?>
         </div>
         <div>
@@ -97,7 +95,7 @@ $select = static function (string $name, string $label, array $options, string $
             <?php else: ?>
                 <div class="grid max-h-72 gap-1 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
                     <?php foreach ($allSubjects as $other): ?>
-                        <label class="flex items-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-slate-50">
+                        <label class="flex items-start gap-2 rounded px-2 py-1.5 text-sm hover:bg-slate-50" data-curriculum-of="<?= e((string) ($other['curriculum_id'] ?? '')) ?>">
                             <input type="checkbox" name="prerequisites[]" value="<?= e($other['id']) ?>"
                                    class="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-600"
                                    <?= in_array((int) $other['id'], $chosen, true) ? 'checked' : '' ?>>
@@ -117,4 +115,36 @@ $select = static function (string $name, string $label, array $options, string $
             <a href="<?= e(url($back)) ?>" class="btn-secondary">Cancel</a>
         </div>
     </form>
+
+    <?php if ($editing): ?>
+        <?php $confirmError = error_for('confirm_code'); $reasonError = error_for('reason'); ?>
+        <section class="card p-5 sm:p-6" aria-labelledby="delete-heading">
+            <h3 id="delete-heading" class="text-base">Delete this subject</h3>
+            <?php if ($deleteBlockers !== []): ?>
+                <p class="mt-1 text-sm text-slate-600">It cannot be deleted while:</p>
+                <ul class="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                    <?php foreach ($deleteBlockers as $blocker): ?><li><?= e($blocker) ?></li><?php endforeach; ?>
+                </ul>
+                <p class="mt-2 text-sm text-slate-600">Untick <strong>Active</strong> above to retire it instead. Its records stay.</p>
+            <?php else: ?>
+                <p class="mt-1 text-sm text-slate-600">Nothing refers to it, so it can be removed for good. This cannot be undone; the audit log keeps a record.</p>
+                <form method="POST" action="<?= e(url('/registrar/subjects/' . $subject['id'] . '/delete')) ?>" class="mt-3 space-y-3" novalidate
+                      data-confirm="<?= e($subject['code'] . ' is removed for good, with its prerequisite links. This cannot be undone.') ?>" data-confirm-title="Delete this subject?" data-confirm-tone="danger" data-confirm-label="Delete subject"
+                      data-confirm-requires="#delete-reason" data-confirm-requires-message="Write the reason for deleting the subject first. It is recorded in the audit log.">
+                    <?= csrf_field() ?>
+                    <div>
+                        <label for="delete-reason" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>
+                        <input id="delete-reason" name="reason" class="field-input <?= $reasonError ? 'field-input-error' : '' ?>" maxlength="255" placeholder="e.g. Added by mistake">
+                        <?php if ($reasonError): ?><p class="field-error"><span><?= e($reasonError) ?></span></p><?php endif; ?>
+                    </div>
+                    <div>
+                        <label for="delete-confirm" class="field-label">Type <strong><?= e($subject['code']) ?></strong> to confirm</label>
+                        <input id="delete-confirm" name="confirm_code" class="field-input <?= $confirmError ? 'field-input-error' : '' ?>" autocomplete="off">
+                        <?php if ($confirmError): ?><p class="field-error"><span><?= e($confirmError) ?></span></p><?php endif; ?>
+                    </div>
+                    <button type="submit" class="btn-danger">Delete subject</button>
+                </form>
+            <?php endif; ?>
+        </section>
+    <?php endif; ?>
 </div>

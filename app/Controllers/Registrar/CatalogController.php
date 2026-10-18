@@ -69,6 +69,7 @@ final class CatalogController extends Controller
             'curriculum' => $curriculum,
             'terms'      => Curriculum::grid((int) $curriculum['id']),
             'totalUnits' => Curriculum::totalUnits((int) $curriculum['id']),
+            'deleteBlockers' => CatalogService::curriculumDeleteBlockers((int) $curriculum['id']),
         ]);
     }
 
@@ -99,6 +100,30 @@ final class CatalogController extends Controller
             return;
         }
         $this->success($id === null ? 'Curriculum created.' : 'Curriculum saved.', "/registrar/curricula/{$savedId}");
+    }
+
+    public function deleteCurriculum(Request $request): void
+    {
+        $curriculum = $this->find('curricula', (int) $request->param('id'), 'curriculum');
+        try {
+            $subjects = CatalogService::deleteCurriculum(Auth::user(), (int) $curriculum['id'], (string) $request->input('reason', ''), (string) $request->input('confirm_code', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], '/registrar/curricula/' . $curriculum['id']);
+            return;
+        }
+        $this->success($curriculum['code'] . ' was deleted' . ($subjects > 0 ? ', with its ' . $subjects . ($subjects === 1 ? ' subject.' : ' subjects.') : '.'), '/registrar/curricula');
+    }
+
+    public function deleteSubject(Request $request): void
+    {
+        $subject = $this->find('subjects', (int) $request->param('id'), 'subject');
+        try {
+            CatalogService::deleteSubject(Auth::user(), (int) $subject['id'], (string) $request->input('reason', ''), (string) $request->input('confirm_code', ''));
+        } catch (ValidationException $e) {
+            $this->failWith($e, [], '/registrar/subjects/' . $subject['id'] . '/edit');
+            return;
+        }
+        $this->success($subject['code'] . ' was deleted.', $subject['curriculum_id'] !== null ? '/registrar/curricula/' . $subject['curriculum_id'] : '/registrar/subjects');
     }
 
     // -- Subjects --------------------------------------------------------------
@@ -145,16 +170,30 @@ final class CatalogController extends Controller
         }
 
         $saved = Catalog::row('subjects', $savedId);
+        if ($saved['curriculum_id'] === null) {
+            $this->success($id === null ? 'General subject created.' : 'Subject saved.', '/registrar/subjects');
+            return;
+        }
+
+        $curriculum = Curriculum::find((int) $saved['curriculum_id']);
+        $year = null;
+        foreach (Catalog::yearLevels() as $level) {
+            if ((int) $level['id'] === (int) $saved['year_level_id']) {
+                $year = $level;
+            }
+        }
+        $term = (int) ($saved['term_sequence'] ?? 0);
+        $where = $year !== null ? $year['name'] . ' · ' . (Curriculum::TERM_NAMES[$term] ?? 'any term') : 'Unscheduled';
+        $anchor = $year !== null ? '#term-' . (int) $year['sequence'] . '-' . $term : '';
         $this->success(
-            $id === null ? 'Subject created.' : 'Subject saved.',
-            $saved['curriculum_id'] !== null ? '/registrar/curricula/' . $saved['curriculum_id'] : '/registrar/subjects'
+            $saved['code'] . ($id === null ? ' was added to ' : ' was saved in ') . $curriculum['code'] . ', ' . $where . '.',
+            '/registrar/curricula/' . $saved['curriculum_id'] . $anchor
         );
     }
 
     /**
-     * The curriculum is fixed on edit, and chosen before the form on create
-     * (?curriculum_id=), so the prerequisite list only offers subjects the
-     * service will accept.
+     * The curriculum is fixed on edit. On create it is a field of the form itself (preselected from ?curriculum_id=), and the
+     * prerequisite list follows it in the browser; the service still refuses a prerequisite from another curriculum.
      *
      * @param array<string,mixed>|null $subject
      */
@@ -174,8 +213,11 @@ final class CatalogController extends Controller
             'curriculum'      => $curriculum,
             'curricula'       => Curriculum::options(),
             'yearLevels'      => Catalog::yearLevels(),
-            'allSubjects'     => Catalog::prerequisiteOptions($curriculumId, $subject === null ? null : (int) $subject['id']),
+            'allSubjects'     => $subject === null
+                ? Catalog::prerequisiteOptionsForAll()
+                : Catalog::prerequisiteOptions($curriculumId, (int) $subject['id']),
             'prerequisiteIds' => $subject === null ? [] : Catalog::prerequisiteIds((int) $subject['id']),
+            'deleteBlockers'  => $subject === null ? [] : CatalogService::subjectDeleteBlockers((int) $subject['id']),
         ]);
     }
 

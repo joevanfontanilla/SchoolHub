@@ -5,6 +5,7 @@
  * @var array $curriculum
  * @var array $terms       Curriculum::grid()
  * @var float $totalUnits
+ * @var array $deleteBlockers  what stops this curriculum being deleted
  */
 $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 1, '.', ''), '0'), '.');
 ?>
@@ -92,4 +93,34 @@ $number = static fn ($value): string => rtrim(rtrim(number_format((float) $value
             </div>
         </section>
     <?php endforeach; ?>
+
+    <?php $confirmError = error_for('confirm_code'); $reasonError = error_for('reason'); $subjectCount = array_sum(array_map(static fn ($t) => count($t['subjects']), $terms)); ?>
+    <section class="card p-5 sm:p-6" aria-labelledby="delete-heading">
+        <h3 id="delete-heading" class="text-base">Delete this curriculum</h3>
+        <?php if ($deleteBlockers !== []): ?>
+            <p class="mt-1 text-sm text-slate-600">It cannot be deleted while:</p>
+            <ul class="mt-1 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                <?php foreach ($deleteBlockers as $blocker): ?><li><?= e($blocker) ?></li><?php endforeach; ?>
+            </ul>
+            <p class="mt-2 text-sm text-slate-600">Use <strong>Edit details</strong> to make it inactive instead. Its records stay.</p>
+        <?php else: ?>
+            <p class="mt-1 text-sm text-slate-600">No student follows it and none of its subjects is in use, so it can be removed for good<?= $subjectCount > 0 ? ', <strong>together with its ' . e((string) $subjectCount) . ' subject' . ($subjectCount === 1 ? '' : 's') . '</strong>' : '' ?>. This cannot be undone; the audit log keeps a record.</p>
+            <form method="POST" action="<?= e(url('/registrar/curricula/' . $curriculum['id'] . '/delete')) ?>" class="mt-3 space-y-3" novalidate
+                  data-confirm="<?= e($curriculum['code'] . ' is removed for good' . ($subjectCount > 0 ? ', with its ' . $subjectCount . ' subject' . ($subjectCount === 1 ? '' : 's') : '') . '. This cannot be undone.') ?>" data-confirm-title="Delete this curriculum?" data-confirm-tone="danger" data-confirm-label="Delete curriculum"
+                  data-confirm-requires="#delete-reason" data-confirm-requires-message="Write the reason for deleting the curriculum first. It is recorded in the audit log.">
+                <?= csrf_field() ?>
+                <div>
+                    <label for="delete-reason" class="field-label">Reason <span class="text-danger-text" aria-hidden="true">*</span></label>
+                    <input id="delete-reason" name="reason" class="field-input <?= $reasonError ? 'field-input-error' : '' ?>" maxlength="255" placeholder="e.g. Created by mistake">
+                    <?php if ($reasonError): ?><p class="field-error"><span><?= e($reasonError) ?></span></p><?php endif; ?>
+                </div>
+                <div>
+                    <label for="delete-confirm" class="field-label">Type <strong><?= e($curriculum['code']) ?></strong> to confirm</label>
+                    <input id="delete-confirm" name="confirm_code" class="field-input <?= $confirmError ? 'field-input-error' : '' ?>" autocomplete="off">
+                    <?php if ($confirmError): ?><p class="field-error"><span><?= e($confirmError) ?></span></p><?php endif; ?>
+                </div>
+                <button type="submit" class="btn-danger">Delete curriculum</button>
+            </form>
+        <?php endif; ?>
+    </section>
 </div>

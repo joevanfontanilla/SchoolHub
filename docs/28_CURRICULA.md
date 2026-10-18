@@ -53,7 +53,12 @@ no effect on it.
 
 ## Rules
 
-- A subject's curriculum is chosen when it is created and **never changes**.
+- A subject's curriculum is chosen when it is created and **never changes**. The choice is part of the New subject form, and it must be made:
+  a curriculum, or **General** on purpose (no default). Coming from a curriculum page ("Add subject") preselects that curriculum.
+- A subject in a curriculum must have a **year level and a term** (a General subject need not), so it lands in the right block of the
+  curriculum at once instead of under "Unscheduled". An older subject without them can still be edited, but one that has them cannot lose them.
+- After saving, the registrar lands on that curriculum, at the year and term the subject was placed in, and the unit totals are already updated.
+- The prerequisite list on the form follows the chosen curriculum (its own subjects plus the general ones).
 - A prerequisite must be a subject of the **same curriculum** or a general subject.
 - In a curriculum file, a prerequisite must be taken in an **earlier term** (summer
   counts as after the second semester of its year). The importer refuses a file whose
@@ -72,7 +77,14 @@ no effect on it.
   in block enlistment, and needs an override reason to add, until the student has passed
   that share of the curriculum's units (rounded down).
 - A curriculum's program cannot change once it has subjects or students.
-- Curricula and subjects are deactivated, never deleted.
+- Curricula and subjects are deactivated by default. They can also be **deleted, but only when nothing refers to them** (the registrar's
+  "Delete subject" and "Delete curriculum", `CatalogService::deleteSubject` / `deleteCurriculum`, permission `academic.manage`):
+  - A **subject** is blocked by any class scheduled for it (with its grades and attendance), any student's subject selection, any
+    credited subject, or being another subject's prerequisite. The button then lists what blocks it and points to Deactivate.
+  - A **curriculum** is blocked by any student following it, or by any of its subjects being blocked as above (prerequisites between
+    its own subjects do not count). An unused curriculum is deleted **together with its subjects**, and the page says how many.
+  - It needs a reason (5+ characters) and the code typed to confirm, and is audited (`academic.subject_deleted`,
+    `academic.curriculum_deleted`) with the code and title. It cannot be undone; the audit entry is what remains.
 
 ## Transcription decisions
 

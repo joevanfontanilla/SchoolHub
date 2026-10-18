@@ -15,6 +15,12 @@ use App\Services\CurriculumImporter as Importer;
 use App\Services\EnrollmentConfirmationService as Confirmation;
 
 /** A fixture program. */
+/** Where a curriculum subject sits (a year level and a term are required): the first year, first semester. */
+function curriculumTestSlot(): array
+{
+    return ['year_level_id' => (int) Database::scalar('SELECT id FROM year_levels ORDER BY sequence LIMIT 1'), 'term_sequence' => '1'];
+}
+
 function curriculumTestProgram(): int
 {
     return Database::insert('programs', [
@@ -140,11 +146,11 @@ return [
             $registrar = makeUser(User::ROLE_REGISTRAR);
             $curriculumId = curriculumTestCurriculum(curriculumTestProgram());
 
-            $id = Catalog::saveSubject($registrar, null, ['code' => '  pub   ad 2 ', 'title' => 'Knowledge Management', 'units' => '3', 'curriculum_id' => $curriculumId, 'is_active' => '1']);
+            $id = Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => '  pub   ad 2 ', 'title' => 'Knowledge Management', 'units' => '3', 'curriculum_id' => $curriculumId, 'is_active' => '1']);
             $t->assertEquals('PUB AD 2', Database::scalar('SELECT code FROM subjects WHERE id = ?', [$id]));
 
             foreach (['#CORE', '-X1', 'A/B'] as $bad) {
-                $errors = fieldErrors(static fn () => Catalog::saveSubject($registrar, null, ['code' => $bad, 'title' => 'X', 'units' => '3', 'curriculum_id' => $curriculumId]));
+                $errors = fieldErrors(static fn () => Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => $bad, 'title' => 'X', 'units' => '3', 'curriculum_id' => $curriculumId]));
                 $t->assertTrue(isset($errors['code']), "{$bad} is refused");
             }
         } finally {
@@ -160,11 +166,11 @@ return [
             $first = curriculumTestCurriculum($programId);
             $second = curriculumTestCurriculum($programId);
 
-            Catalog::saveSubject($registrar, null, ['code' => 'CORE 1', 'title' => 'Financial Accounting and Reporting', 'units' => '3', 'curriculum_id' => $first]);
-            Catalog::saveSubject($registrar, null, ['code' => 'CORE 1', 'title' => 'Basic Accounting', 'units' => '3', 'curriculum_id' => $second]);
+            Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'CORE 1', 'title' => 'Financial Accounting and Reporting', 'units' => '3', 'curriculum_id' => $first]);
+            Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'CORE 1', 'title' => 'Basic Accounting', 'units' => '3', 'curriculum_id' => $second]);
             $t->assertEquals(2, (int) Database::scalar("SELECT COUNT(*) FROM subjects WHERE code = 'CORE 1' AND curriculum_id IN (?, ?)", [$first, $second]));
 
-            $errors = fieldErrors(static fn () => Catalog::saveSubject($registrar, null, ['code' => 'core 1', 'title' => 'Again', 'units' => '3', 'curriculum_id' => $first]));
+            $errors = fieldErrors(static fn () => Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'core 1', 'title' => 'Again', 'units' => '3', 'curriculum_id' => $first]));
             $t->assertContains('already used in', $errors['code'][0] ?? '');
         } finally {
             actingAs(null);
@@ -179,14 +185,14 @@ return [
             $mine = curriculumTestCurriculum($programId);
             $other = curriculumTestCurriculum($programId);
 
-            $foreign = Catalog::saveSubject($registrar, null, ['code' => 'GE001', 'title' => 'Understanding Self', 'units' => '3', 'curriculum_id' => $other]);
-            $general = Catalog::saveSubject($registrar, null, ['code' => testCode('G'), 'title' => 'General', 'units' => '3']);
-            $own = Catalog::saveSubject($registrar, null, ['code' => 'GE001', 'title' => 'Understanding Self', 'units' => '3', 'curriculum_id' => $mine]);
+            $foreign = Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'GE001', 'title' => 'Understanding Self', 'units' => '3', 'curriculum_id' => $other]);
+            $general = Catalog::saveSubject($registrar, null, ['code' => testCode('G'), 'title' => 'General', 'units' => '3', 'curriculum_id' => 'general']);
+            $own = Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'GE001', 'title' => 'Understanding Self', 'units' => '3', 'curriculum_id' => $mine]);
 
-            $errors = fieldErrors(static fn () => Catalog::saveSubject($registrar, null, ['code' => 'CORE 2', 'title' => 'X', 'units' => '3', 'curriculum_id' => $mine, 'prerequisites' => [$foreign]]));
+            $errors = fieldErrors(static fn () => Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'CORE 2', 'title' => 'X', 'units' => '3', 'curriculum_id' => $mine, 'prerequisites' => [$foreign]]));
             $t->assertContains('belongs to a different curriculum', $errors['prerequisites'][0] ?? '');
 
-            $id = Catalog::saveSubject($registrar, null, ['code' => 'CORE 2', 'title' => 'X', 'units' => '3', 'curriculum_id' => $mine, 'prerequisites' => [$own, $general]]);
+            $id = Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'CORE 2', 'title' => 'X', 'units' => '3', 'curriculum_id' => $mine, 'prerequisites' => [$own, $general]]);
             $t->assertEquals(2, (int) Database::scalar('SELECT COUNT(*) FROM subject_prerequisites WHERE subject_id = ?', [$id]));
         } finally {
             actingAs(null);
@@ -201,7 +207,7 @@ return [
             $curriculumId = curriculumTestCurriculum($programId);
             $elsewhere = curriculumTestCurriculum($programId);
 
-            $input = ['code' => 'BPLAN1', 'title' => 'Business Plan Implementation 1', 'units' => '5', 'lab_units' => '3', 'curriculum_id' => $curriculumId];
+            $input = [...curriculumTestSlot(), 'code' => 'BPLAN1', 'title' => 'Business Plan Implementation 1', 'units' => '5', 'lab_units' => '3', 'curriculum_id' => $curriculumId];
             $id = Catalog::saveSubject($registrar, null, $input);
 
             Catalog::saveSubject($registrar, $id, array_merge($input, ['curriculum_id' => $elsewhere, 'title' => 'Renamed']));
@@ -234,7 +240,7 @@ return [
             $id = Catalog::saveCurriculum($registrar, null, $input);
             $t->assertTrue(isset(fieldErrors(static fn () => Catalog::saveCurriculum($registrar, null, $input))['code']), 'A duplicate code is refused');
 
-            Catalog::saveSubject($registrar, null, ['code' => 'GE001', 'title' => 'Understanding Self', 'units' => '3', 'curriculum_id' => $id]);
+            Catalog::saveSubject($registrar, null, [...curriculumTestSlot(), 'code' => 'GE001', 'title' => 'Understanding Self', 'units' => '3', 'curriculum_id' => $id]);
             $moved = array_merge($input, ['program_id' => curriculumTestProgram()]);
             $t->assertTrue(isset(fieldErrors(static fn () => Catalog::saveCurriculum($registrar, $id, $moved))['program_id']), 'The program is fixed once it has subjects');
 

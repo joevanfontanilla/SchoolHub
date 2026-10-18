@@ -1072,3 +1072,26 @@
         });
     });
 })();
+
+/* Subject form: the prerequisite list follows the chosen curriculum (its own subjects, plus the general ones). The server
+   checks it again, so this only saves the person from picking something that will be refused. */
+(function () {
+    var select = document.querySelector('[data-curriculum-filter]');
+    if (!select) { return; }
+    var items = document.querySelectorAll('[data-curriculum-of]');
+    function apply() {
+        var chosen = select.value;
+        items.forEach(function (item) {
+            var own = item.getAttribute('data-curriculum-of');
+            var show = chosen !== '' && chosen !== 'general' ? (own === '' || own === chosen) : (own === '' || chosen === '');
+            if (chosen === '') { show = true; }
+            item.style.display = show ? '' : 'none';
+            if (!show) {
+                var box = item.querySelector('input[type="checkbox"]');
+                if (box) { box.checked = false; }
+            }
+        });
+    }
+    select.addEventListener('change', apply);
+    apply();
+})();

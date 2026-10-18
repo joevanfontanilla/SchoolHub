@@ -15,7 +15,7 @@ use App\Services\CatalogService as Catalog;
 
 function subjectInput(array $overrides = []): array
 {
-    return array_merge(['code' => testCode('S'), 'title' => 'Test Subject', 'units' => '3', 'is_active' => '1'], $overrides);
+    return array_merge(['code' => testCode('S'), 'title' => 'Test Subject', 'units' => '3', 'is_active' => '1', 'curriculum_id' => 'general'], $overrides);
 }
 
 return [
