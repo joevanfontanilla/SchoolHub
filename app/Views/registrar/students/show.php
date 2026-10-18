@@ -16,6 +16,7 @@
  * @var ?float $unitLimit
  * @var array  $history
  * @var ?array $withdrawn    the latest withdrawn enrollment, when the student has no current one
+ * @var ?array $enrollOption WalkInService::enrollOption(), or null when the registrar may not enroll walk-ins
  * @var ?string $balance     what the student still owes on it, in pesos
  */
 $id = (int) $student['id'];
@@ -62,6 +63,9 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
         </div>
         <div class="flex items-center gap-2">
             <?= partial('print-button') ?>
+            <?php if ($enrollOption !== null && $enrollOption['can']): ?>
+                <a href="<?= e(url('/registrar/walk-in/student/' . $id)) ?>" class="btn-primary"><?= icon('plus', 'h-5 w-5') ?> Enroll for a term</a>
+            <?php endif; ?>
             <a href="<?= e(url('/registrar/students/' . $id . '/e-id')) ?>" class="btn-secondary"><?= icon('shield', 'h-5 w-5') ?> E-ID</a>
             <a href="<?= e(url('/registrar/students/' . $id . '/prospectus')) ?>" class="btn-secondary"><?= icon('requirements', 'h-5 w-5') ?> Curriculum Checklist</a>
             <?php if ($enrollment !== null): ?>
@@ -72,6 +76,10 @@ $hasErrors = errors() !== [] && error_for('override_reason') === null && error_f
             </span>
         </div>
     </div>
+
+    <?php if ($enrollOption !== null && !$enrollOption['can']): ?>
+        <p class="rounded-xl bg-brand-50 px-4 py-3 text-sm text-brand-navy" role="note"><strong>Enroll for a term:</strong> <?= e((string) $enrollOption['reason']) ?></p>
+    <?php endif; ?>
 
     <section class="card" aria-labelledby="apps-heading">
         <h2 id="apps-heading" class="border-b border-slate-200 px-5 py-4 text-base">Applications and enrollment</h2>

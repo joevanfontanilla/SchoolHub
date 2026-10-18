@@ -49,6 +49,7 @@ final class StudentController extends Controller
 
         $this->appView('registrar/students/show', [
             'withdrawn'    => $withdrawn,
+            'enrollOption' => Auth::user()->hasPermission('enrollment.walkin') ? \App\Services\WalkInService::enrollOption($id) : null,
             'balance'      => $assessment['balance'] ?? null,
             'enrollment'   => $enrollment,
             'classes'      => $enrollmentId === null ? [] : AcademicRecordService::classesForEnrollment($enrollmentId, true),

@@ -185,6 +185,46 @@ final class WalkInService
     }
 
     /** One registered student, with the name and number shown on the page that starts their application. @return array<string,mixed>|null */
+    /**
+     * Whether a registered student can be enrolled for a term from their record (docs/09): their account takes an application, and for at least one term whose
+     * enrollment window is open they are neither enrolled nor already holding an open application.
+     *
+     * @return array{can:bool,reason:?string,terms:array<int,array<string,mixed>>} the terms the student can be enrolled for
+     */
+    public static function enrollOption(int $studentId): array
+    {
+        $student = Database::selectOne('SELECT s.id, u.status FROM students s JOIN users u ON u.id = s.user_id WHERE s.id = ?', [$studentId]);
+        if ($student === null) {
+            return ['can' => false, 'reason' => 'This student was not found.', 'terms' => []];
+        }
+        if (!in_array($student['status'], [User::STATUS_ACTIVE, User::STATUS_PENDING], true)) {
+            return ['can' => false, 'reason' => 'This student\'s account is ' . strtolower((string) $student['status']) . ', so an application cannot be started.', 'terms' => []];
+        }
+
+        $open = \App\Models\Term::openForEnrollment();
+        if ($open === []) {
+            return ['can' => false, 'reason' => 'Enrollment is not open for any term right now.', 'terms' => []];
+        }
+
+        $available = [];
+        $enrolled = 0;
+        foreach ($open as $term) {
+            $isEnrolled = (int) Database::scalar("SELECT COUNT(*) FROM enrollments WHERE student_id = ? AND term_id = ? AND status = 'ENROLLED'", [$studentId, $term['id']]) > 0;
+            if ($isEnrolled) {
+                $enrolled++;
+            } elseif (!Application::hasOpenApplicationForTerm($studentId, (int) $term['id'])) {
+                $available[] = $term;
+            }
+        }
+        if ($available === []) {
+            return ['can' => false, 'reason' => $enrolled === count($open)
+                ? 'Already enrolled for the open term.'
+                : 'Already has an application for the open term. Continue it from Applications.', 'terms' => []];
+        }
+
+        return ['can' => true, 'reason' => null, 'terms' => $available];
+    }
+
     public static function studentSummary(int $studentId): ?array
     {
         return Database::selectOne(

@@ -18,7 +18,12 @@
                 <?= e($enrolled) ?> enrolled so far.
             </p>
         </div>
-        <a href="<?= e(url('/registrar/applications')) ?>" class="btn-primary">Open the queue</a>
+        <div class="flex flex-wrap items-center gap-2">
+            <?php if (auth_user()?->hasPermission('enrollment.walkin')): ?>
+                <a href="<?= e(url('/registrar/walk-in')) ?>" class="btn-secondary"><?= icon('plus', 'h-5 w-5') ?> Walk-in enrollment</a>
+            <?php endif; ?>
+            <a href="<?= e(url('/registrar/applications')) ?>" class="btn-primary">Open the queue</a>
+        </div>
     </div>
 
     <?= partial('dashboard-cards', ['cards' => $cards]) ?>

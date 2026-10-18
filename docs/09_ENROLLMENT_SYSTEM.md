@@ -191,6 +191,10 @@ confirmation steps as an online applicant. Only the way in differs.
   **Find an existing student** on the intake page, by name, student number, or email. The registrar then
   enters only the enrollment choices; the application is created on the **existing account** (no new account,
   no set-up link), as a walk-in draft, and continues at step 2.
+- **Enroll for a term, from the record.** Each student's record has an **Enroll for a term** button that opens this same existing-account walk-in with the student already chosen
+  (`/registrar/walk-in/student/{id}`), so the registrar only picks the term, program, year level, section, and subjects. The Registrar's dashboard has a **Walk-in enrollment**
+  button to the intake page. The record button shows only when the student's account can take an application and, for at least one term whose enrollment window is open, the
+  student is neither enrolled nor already holding an open application for it; otherwise a note says why. Both need the `enrollment.walkin` permission.
 - **Cancel.** A walk-in left as a `DRAFT` can be cancelled by the registrar (docs/26 rule 10).
 - **Data.** `enrollment_applications.source` (`online` | `walk_in`, default `online`) and
   `created_by`; `enrollment_requirements.received_in_person`. The application queue shows a
