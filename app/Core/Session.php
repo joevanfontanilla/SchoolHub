@@ -42,7 +42,10 @@ final class Session
             self::flash('warning', 'Your session expired after a period of inactivity. Please sign in again.');
         }
 
-        self::put('_last_activity', time());
+        // The banner's background check is not the person using the site, so it must not keep an idle session alive.
+        if (($_SERVER['HTTP_X_BACKGROUND_POLL'] ?? '') !== '1') {
+            self::put('_last_activity', time());
+        }
     }
 
     public static function get(string $key, mixed $default = null): mixed

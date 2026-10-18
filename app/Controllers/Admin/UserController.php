@@ -111,6 +111,12 @@ final class UserController extends Controller
         $this->act($account, static fn () => UserAdminService::unlock(Auth::user(), $account->id), 'Account unlocked. The user can sign in again.');
     }
 
+    public function releaseDevices(Request $request): void
+    {
+        $account = $this->account($request);
+        $this->act($account, static fn () => \App\Services\DeviceSessionService::releaseAll(Auth::user(), $account->id), 'Signed-in devices released. The account is signed out everywhere and can sign in again.');
+    }
+
     public function delete(Request $request): void
     {
         $account = $this->account($request);

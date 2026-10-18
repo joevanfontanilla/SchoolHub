@@ -24,6 +24,8 @@ final class AccountController extends Controller
         $user = Auth::user();
         $this->appView('account/index', [
             'title'    => 'My Account',
+            'devices'  => \App\Services\DeviceSessionService::devicesFor($user->id),
+            'pendingDevices' => \App\Services\DeviceSessionService::pendingFor($user->id),
             'user'     => $user,
             'photoUrl' => AvatarService::currentUrl($user),
             'maxBytes' => AvatarService::MAX_BYTES,

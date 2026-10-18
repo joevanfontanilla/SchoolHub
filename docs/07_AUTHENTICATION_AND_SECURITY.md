@@ -166,3 +166,22 @@ be lower than the per-account limit.
   `log` driver (development) writes messages to `storage/logs/mail.log`; the preflight fails on it in
   production. `tests/mail_test.php` runs the SMTP conversation against a local test server, with and
   without STARTTLS.
+
+## One device at a time, and the sign-in alert (migration 048)
+When the correct password is entered while the account is **already signed in on another device**, the account owner is told and decides. Table `user_sessions`
+holds one row per signed-in browser (a hash of its random token, a label such as "Chrome on Windows", the IP address, `last_seen_at`, and a status of `PENDING`,
+`ACTIVE`, `ENDED` or `DENIED`). The password is never stored there.
+- **No other device in use** (no `ACTIVE` row seen in the last **30 minutes**): the sign-in goes ahead as before and the browser gets an `ACTIVE` row.
+- **Another device is in use**: the new browser does **not** sign in. It gets a `PENDING` row and a "Waiting for approval" page that checks every few seconds. The
+  owner gets an in-app notification (the bell) and a banner on every page of the device they are signed in on, within ~10 seconds, with the time, device, and
+  IP address, and **Yes, it's me** / **No, deny** buttons. Approving signs the new browser in (both stay signed in); denying refuses it.
+- **No way to reach the first device**: when the other device has been idle for 30 minutes, or has been signed out, the waiting browser is let in on its own. A
+  request nobody answers expires after **10 minutes**. A Super Admin can **Release signed-in devices** on the account's page (`users.manage`), which ends all of
+  the account's sessions, so a lost device never locks someone out for good.
+- Every role gets this. The alert shows the time, browser and operating system, and IP address only (no map location).
+- A wrong password for an account is **not** announced one by one (the lockout already covers guessing). When repeated wrong passwords **lock** the account, the owner
+  gets one notification that someone tried to sign in and was locked out.
+- **My Account > Where you're signed in** lists the account's active and waiting devices, marks "This device", and lets the owner **sign out** any other device
+  (that device is signed out on its next request) or answer a waiting one. A browser signed in before this feature existed is adopted on its next request.
+- Audit actions: `login.device_pending`, `login.device_approved`, `login.device_denied`, `login.device_auto_allowed`, `login.device_expired`,
+  `session.signed_out_remotely`, `session.released`. The background check that fetches the banner does not count as activity, so it does not keep an idle session alive.

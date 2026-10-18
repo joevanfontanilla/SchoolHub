@@ -43,6 +43,12 @@ final class AuthController extends Controller
             return;
         }
 
+        if (!empty($result['pending'])) {
+            // The password was right but the account is open on another device: wait for its owner (docs/07).
+            $this->redirect('/login/waiting');
+            return;
+        }
+
         if ($result['user']?->must_change_password) {
             Session::flash('warning', 'Please set a new password before continuing.');
             $this->redirect('/password/change');

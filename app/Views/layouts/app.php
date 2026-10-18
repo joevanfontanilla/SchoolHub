@@ -40,6 +40,7 @@ $portalName = match ($user?->role_name) {
             <?= partial('app-topbar', ['user' => $user, 'title' => $title ?? '', 'portal' => $portal]) ?>
 
             <main id="main" tabindex="-1" class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+                <div data-device-alerts data-url="<?= e(url('/security/alerts')) ?>" aria-live="assertive"><?= partial('device-alerts', ['user' => $user]) ?></div>
                 <?= partial('urgent-banner', ['urgent' => $portal['urgent'] ?? []]) ?>
                 <?= partial('flash') ?>
                 <?= $content ?>

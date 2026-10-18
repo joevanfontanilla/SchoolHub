@@ -86,6 +86,31 @@
             <button type="submit" class="btn-primary"><?= $signatureUrl !== null ? 'Replace signature' : 'Save signature' ?></button>
         </form>
     </section>
+    <section class="card p-5 sm:p-6" id="devices" aria-labelledby="devices-heading">
+        <h3 id="devices-heading" class="text-base">Where you&rsquo;re signed in</h3>
+        <p class="mt-1 text-sm text-slate-600">If someone enters your password while you are signed in here, you are asked before they get in. Sign out any device you do not recognise.</p>
+        <?php foreach ($pendingDevices as $p): ?>
+            <div class="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-danger-line bg-danger-bg p-3 text-sm">
+                <span class="min-w-0 flex-1"><strong>Waiting for your approval:</strong> <?= e($p['device_label']) ?> &middot; IP <?= e($p['ip_address']) ?> &middot; <?= e(dt($p['created_at'])) ?></span>
+                <form method="POST" action="<?= e(url('/security/devices/' . $p['id'] . '/approve')) ?>"><?= csrf_field() ?><button type="submit" class="btn-secondary">Yes, it&rsquo;s me</button></form>
+                <form method="POST" action="<?= e(url('/security/devices/' . $p['id'] . '/deny')) ?>"><?= csrf_field() ?><button type="submit" class="btn-primary">No, deny</button></form>
+            </div>
+        <?php endforeach; ?>
+        <ul class="mt-3 divide-y divide-slate-100 text-sm">
+            <?php foreach ($devices as $d): ?>
+                <li class="flex flex-wrap items-center gap-3 py-2">
+                    <span class="min-w-0 flex-1">
+                        <span class="font-semibold text-brand-navy"><?= e($d['device_label']) ?></span>
+                        <?php if ($d['current']): ?><span class="ml-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-navy">This device</span><?php endif; ?>
+                        <span class="block text-xs text-brand-gray">IP <?= e($d['ip_address']) ?> &middot; signed in <?= e(dt($d['created_at'])) ?> &middot; last active <?= e(dt($d['last_seen_at'])) ?></span>
+                    </span>
+                    <?php if (!$d['current']): ?>
+                        <form method="POST" action="<?= e(url('/security/devices/' . $d['id'] . '/sign-out')) ?>" data-confirm="That device is signed out the next time it loads a page." data-confirm-title="Sign out this device?" data-confirm-tone="warning"><?= csrf_field() ?><button type="submit" class="btn-secondary">Sign out<span class="sr-only">: <?= e($d['device_label']) ?></span></button></form>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
     <section class="card p-5 sm:p-6" aria-labelledby="security-heading">
         <h3 id="security-heading" class="text-base">Password &amp; security</h3>
         <p class="mt-1 text-sm text-slate-600">Change the password you use to sign in.</p>

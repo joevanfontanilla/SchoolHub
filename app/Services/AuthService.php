@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\Auth;
 use App\Core\Database;
 use App\Core\HttpException;
+use App\Core\Session;
 use App\Models\SystemSetting;
 use App\Models\User;
 
@@ -21,7 +22,7 @@ final class AuthService
     /**
      * Attempt a sign-in.
      *
-     * @return array{ok:bool,message:string,user:?User}
+     * @return array{ok:bool,message:string,user:?User,pending?:bool} pending: the password was right but the account is open elsewhere, so the owner must approve
      */
     public static function attempt(string $login, string $password, string $ip, string $userAgent): array
     {
@@ -75,11 +76,22 @@ final class AuthService
         LoginThrottle::record($user->id, $login, $ip, $userAgent, 'SUCCESS');
 
         $user = User::find($user->id);
+
+        // Already signed in on another device: this browser waits for the owner's answer instead of signing in (docs/07).
+        $device = DeviceSessionService::begin($user, $ip, $userAgent);
+        if ($device['state'] === 'pending') {
+            Session::regenerate();
+            DeviceSessionService::rememberPending($device['token']);
+
+            return ['ok' => true, 'message' => '', 'user' => $user, 'pending' => true];
+        }
+
         Auth::login($user);
+        DeviceSessionService::rememberActive($device['token']);
 
         AuditService::log('login.success', 'auth', 'User', $user->id, null, null, 'SUCCESS');
 
-        return ['ok' => true, 'message' => '', 'user' => $user];
+        return ['ok' => true, 'message' => '', 'user' => $user, 'pending' => false];
     }
 
     public static function logout(): void
@@ -87,6 +99,7 @@ final class AuthService
         $user = Auth::user();
         if ($user !== null) {
             AuditService::log('logout', 'auth', 'User', $user->id);
+            DeviceSessionService::endCurrent();
         }
         Auth::logout();
     }
@@ -166,6 +179,9 @@ final class AuthService
 
         Database::update('users', $update, ['id' => $user->id]);
         LoginThrottle::record($user->id, $login, $ip, $userAgent, 'FAILED');
+        if ($attempts >= $max) {
+            DeviceSessionService::notifyLockout($user->id, $ip);
+        }
 
         AuditService::log(
             $attempts >= $max ? 'login.locked_out' : 'login.failed',

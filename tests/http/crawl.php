@@ -403,6 +403,9 @@ try {
             $expected = [200];
             if (in_array('guest', $middleware, true)) {
                 $expected = $user === null ? [200] : [302];
+                if ($user === null && $route['pattern'] === '/login/waiting') {
+                    $expected = [302]; // a visitor holding no waiting sign-in request is sent back to sign in
+                }
             } elseif ($user === null && in_array('auth', $middleware, true)) {
                 $expected = [302];
             } else {
@@ -473,7 +476,8 @@ try {
             if ($route['pattern'] !== '/admin/health' && preg_match('/SQLSTATE|Fatal error|Warning: |Notice: |Deprecated: |Stack trace/', $response['body'])) {
                 fail("{$name} GET {$path}: error text in the page");
             }
-            if ($response['status'] === 200 && str_contains((string) ($response['headers']['content-type'][0] ?? ''), 'text/html')) {
+            // /security/alerts is a page fragment (empty when nobody is waiting), not a whole page.
+            if ($response['status'] === 200 && $route['pattern'] !== '/security/alerts' && str_contains((string) ($response['headers']['content-type'][0] ?? ''), 'text/html')) {
                 foreach (accessibilityProblems($response['body']) as $problem) {
                     fail("{$name} GET {$path}: accessibility: {$problem}");
                 }

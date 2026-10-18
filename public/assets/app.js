@@ -1200,3 +1200,40 @@
     select.addEventListener('change', update);
     update();
 })();
+
+/* Sign-in alert (docs/07): the signed-in page asks every 10 seconds whether someone is waiting to sign in; the waiting browser asks every 4 seconds whether it was
+   approved. The requests are marked as background so they never keep an idle session alive. */
+(function () {
+    function ask(url) {
+        return fetch(url, { credentials: 'same-origin', headers: { 'X-Background-Poll': '1', 'X-Requested-With': 'XMLHttpRequest' } });
+    }
+
+    var box = document.querySelector('[data-device-alerts]');
+    if (box) {
+        var alertTimer = window.setInterval(function () {
+            if (document.hidden) { return; }
+            ask(box.getAttribute('data-url')).then(function (response) {
+                if (!response.ok) { window.clearInterval(alertTimer); return null; }
+                return response.text();
+            }).then(function (html) {
+                if (html !== null && html !== undefined && html.trim() !== box.innerHTML.trim()) { box.innerHTML = html; }
+            }).catch(function () { /* offline: try again next time */ });
+        }, 10000);
+    }
+
+    var waiting = document.querySelector('[data-waiting]');
+    if (waiting) {
+        var text = waiting.querySelector('[data-waiting-text]');
+        var waitTimer = window.setInterval(function () {
+            ask(waiting.getAttribute('data-status-url')).then(function (response) { return response.json(); }).then(function (data) {
+                if (data.state === 'approved') {
+                    window.clearInterval(waitTimer);
+                    window.location.href = data.redirect;
+                } else if (data.state === 'denied' || data.state === 'expired' || data.state === 'gone') {
+                    window.clearInterval(waitTimer);
+                    window.location.reload();
+                }
+            }).catch(function () { /* try again */ });
+        }, 4000);
+    }
+})();

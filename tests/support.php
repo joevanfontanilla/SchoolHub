@@ -443,6 +443,8 @@ function actingAs(?User $user): void
 {
     $_SESSION = $_SESSION ?? [];
     Auth::forgetCache();
+    // A different person is a different browser: it gets its own device row (docs/07), not the previous user's.
+    unset($_SESSION['_device_token']);
 
     if ($user === null) {
         unset($_SESSION['_auth_user_id']);

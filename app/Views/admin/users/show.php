@@ -163,6 +163,16 @@ $auditRows = static function (array $entries): string {
                 </section>
             <?php endif; ?>
 
+            <section class="card p-5">
+                <h3 class="text-base">Signed-in devices</h3>
+                <p class="mt-1 text-sm text-slate-600">Signs this account out everywhere and clears any waiting sign-in, for example when the person lost their device.</p>
+                <form method="POST" action="<?= e(url('/admin/users/' . $account->id . '/release-devices')) ?>" class="mt-3"
+                      data-confirm="Every device signed in to this account is signed out, and any sign-in waiting for approval is cancelled." data-confirm-title="Release signed-in devices?" data-confirm-tone="warning">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn-secondary w-full"><?= icon('shield', 'h-5 w-5') ?> Release signed-in devices</button>
+                </form>
+            </section>
+
             <?php if ($account->status === User::STATUS_LOCKED || $account->failed_login_attempts > 0): ?>
                 <section class="card p-5">
                     <h3 class="text-base">Unlock</h3>

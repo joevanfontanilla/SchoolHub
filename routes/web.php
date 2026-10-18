@@ -26,6 +26,7 @@ use App\Controllers\AccountController;
 use App\Controllers\EIdController;
 use App\Controllers\VerifyController;
 use App\Controllers\AuthController;
+use App\Controllers\DeviceController;
 use App\Controllers\Cashier\AccountController as CashierAccounts;
 use App\Controllers\Cashier\DashboardController as CashierDashboard;
 use App\Controllers\Cashier\CashBookController as CashierCashBook;
@@ -92,6 +93,9 @@ $router->get('/calendar',      [CalendarController::class, 'show'],        [], '
 // ---------------------------------------------------------------------------
 $router->get('/login',  [AuthController::class, 'showLogin'], ['guest'], 'login');
 $router->post('/login', [AuthController::class, 'login'],     ['guest']);
+$router->get('/login/waiting',        [DeviceController::class, 'waiting'],       ['guest'], 'login.waiting');
+$router->get('/login/waiting/status', [DeviceController::class, 'waitingStatus'], ['guest']);
+$router->post('/login/waiting/cancel', [DeviceController::class, 'cancel'],       ['guest']);
 $router->post('/logout', [AuthController::class, 'logout'],   ['auth'], 'logout');
 
 $router->get('/password/change',  [AuthController::class, 'showChangePassword'], ['auth'], 'password.change');
@@ -100,6 +104,10 @@ $router->post('/password/change', [AuthController::class, 'changePassword'],    
 // My Account: profile photo and password, for every signed-in role.
 $router->get('/portal/calendar', [CalendarController::class, 'portal'],  ['auth'], 'portal.calendar');
 $router->get('/account',        [AccountController::class, 'show'],      ['auth'], 'account');
+$router->get('/security/alerts',                    [DeviceController::class, 'alerts'],  ['auth']);
+$router->post('/security/devices/{id}/approve',     [DeviceController::class, 'approve'], ['auth']);
+$router->post('/security/devices/{id}/deny',        [DeviceController::class, 'deny'],    ['auth']);
+$router->post('/security/devices/{id}/sign-out',    [DeviceController::class, 'signOut'], ['auth']);
 $router->get('/grading-system', [\App\Controllers\GradingSystemController::class, 'show'], ['auth'], 'grading-system');
 $router->post('/account/name',  [AccountController::class, 'saveName'],  ['auth']);
 $router->post('/account/photo', [AccountController::class, 'savePhoto'], ['auth']);
@@ -159,6 +167,7 @@ $router->post('/admin/users/{id}/edit',       [AdminUsers::class, 'update'],    
 $router->post('/admin/users/{id}/disable',    [AdminUsers::class, 'disable'],   $admin('users.manage'));
 $router->post('/admin/users/{id}/enable',     [AdminUsers::class, 'enable'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/unlock',     [AdminUsers::class, 'unlock'],    $admin('users.manage'));
+$router->post('/admin/users/{id}/release-devices', [AdminUsers::class, 'releaseDevices'], $admin('users.manage'));
 $router->post('/admin/users/{id}/delete',     [AdminUsers::class, 'delete'],    $admin('users.manage'));
 $router->post('/admin/users/{id}/restore',    [AdminUsers::class, 'restore'],   $admin('users.manage'));
 $router->post('/admin/users/{id}/erase',      [AdminUsers::class, 'erase'],     $admin('users.manage'));
