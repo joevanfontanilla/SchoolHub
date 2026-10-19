@@ -12,7 +12,7 @@ if ($pending === []) {
     return;
 }
 ?>
-<section aria-label="Sign-in approval" class="mb-5 space-y-3">
+<section aria-label="Sign-in approval" class="relative z-10 mb-6 space-y-3">
     <?php foreach ($pending as $request): ?>
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-danger-line bg-white p-3 shadow-sm sm:flex-nowrap" role="alert">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger-bg text-danger-text ring-1 ring-danger-line"><?= icon('shield', 'h-5 w-5') ?></span>

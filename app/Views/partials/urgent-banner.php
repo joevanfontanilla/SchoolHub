@@ -10,7 +10,7 @@ if ($urgent === []) {
     return;
 }
 ?>
-<section aria-label="Urgent announcements" class="mb-5 space-y-3">
+<section aria-label="Urgent announcements" class="relative z-10 mb-6 space-y-3">
     <?php foreach ($urgent as $announcement): ?>
         <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-danger-line bg-white p-3 pr-2 shadow-sm sm:flex-nowrap" role="alert">
             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-danger-bg text-danger-text ring-1 ring-danger-line"><?= icon('megaphone', 'h-5 w-5') ?></span>

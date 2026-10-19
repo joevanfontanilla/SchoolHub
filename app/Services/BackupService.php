@@ -455,6 +455,29 @@ final class BackupService
         return $count;
     }
 
+    /**
+     * The command that runs the command-line php, for the schedule and restore instructions on the Backups page. Under Apache PHP_BINARY is the web
+     * server, so the real php is looked for beside the PHP install. A shared host may forbid looking outside the site (open_basedir makes is_file() warn)
+     * or disable php_ini_loaded_file(); the app turns every warning into an error, so either would make the page a 500. "Unknown" is a fine answer: 'php'.
+     */
+    public static function phpCommand(): string
+    {
+        try {
+            $iniFile = function_exists('php_ini_loaded_file') ? @php_ini_loaded_file() : false;
+            $candidates = $iniFile ? [dirname((string) $iniFile) . DIRECTORY_SEPARATOR . 'php.exe'] : [];
+            array_push($candidates, PHP_BINDIR . DIRECTORY_SEPARATOR . 'php.exe', PHP_BINDIR . DIRECTORY_SEPARATOR . 'php');
+            foreach ($candidates as $candidate) {
+                if (@is_file($candidate)) {
+                    return $candidate;
+                }
+            }
+        } catch (\Throwable) {
+            // fall through to the plain command
+        }
+
+        return 'php';
+    }
+
     private static function directory(): string
     {
         $dir = STORAGE_PATH . '/backups';

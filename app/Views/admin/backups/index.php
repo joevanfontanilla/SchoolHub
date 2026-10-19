@@ -4,6 +4,7 @@
  *
  * @var array $backups
  */
+use App\Services\BackupService;
 use App\Services\SystemHealth;
 
 $badge = static fn (string $status) => component('status-badge', match ($status) {
@@ -14,14 +15,9 @@ $badge = static fn (string $status) => component('status-badge', match ($status)
 });
 $types = ['MANUAL' => 'Manual', 'SCHEDULED' => 'Scheduled', 'PRE_RESTORE' => 'Before a restore'];
 $passwordError = error_for('password');
-// Under Apache PHP_BINARY is the web server, so find the command-line php beside the PHP install.
-$iniDir = php_ini_loaded_file() ? dirname((string) php_ini_loaded_file()) : '';
-$php = match (true) {
-    $iniDir !== '' && is_file($iniDir . DIRECTORY_SEPARATOR . 'php.exe') => $iniDir . DIRECTORY_SEPARATOR . 'php.exe',
-    is_file(PHP_BINDIR . DIRECTORY_SEPARATOR . 'php.exe') => PHP_BINDIR . DIRECTORY_SEPARATOR . 'php.exe',
-    is_file(PHP_BINDIR . DIRECTORY_SEPARATOR . 'php')     => PHP_BINDIR . DIRECTORY_SEPARATOR . 'php',
-    default                                                => 'php',
-};
+$php = BackupService::phpCommand();
+$isWindows = DIRECTORY_SEPARATOR === '\\';
+$backupCommand = '"' . $php . '" "' . BASE_PATH . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'backup.php" --scheduled';
 ?>
 <div class="space-y-6">
     <div>
@@ -45,8 +41,13 @@ $php = match (true) {
 
         <section class="card min-w-0 p-5 xl:col-span-2" aria-labelledby="schedule-heading">
             <h3 id="schedule-heading" class="flex items-center gap-2 text-base"><span class="text-brand-600"><?= icon('clock', 'h-5 w-5') ?></span> Daily backup and restore</h3>
-            <p class="mt-2 text-sm text-slate-600">In Windows Task Scheduler, create a daily task at <strong>2:00 AM</strong> that runs:</p>
-            <pre class="table-scroll mt-2 rounded-lg bg-brand-50/60 p-3 text-xs text-slate-800"><?= e('"' . $php . '" "' . BASE_PATH . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'backup.php" --scheduled') ?></pre>
+            <p class="mt-2 text-sm text-slate-600">
+                <?= $isWindows ? 'In Windows Task Scheduler, create a daily task at <strong>2:00 AM</strong> that runs:' : 'If this server has cron, add a daily job at <strong>2:00 AM</strong> that runs:' ?>
+            </p>
+            <pre class="table-scroll mt-2 rounded-lg bg-brand-50/60 p-3 text-xs text-slate-800"><?= e($isWindows ? $backupCommand : '0 2 * * * ' . $backupCommand) ?></pre>
+            <?php if (!$isWindows): ?>
+                <p class="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-navy" role="note"><strong>Free hosting such as InfinityFree has no scheduled tasks</strong>, so a daily backup cannot run by itself there. Use <strong>Back up now</strong> before important changes, and also export the database from your host's phpMyAdmin.</p>
+            <?php endif; ?>
             <p class="mt-3 text-sm text-slate-600"><strong>Restoring</strong> replaces the entire database and all uploaded files, so it is not available here. On the server, run the command below and follow its prompts. It verifies the archive and makes a safety backup first.</p>
             <pre class="table-scroll mt-2 rounded-lg bg-brand-50/60 p-3 text-xs text-slate-800"><?= e('"' . $php . '" "' . BASE_PATH . DIRECTORY_SEPARATOR . 'database' . DIRECTORY_SEPARATOR . 'restore.php" <backup file name>') ?></pre>
         </section>
