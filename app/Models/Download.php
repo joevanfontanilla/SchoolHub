@@ -20,7 +20,7 @@ final class Download
             'SELECT id, title, description, original_filename, file_size, mime_type, download_count, created_at
                FROM downloads
               WHERE is_public = 1
-              ORDER BY created_at DESC'
+              ORDER BY sort_order, created_at DESC, id DESC'
         );
     }
 

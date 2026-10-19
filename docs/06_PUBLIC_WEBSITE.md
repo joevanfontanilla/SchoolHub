@@ -40,6 +40,17 @@ images are served through `/announcement-images/{id}`, which checks the same vis
 ## Downloads
 Allow administrators to publish public documents for download.
 
+As built (migration 050): the Super Admin keeps this page under **Administration > Downloads** (`settings.manage`). The list shows every download with its title, file name,
+size, how many times it was downloaded, who uploaded it, and whether it is shown publicly. The admin can **upload** a new file (title, optional description, order, shown or
+hidden), **edit** the details, **replace** the file, **hide or show** it without deleting it, and **delete** it, which removes the file from the server after a confirmation.
+The public page lists the shown ones by **order** (the smallest number first, newest first when equal).
+- **Files:** documents only: PDF, Word (doc, docx), Excel (xls, xlsx), PowerPoint (ppt, pptx), and JPG or PNG images, up to 5 MB. The type is checked from the file's own bytes
+  (a PDF starts with `%PDF`, an image must really be an image, an old Office file carries the Office container signature, a modern one is a zip holding the `word/`, `xl/` or
+  `ppt/` folder), so renaming a program to `.pdf` does not get it in. Scripts, zips and anything else are refused.
+- **Storage and links:** the file is kept under `storage/uploads/downloads` with a random name and is streamed by `/downloads/{id}`, which refuses a hidden download even to
+  someone who has the link. The admin opens any file, hidden or not, from the list.
+- **Audit:** `download.created`, `download.updated`, `download.replaced`, `download.shown`, `download.hidden` and `download.deleted`, none of them holding the file itself.
+
 ## Contact
 Show official school contact information and office details.
 
